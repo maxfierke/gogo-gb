@@ -5,6 +5,8 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
+SRCS := main.go cpu.go inst.go go.mod
+
 .PHONY: help
 help:
 	@echo 'Usage:'
@@ -24,9 +26,9 @@ clean:
 
 .PHONY: run
 run:
-	go run main.go
+	go run .
 
-bin/gogo-gb:
-	go build -o bin/gogo-gb main.go
+bin/gogo-gb: $(SRCS)
+	go build -o bin/gogo-gb .
 
 all: build
