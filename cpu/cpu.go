@@ -2,19 +2,22 @@ package cpu
 
 import (
 	"fmt"
+
+	"github.com/maxfierke/gogo-gb/mem"
 )
 
-type Cpu struct {
+type CPU struct {
 	Reg Registers
 	PC  *Register[uint16]
 	SP  *Register[uint16]
+	mmu *mem.MMU
 }
 
-func (cpu *Cpu) Step() uint8 {
+func (cpu *CPU) Step() uint8 {
 	return 0x00
 }
 
-func (cpu *Cpu) Execute(inst Instruction) (uint16, uint8) {
+func (cpu *CPU) Execute(inst Instruction) (uint16, uint8) {
 	opcode := inst.Opcode
 
 	switch opcode.Addr {
@@ -50,6 +53,9 @@ func (cpu *Cpu) Execute(inst Instruction) (uint16, uint8) {
 	case 0x85:
 		// ADD A, L
 		cpu.add8(cpu.Reg.A, cpu.Reg.L.Read())
+	case 0x86:
+		// ADD A, (HL)
+		cpu.add8(cpu.Reg.A, cpu.mmu.Read8(cpu.Reg.HL.Read()))
 	case 0x87:
 		// ADD A, A
 		cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
@@ -60,8 +66,8 @@ func (cpu *Cpu) Execute(inst Instruction) (uint16, uint8) {
 	return 0x0000, 0x00
 }
 
-func NewCpu() *Cpu {
-	cpu := new(Cpu)
+func NewCpu() *CPU {
+	cpu := new(CPU)
 	a := &Register[uint8]{name: "A", value: 0x00}
 	b := &Register[uint8]{name: "B", value: 0x00}
 	c := &Register[uint8]{name: "C", value: 0x00}
@@ -94,10 +100,12 @@ func NewCpu() *Cpu {
 	cpu.PC = &Register[uint16]{name: "PC", value: 0x0000}
 	cpu.SP = &Register[uint16]{name: "SP", value: 0x0000}
 
+	cpu.mmu = mem.NewMMU()
+
 	return cpu
 }
 
-func (cpu *Cpu) add8(reg RWByte, value uint8) uint8 {
+func (cpu *CPU) add8(reg RWByte, value uint8) uint8 {
 	newValue, didCarry := overflowingAdd8(reg.Read(), value)
 	reg.Write(newValue)
 
@@ -111,7 +119,7 @@ func (cpu *Cpu) add8(reg RWByte, value uint8) uint8 {
 	return newValue
 }
 
-func (cpu *Cpu) add16(reg RWTwoByte, value uint16) uint16 {
+func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	newValue, didCarry := overflowingAdd16(reg.Read(), value)
 	reg.Write(newValue)
 

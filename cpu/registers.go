@@ -82,8 +82,8 @@ func (reg *Register[T]) Dec(value T) {
 }
 
 type RWByte interface {
-	Read() uint8
-	Write(value uint8)
+	Read() byte
+	Write(value byte)
 }
 
 type RWTwoByte interface {
