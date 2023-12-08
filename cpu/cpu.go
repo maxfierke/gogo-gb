@@ -12,10 +12,27 @@ type CPU struct {
 	PC  *Register[uint16]
 	SP  *Register[uint16]
 	mmu *mem.MMU
+
+	opcodes *isa.Opcodes
 }
 
-func (cpu *CPU) Step() uint8 {
-	return 0x00
+func (cpu *CPU) Step() {
+	inst := cpu.fetchAndDecode()
+	nextPc := cpu.Execute(inst)
+
+	cpu.PC.Write(nextPc)
+}
+
+func (cpu *CPU) fetchAndDecode() isa.Instruction {
+	opcodeByte := cpu.mmu.Read8(cpu.PC.Read())
+	prefixed := opcodeByte == 0xCB
+
+	if prefixed {
+		opcodeByte = cpu.mmu.Read8(cpu.PC.Read() + 1)
+	}
+
+	inst := cpu.opcodes.FromByte(opcodeByte, prefixed)
+	return inst
 }
 
 func (cpu *CPU) Execute(inst isa.Instruction) uint16 {
