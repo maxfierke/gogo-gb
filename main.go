@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/maxfierke/gogo-gb/cpu"
+	"github.com/maxfierke/gogo-gb/cpu/isa"
 )
 
 func main() {
@@ -14,7 +14,7 @@ func main() {
 	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. Currently just 'opcodes'")
 	flag.Parse()
 
-	opcodes, err := cpu.LoadOpcodes("./opcodes.json")
+	opcodes, err := isa.LoadOpcodes("./opcodes.json")
 	if err != nil {
 		log.Fatalf("Unable to load opcodes: %v\n", err)
 	}
@@ -26,7 +26,7 @@ func main() {
 	}
 }
 
-func printOpcodes(opcodes *cpu.Opcodes) {
+func printOpcodes(opcodes *isa.Opcodes) {
 	fmt.Println("== Opcodes ==")
 
 	fmt.Printf("=== Unprefixed: \n\n")

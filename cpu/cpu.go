@@ -3,6 +3,7 @@ package cpu
 import (
 	"fmt"
 
+	"github.com/maxfierke/gogo-gb/cpu/isa"
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
@@ -17,7 +18,7 @@ func (cpu *CPU) Step() uint8 {
 	return 0x00
 }
 
-func (cpu *CPU) Execute(inst Instruction) (uint16, uint8) {
+func (cpu *CPU) Execute(inst isa.Instruction) uint16 {
 	opcode := inst.Opcode
 
 	switch opcode.Addr {
@@ -60,10 +61,10 @@ func (cpu *CPU) Execute(inst Instruction) (uint16, uint8) {
 		// ADD A, A
 		cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
 	default:
-		panic(fmt.Sprintf("Unexpected instruction @ 0x%x: %s", inst.Addr, opcode))
+		panic(fmt.Sprintf("Unimplemented instruction @ 0x%x: %s", inst.Addr, opcode))
 	}
 
-	return 0x0000, 0x00
+	return cpu.PC.Read() + uint16(inst.Opcode.Bytes)
 }
 
 func NewCpu() *CPU {

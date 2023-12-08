@@ -1,4 +1,4 @@
-package cpu
+package isa
 
 import (
 	"encoding/hex"
@@ -103,9 +103,4 @@ func parseOpcodeAddr(key string) (uint8, error) {
 	}
 
 	return decoded[0], nil
-}
-
-type Instruction struct {
-	Addr   uint16
-	Opcode *Opcode
 }
