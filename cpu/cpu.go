@@ -123,6 +123,32 @@ func NewCpu() *CPU {
 	return cpu
 }
 
+func (cpu *CPU) Reset() {
+	cpu.Reg.AF.Write(0x0000)
+	cpu.Reg.BC.Write(0x0000)
+	cpu.Reg.DE.Write(0x0000)
+	cpu.Reg.HL.Write(0x0000)
+	cpu.PC.Write(0x0000)
+	cpu.SP.Write(0x0000)
+
+	// TODO: Reset memory, interrupts, etc.
+}
+
+// Reset CPU and registers to post-boot ROM state
+// Mostly for gameboy-doctor usage
+func (cpu *CPU) ResetToBootROM() {
+	cpu.Reg.A.Write(0x01)
+	cpu.Reg.F.Write(0xB0)
+	cpu.Reg.B.Write(0x00)
+	cpu.Reg.C.Write(0x13)
+	cpu.Reg.D.Write(0x00)
+	cpu.Reg.E.Write(0xD8)
+	cpu.Reg.H.Write(0x01)
+	cpu.Reg.L.Write(0x4D)
+	cpu.SP.Write(0xFFFE)
+	cpu.PC.Write(0x100)
+}
+
 func (cpu *CPU) add8(reg RWByte, value uint8) uint8 {
 	newValue, didCarry := overflowingAdd8(reg.Read(), value)
 	reg.Write(newValue)
