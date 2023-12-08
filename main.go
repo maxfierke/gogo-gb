@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+
+	"github.com/maxfierke/gogo-gb/cpu"
 )
 
 func main() {
@@ -12,7 +14,7 @@ func main() {
 	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. Currently just 'opcodes'")
 	flag.Parse()
 
-	opcodes, err := LoadOpcodes("./opcodes.json")
+	opcodes, err := cpu.LoadOpcodes("./opcodes.json")
 	if err != nil {
 		log.Fatalf("Unable to load opcodes: %v\n", err)
 	}
@@ -24,7 +26,7 @@ func main() {
 	}
 }
 
-func printOpcodes(opcodes *Opcodes) {
+func printOpcodes(opcodes *cpu.Opcodes) {
 	fmt.Println("== Opcodes ==")
 
 	fmt.Printf("=== Unprefixed: \n\n")

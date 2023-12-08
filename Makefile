@@ -5,7 +5,7 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
-SRCS := main.go cpu.go inst.go go.mod
+SRCS := main.go cpu/cpu.go cpu/registers.go cpu/inst.go go.mod
 
 .PHONY: help
 help:

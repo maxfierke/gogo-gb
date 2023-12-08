@@ -1,4 +1,4 @@
-package main
+package cpu
 
 const (
 	zeroFlagBit      = 7
@@ -81,15 +81,20 @@ func (reg *Register[T]) Dec(value T) {
 	reg.value -= value
 }
 
-type ByteRegister interface {
+type RWByte interface {
 	Read() uint8
 	Write(value uint8)
 }
 
+type RWTwoByte interface {
+	Read() uint16
+	Write(value uint16)
+}
+
 type CompoundRegister struct {
 	name string
-	high ByteRegister
-	low  ByteRegister
+	high RWByte
+	low  RWByte
 }
 
 func (reg *CompoundRegister) Read() uint16 {
@@ -123,50 +128,4 @@ type Registers struct {
 	BC *CompoundRegister
 	DE *CompoundRegister
 	HL *CompoundRegister
-
-	PC *Register[uint16]
-	SP *Register[uint16]
-}
-
-type Cpu struct {
-	Reg Registers
-}
-
-func NewCPU() *Cpu {
-	cpu := new(Cpu)
-	a := &Register[uint8]{name: "A", value: 0x00}
-	b := &Register[uint8]{name: "B", value: 0x00}
-	c := &Register[uint8]{name: "C", value: 0x00}
-	d := &Register[uint8]{name: "D", value: 0x00}
-	e := &Register[uint8]{name: "E", value: 0x00}
-	f := &Flags{
-		Zero:      false,
-		Subtract:  false,
-		HalfCarry: false,
-		Carry:     false,
-	}
-	h := &Register[uint8]{name: "H", value: 0x00}
-	l := &Register[uint8]{name: "L", value: 0x00}
-
-	pc := &Register[uint16]{name: "PC", value: 0x0000}
-	sp := &Register[uint16]{name: "SP", value: 0x0000}
-
-	cpu.Reg = Registers{
-		A:  a,
-		B:  b,
-		C:  c,
-		D:  d,
-		E:  e,
-		F:  f,
-		H:  h,
-		L:  l,
-		AF: &CompoundRegister{name: "AF", high: a, low: f},
-		BC: &CompoundRegister{name: "BC", high: b, low: c},
-		DE: &CompoundRegister{name: "DE", high: d, low: e},
-		HL: &CompoundRegister{name: "HL", high: h, low: l},
-		PC: pc,
-		SP: sp,
-	}
-
-	return cpu
 }
