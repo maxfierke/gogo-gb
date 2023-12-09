@@ -31,11 +31,11 @@ func printOpcodes(opcodes *isa.Opcodes) {
 
 	fmt.Printf("=== Unprefixed: \n\n")
 	for k := range opcodes.Unprefixed {
-		fmt.Printf("%s %s\n", k, opcodes.Unprefixed[k].String())
+		fmt.Printf("0x%X %s\n", k, opcodes.Unprefixed[k].String())
 	}
 
 	fmt.Printf("\n=== Cbprefixed: \n\n")
 	for k := range opcodes.CbPrefixed {
-		fmt.Printf("%s %s\n", k, opcodes.CbPrefixed[k].String())
+		fmt.Printf("0x%X %s\n", k, opcodes.CbPrefixed[k].String())
 	}
 }

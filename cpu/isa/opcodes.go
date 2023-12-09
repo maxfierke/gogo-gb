@@ -55,9 +55,34 @@ func (opcode *Opcode) String() string {
 	return fmt.Sprintf("%s %s %s", opcode.Mnemonic, strings.Join(operands, ", "), comment)
 }
 
-type Opcodes struct {
+type OpcodesJSON struct {
 	Unprefixed map[string]*Opcode `json:"unprefixed"`
 	CbPrefixed map[string]*Opcode `json:"cbprefixed"`
+}
+
+type Opcodes struct {
+	Unprefixed map[uint8]*Opcode
+	CbPrefixed map[uint8]*Opcode
+}
+
+func (opcodes *Opcodes) InstructionFromByte(value byte, prefixed bool) (*Instruction, bool) {
+	var opcode *Opcode
+	var present bool
+
+	if prefixed {
+		opcode, present = opcodes.CbPrefixed[value]
+	} else {
+		opcode, present = opcodes.Unprefixed[value]
+	}
+
+	if !present {
+		return nil, present
+	}
+
+	return &Instruction{
+		Addr:   uint16(value),
+		Opcode: opcode,
+	}, true
 }
 
 func LoadOpcodes(path string) (*Opcodes, error) {
@@ -67,28 +92,37 @@ func LoadOpcodes(path string) (*Opcodes, error) {
 		return nil, err
 	}
 
-	var opcodes Opcodes
-	err = json.Unmarshal(jsonBytes, &opcodes)
+	var opcodesJSON OpcodesJSON
+	err = json.Unmarshal(jsonBytes, &opcodesJSON)
 	if err != nil {
 		return nil, err
 	}
 
-	for k := range opcodes.Unprefixed {
-		addr, err := parseOpcodeAddr(k)
-		if err != nil {
-			return nil, err
-		}
-
-		opcodes.Unprefixed[k].Addr = addr
+	opcodes := Opcodes{
+		Unprefixed: map[uint8]*Opcode{},
+		CbPrefixed: map[uint8]*Opcode{},
 	}
 
-	for k := range opcodes.CbPrefixed {
+	for k := range opcodesJSON.Unprefixed {
 		addr, err := parseOpcodeAddr(k)
 		if err != nil {
 			return nil, err
 		}
 
-		opcodes.CbPrefixed[k].Addr = addr
+		opcode := opcodesJSON.Unprefixed[k]
+		opcode.Addr = addr
+		opcodes.Unprefixed[addr] = opcode
+	}
+
+	for k := range opcodesJSON.CbPrefixed {
+		addr, err := parseOpcodeAddr(k)
+		if err != nil {
+			return nil, err
+		}
+
+		opcode := opcodesJSON.CbPrefixed[k]
+		opcode.Addr = addr
+		opcodes.CbPrefixed[addr] = opcode
 	}
 
 	return &opcodes, nil

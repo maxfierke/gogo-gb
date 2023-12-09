@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/maxfierke/gogo-gb/cpu/isa"
 	"github.com/maxfierke/gogo-gb/mem"
@@ -23,7 +23,7 @@ func (cpu *CPU) Step() {
 	cpu.PC.Write(nextPc)
 }
 
-func (cpu *CPU) fetchAndDecode() isa.Instruction {
+func (cpu *CPU) fetchAndDecode() *isa.Instruction {
 	opcodeByte := cpu.mmu.Read8(cpu.PC.Read())
 	prefixed := opcodeByte == 0xCB
 
@@ -31,11 +31,20 @@ func (cpu *CPU) fetchAndDecode() isa.Instruction {
 		opcodeByte = cpu.mmu.Read8(cpu.PC.Read() + 1)
 	}
 
-	inst := cpu.opcodes.FromByte(opcodeByte, prefixed)
+	inst, exist := cpu.opcodes.InstructionFromByte(opcodeByte, prefixed)
+
+	if !exist {
+		if prefixed {
+			log.Fatalf("Unimplemented instruction found: 0xCB%X", opcodeByte)
+		} else {
+			log.Fatalf("Unimplemented instruction found: 0x%X", opcodeByte)
+		}
+	}
+
 	return inst
 }
 
-func (cpu *CPU) Execute(inst isa.Instruction) uint16 {
+func (cpu *CPU) Execute(inst *isa.Instruction) uint16 {
 	opcode := inst.Opcode
 
 	switch opcode.Addr {
@@ -78,7 +87,7 @@ func (cpu *CPU) Execute(inst isa.Instruction) uint16 {
 		// ADD A, A
 		cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
 	default:
-		panic(fmt.Sprintf("Unimplemented instruction @ 0x%x: %s", inst.Addr, opcode))
+		log.Fatalf("Unimplemented instruction 0x%X %s", inst.Addr, opcode)
 	}
 
 	return cpu.PC.Read() + uint16(inst.Opcode.Bytes)
