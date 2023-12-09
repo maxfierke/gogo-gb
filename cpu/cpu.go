@@ -24,6 +24,7 @@ func (cpu *CPU) Step() {
 }
 
 func (cpu *CPU) fetchAndDecode() *isa.Instruction {
+	// Fetch :)
 	opcodeByte := cpu.mmu.Read8(cpu.PC.Read())
 	prefixed := opcodeByte == 0xCB
 
@@ -31,6 +32,7 @@ func (cpu *CPU) fetchAndDecode() *isa.Instruction {
 		opcodeByte = cpu.mmu.Read8(cpu.PC.Read() + 1)
 	}
 
+	// Decode :D
 	inst, exist := cpu.opcodes.InstructionFromByte(opcodeByte, prefixed)
 
 	if !exist {
@@ -86,6 +88,24 @@ func (cpu *CPU) Execute(inst *isa.Instruction) uint16 {
 	case 0x87:
 		// ADD A, A
 		cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
+	case 0xC2:
+		// JP NZ, a16
+		return cpu.jump(!cpu.Reg.F.Zero)
+	case 0xC3:
+		// JP a16
+		return cpu.jump(true)
+	case 0xCA:
+		// JP Z, a16
+		return cpu.jump(cpu.Reg.F.Zero)
+	case 0xD2:
+		// JP NC, a16
+		return cpu.jump(!cpu.Reg.F.Carry)
+	case 0xDA:
+		// JP C, a16
+		return cpu.jump(cpu.Reg.F.Carry)
+	case 0xE9:
+		// JP HL
+		return cpu.PC.Read() + cpu.Reg.HL.Read()
 	default:
 		log.Fatalf("Unimplemented instruction 0x%X %s", inst.Addr, opcode)
 	}
@@ -186,6 +206,7 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	return newValue
 }
 
+// Are these necessary?
 func overflowingAdd8(x, y uint8) (uint8, bool) {
 	sum16 := uint16(x) + uint16(y)
 	return x + y, uint8(sum16>>7) == 1
@@ -194,4 +215,16 @@ func overflowingAdd8(x, y uint8) (uint8, bool) {
 func overflowingAdd16(x, y uint16) (uint16, bool) {
 	sum32 := uint32(x) + uint32(y)
 	return x + y, uint16(sum32>>15) == 1
+}
+
+func (cpu *CPU) jump(should_jump bool) uint16 {
+	if should_jump {
+		// A little endianness conversion...
+		lsb := uint16(cpu.mmu.Read8(cpu.PC.Read() + 1))
+		msb := uint16(cpu.mmu.Read8(cpu.PC.Read() + 2))
+		return msb<<8 | lsb
+	} else {
+		// All JP instructions are 3 bytes except 0xE9 (JP HL), which is handled separately
+		return cpu.PC.Read() + 3
+	}
 }
