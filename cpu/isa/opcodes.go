@@ -1,6 +1,7 @@
 package isa
 
 import (
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -85,15 +86,26 @@ func (opcodes *Opcodes) InstructionFromByte(value byte, prefixed bool) (*Instruc
 	}, true
 }
 
-func LoadOpcodes(path string) (*Opcodes, error) {
+func LoadOpcodesFromPath(path string) (*Opcodes, error) {
 	jsonBytes, err := os.ReadFile(path)
 
 	if err != nil {
 		return nil, err
 	}
 
+	return parseOpcodeJson(jsonBytes)
+}
+
+func LoadOpcodes() (*Opcodes, error) {
+	return parseOpcodeJson(opcodeJsonBytes)
+}
+
+//go:embed opcodes.json
+var opcodeJsonBytes []byte
+
+func parseOpcodeJson(jsonBytes []byte) (*Opcodes, error) {
 	var opcodesJSON OpcodesJSON
-	err = json.Unmarshal(jsonBytes, &opcodesJSON)
+	err := json.Unmarshal(jsonBytes, &opcodesJSON)
 	if err != nil {
 		return nil, err
 	}

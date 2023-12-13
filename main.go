@@ -14,7 +14,7 @@ func main() {
 	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. Currently just 'opcodes'")
 	flag.Parse()
 
-	opcodes, err := isa.LoadOpcodes("./opcodes.json")
+	opcodes, err := isa.LoadOpcodes()
 	if err != nil {
 		log.Fatalf("Unable to load opcodes: %v\n", err)
 	}
