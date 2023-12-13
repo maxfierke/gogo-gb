@@ -129,3 +129,34 @@ type Registers struct {
 	DE *CompoundRegister
 	HL *CompoundRegister
 }
+
+func NewRegisters() Registers {
+	a := &Register[uint8]{name: "A", value: 0x00}
+	b := &Register[uint8]{name: "B", value: 0x00}
+	c := &Register[uint8]{name: "C", value: 0x00}
+	d := &Register[uint8]{name: "D", value: 0x00}
+	e := &Register[uint8]{name: "E", value: 0x00}
+	f := &Flags{
+		Zero:      false,
+		Subtract:  false,
+		HalfCarry: false,
+		Carry:     false,
+	}
+	h := &Register[uint8]{name: "H", value: 0x00}
+	l := &Register[uint8]{name: "L", value: 0x00}
+
+	return Registers{
+		A:  a,
+		B:  b,
+		C:  c,
+		D:  d,
+		E:  e,
+		F:  f,
+		H:  h,
+		L:  l,
+		AF: &CompoundRegister{name: "AF", high: a, low: f},
+		BC: &CompoundRegister{name: "BC", high: b, low: c},
+		DE: &CompoundRegister{name: "DE", high: d, low: e},
+		HL: &CompoundRegister{name: "HL", high: h, low: l},
+	}
+}
