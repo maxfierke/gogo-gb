@@ -160,3 +160,10 @@ func NewRegisters() Registers {
 		HL: &CompoundRegister{name: "HL", high: h, low: l},
 	}
 }
+
+func (regs *Registers) Reset() {
+	regs.AF.Write(0x0000)
+	regs.BC.Write(0x0000)
+	regs.DE.Write(0x0000)
+	regs.HL.Write(0x0000)
+}

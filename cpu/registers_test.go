@@ -62,3 +62,23 @@ func TestRegSetFlags(t *testing.T) {
 		t.Errorf("Expected Z flag to be set, but was false")
 	}
 }
+
+func TestRegReset(t *testing.T) {
+	regs := NewRegisters()
+
+	regs.AF.Write(0x1234)
+	regs.BC.Write(0x5678)
+	regs.DE.Write(0x9ABC)
+	regs.HL.Write(0xDEF0)
+
+	regs.Reset()
+
+	assertRegEquals(t, regs.A.Read(), 0x00)
+	assertRegEquals(t, regs.B.Read(), 0x00)
+	assertRegEquals(t, regs.C.Read(), 0x00)
+	assertRegEquals(t, regs.D.Read(), 0x00)
+	assertRegEquals(t, regs.E.Read(), 0x00)
+	assertRegEquals(t, regs.F.Read(), 0x00)
+	assertRegEquals(t, regs.H.Read(), 0x00)
+	assertRegEquals(t, regs.L.Read(), 0x00)
+}

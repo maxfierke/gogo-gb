@@ -125,10 +125,7 @@ func NewCpu() *CPU {
 }
 
 func (cpu *CPU) Reset() {
-	cpu.Reg.AF.Write(0x0000)
-	cpu.Reg.BC.Write(0x0000)
-	cpu.Reg.DE.Write(0x0000)
-	cpu.Reg.HL.Write(0x0000)
+	cpu.Reg.Reset()
 	cpu.PC.Write(0x0000)
 	cpu.SP.Write(0x0000)
 
