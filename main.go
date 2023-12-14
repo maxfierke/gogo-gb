@@ -4,14 +4,17 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
+	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu/isa"
 )
 
 func main() {
-	fmt.Println("welcome to gogo-gb")
+	fmt.Println("welcome to gogo-gb, the go-getting gameboy emulator")
 
-	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. Currently just 'opcodes'")
+	cartPath := flag.String("cart", "", "Path to cartridge file (.gb, .gbc)")
+	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. Currently just 'cart-header', 'opcodes'")
 	flag.Parse()
 
 	opcodes, err := isa.LoadOpcodes()
@@ -20,22 +23,25 @@ func main() {
 	}
 
 	if debugPrintPtr != nil {
-		if *debugPrintPtr == "opcodes" {
-			printOpcodes(opcodes)
+		if *debugPrintPtr == "cart-header" {
+			cartFile, err := os.Open(*cartPath)
+			if *cartPath == "" || err != nil {
+				log.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (exists): %v\n", err)
+			}
+			defer cartFile.Close()
+
+			cartReader, err := cart.NewReader(cartFile)
+			if err == cart.ErrHeader {
+				log.Printf("Warning: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
+			} else if err != nil {
+				log.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly or trying blowing on it: %v\n", err)
+			}
+
+			cartReader.Header.DebugPrint()
 		}
-	}
-}
 
-func printOpcodes(opcodes *isa.Opcodes) {
-	fmt.Println("== Opcodes ==")
-
-	fmt.Printf("=== Unprefixed: \n\n")
-	for k := range opcodes.Unprefixed {
-		fmt.Printf("0x%X %s\n", k, opcodes.Unprefixed[k].String())
-	}
-
-	fmt.Printf("\n=== Cbprefixed: \n\n")
-	for k := range opcodes.CbPrefixed {
-		fmt.Printf("0x%X %s\n", k, opcodes.CbPrefixed[k].String())
+		if *debugPrintPtr == "opcodes" {
+			opcodes.DebugPrint()
+		}
 	}
 }

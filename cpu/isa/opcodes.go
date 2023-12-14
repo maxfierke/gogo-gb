@@ -86,6 +86,20 @@ func (opcodes *Opcodes) InstructionFromByte(value byte, prefixed bool) (*Instruc
 	}, true
 }
 
+func (opcodes *Opcodes) DebugPrint() {
+	fmt.Println("== Opcodes ==")
+
+	fmt.Printf("=== Unprefixed: \n\n")
+	for k := range opcodes.Unprefixed {
+		fmt.Printf("0x%X %s\n", k, opcodes.Unprefixed[k].String())
+	}
+
+	fmt.Printf("\n=== Cbprefixed: \n\n")
+	for k := range opcodes.CbPrefixed {
+		fmt.Printf("0x%X %s\n", k, opcodes.CbPrefixed[k].String())
+	}
+}
+
 func LoadOpcodesFromPath(path string) (*Opcodes, error) {
 	jsonBytes, err := os.ReadFile(path)
 
