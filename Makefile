@@ -5,7 +5,7 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
-SRCS := main.go cpu/cpu.go cpu/registers.go cpu/isa/instruction.go cpu/isa/opcodes.go go.mod
+all: build
 
 .PHONY: help
 help:
@@ -22,13 +22,13 @@ build: bin/gogo-gb
 
 .PHONY: clean
 clean:
+	go clean
 	rm -f bin/gogo-gb
 
 .PHONY: run
 run:
 	go run .
 
-bin/gogo-gb: $(SRCS)
+.PHONY: bin/gogo-gb # This does exist, but we're not tracking its dependencies. Go is
+bin/gogo-gb:
 	go build -o bin/gogo-gb .
-
-all: build
