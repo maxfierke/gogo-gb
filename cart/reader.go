@@ -84,6 +84,11 @@ func (cr *Reader) readHeader() (hdr Header, err error) {
 	return hdr, nil
 }
 
+// Read implements io.Reader, reading cartridge ROM bytes from its underlying Reader.
+func (cr *Reader) Read(p []byte) (n int, err error) {
+	return cr.r.Read(p)
+}
+
 // Close closes the Reader. It does not close the underlying io.Reader.
 // In order for the cart checksum to be verified, the reader must be
 // fully consumed until the io.EOF.
