@@ -107,7 +107,7 @@ func (cpu *CPU) Execute(inst *isa.Instruction) uint16 {
 		return cpu.jump(cpu.Reg.F.Carry)
 	case 0xE9:
 		// JP HL
-		return cpu.PC.Read() + cpu.Reg.HL.Read()
+		return cpu.Reg.HL.Read()
 	default:
 		log.Fatalf("Unimplemented instruction 0x%X %s", inst.Addr, opcode)
 	}
@@ -197,10 +197,7 @@ func isHalfCarry16(aVal uint16, bVal uint16) bool {
 
 func (cpu *CPU) jump(should_jump bool) uint16 {
 	if should_jump {
-		// A little endianness conversion...
-		lsb := uint16(cpu.mmu.Read8(cpu.PC.Read() + 1))
-		msb := uint16(cpu.mmu.Read8(cpu.PC.Read() + 2))
-		return msb<<8 | lsb
+		return cpu.mmu.Read16(cpu.PC.Read() + 1)
 	} else {
 		// All JP instructions are 3 bytes except 0xE9 (JP HL), which is handled separately
 		return cpu.PC.Read() + 3

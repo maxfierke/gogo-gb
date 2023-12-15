@@ -22,6 +22,12 @@ func assertFlags(t *testing.T, cpu *CPU, zero bool, subtract bool, halfCarry boo
 	}
 }
 
+func assertNextPC(t *testing.T, nextPC uint16, expectedNextPC uint16) {
+	if nextPC != expectedNextPC {
+		t.Errorf("Expected next PC value to be 0x%X, but got 0x%X", expectedNextPC, nextPC)
+	}
+}
+
 func TestExecuteAdd8NonOverflowingTargetA(t *testing.T) {
 	cpu, _ := NewCpu()
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x87, false)
@@ -110,6 +116,127 @@ func TestExecuteAdd16TargetDECarry(t *testing.T) {
 
 	assertRegEquals(t, cpu.Reg.HL.Read(), 0x0100)
 	assertFlags(t, cpu, false, false, true, true)
+}
+
+func TestExecuteJump(t *testing.T) {
+	cpu, _ := NewCpu()
+	cpu.PC.Write(0xF8)
+
+	cpu.mmu.Write8(0xF9, 0xFC)
+	cpu.mmu.Write8(0xFA, 0x02)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC3, false)
+
+	expectedNextPC := uint16(0x02FC)
+	nextPC := cpu.Execute(inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteJumpZero(t *testing.T) {
+	cpu, _ := NewCpu()
+	cpu.PC.Write(0xF8)
+	cpu.Reg.F.Zero = true
+
+	cpu.mmu.Write8(0xF9, 0xFC)
+	cpu.mmu.Write8(0xFA, 0x02)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xCA, false)
+
+	expectedNextPC := uint16(0x02FC)
+	nextPC := cpu.Execute(inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteJumpCarry(t *testing.T) {
+	cpu, _ := NewCpu()
+	cpu.PC.Write(0xF8)
+	cpu.Reg.F.Carry = true
+
+	cpu.mmu.Write8(0xF9, 0xFC)
+	cpu.mmu.Write8(0xFA, 0x02)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xDA, false)
+
+	expectedNextPC := uint16(0x02FC)
+	nextPC := cpu.Execute(inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteNoJumpCarry(t *testing.T) {
+	cpu, _ := NewCpu()
+	cpu.PC.Write(0xF8)
+	cpu.Reg.F.Carry = true
+
+	cpu.mmu.Write8(0xF9, 0xFC)
+	cpu.mmu.Write8(0xFA, 0x02)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD2, false)
+
+	expectedNextPC := uint16(0xFB)
+	nextPC := cpu.Execute(inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteNoJumpNoCarry(t *testing.T) {
+	cpu, _ := NewCpu()
+	cpu.PC.Write(0xF8)
+
+	cpu.mmu.Write8(0xF9, 0xFC)
+	cpu.mmu.Write8(0xFA, 0x02)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xDA, false)
+
+	expectedNextPC := uint16(0xFB)
+	nextPC := cpu.Execute(inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteJumpNoZero(t *testing.T) {
+	cpu, _ := NewCpu()
+	cpu.PC.Write(0xF8)
+
+	cpu.mmu.Write8(0xF9, 0xFC)
+	cpu.mmu.Write8(0xFA, 0x02)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC2, false)
+
+	expectedNextPC := uint16(0x02FC)
+	nextPC := cpu.Execute(inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteJumpNoCarry(t *testing.T) {
+	cpu, _ := NewCpu()
+	cpu.PC.Write(0xF8)
+
+	cpu.mmu.Write8(0xF9, 0xFC)
+	cpu.mmu.Write8(0xFA, 0x02)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD2, false)
+
+	expectedNextPC := uint16(0x02FC)
+	nextPC := cpu.Execute(inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteJumpHL(t *testing.T) {
+	cpu, _ := NewCpu()
+	cpu.PC.Write(0xF8)
+	cpu.Reg.HL.Write(0x02FC)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xE9, false)
+
+	expectedNextPC := uint16(0x02FC)
+	nextPC := cpu.Execute(inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
 }
 
 func TestCPUReset(t *testing.T) {
