@@ -128,7 +128,7 @@ func TestExecuteJump(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC3, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC := cpu.Execute(inst)
+	nextPC, _ := cpu.Execute(inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -144,7 +144,7 @@ func TestExecuteJumpZero(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xCA, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC := cpu.Execute(inst)
+	nextPC, _ := cpu.Execute(inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -160,7 +160,7 @@ func TestExecuteJumpCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xDA, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC := cpu.Execute(inst)
+	nextPC, _ := cpu.Execute(inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -176,7 +176,7 @@ func TestExecuteNoJumpCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD2, false)
 
 	expectedNextPC := uint16(0xFB)
-	nextPC := cpu.Execute(inst)
+	nextPC, _ := cpu.Execute(inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -191,7 +191,7 @@ func TestExecuteNoJumpNoCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xDA, false)
 
 	expectedNextPC := uint16(0xFB)
-	nextPC := cpu.Execute(inst)
+	nextPC, _ := cpu.Execute(inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -206,7 +206,7 @@ func TestExecuteJumpNoZero(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC2, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC := cpu.Execute(inst)
+	nextPC, _ := cpu.Execute(inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -221,7 +221,7 @@ func TestExecuteJumpNoCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD2, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC := cpu.Execute(inst)
+	nextPC, _ := cpu.Execute(inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -234,7 +234,7 @@ func TestExecuteJumpHL(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xE9, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC := cpu.Execute(inst)
+	nextPC, _ := cpu.Execute(inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }

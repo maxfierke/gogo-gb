@@ -18,7 +18,7 @@ type CPU struct {
 
 func (cpu *CPU) Step() {
 	inst := cpu.fetchAndDecode()
-	nextPc := cpu.Execute(inst)
+	nextPc, _ := cpu.Execute(inst)
 
 	cpu.PC.Write(nextPc)
 }
@@ -48,7 +48,7 @@ func (cpu *CPU) fetchAndDecode() *isa.Instruction {
 	return inst
 }
 
-func (cpu *CPU) Execute(inst *isa.Instruction) uint16 {
+func (cpu *CPU) Execute(inst *isa.Instruction) (nextPC uint16, cycles uint8) {
 	opcode := inst.Opcode
 
 	switch opcode.Addr {
@@ -92,27 +92,27 @@ func (cpu *CPU) Execute(inst *isa.Instruction) uint16 {
 		cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
 	case 0xC2:
 		// JP NZ, a16
-		return cpu.jump(!cpu.Reg.F.Zero)
+		return cpu.jump(opcode, !cpu.Reg.F.Zero)
 	case 0xC3:
 		// JP a16
-		return cpu.jump(true)
+		return cpu.jump(opcode, true)
 	case 0xCA:
 		// JP Z, a16
-		return cpu.jump(cpu.Reg.F.Zero)
+		return cpu.jump(opcode, cpu.Reg.F.Zero)
 	case 0xD2:
 		// JP NC, a16
-		return cpu.jump(!cpu.Reg.F.Carry)
+		return cpu.jump(opcode, !cpu.Reg.F.Carry)
 	case 0xDA:
 		// JP C, a16
-		return cpu.jump(cpu.Reg.F.Carry)
+		return cpu.jump(opcode, cpu.Reg.F.Carry)
 	case 0xE9:
 		// JP HL
-		return cpu.Reg.HL.Read()
+		return cpu.Reg.HL.Read(), uint8(opcode.Cycles[0])
 	default:
-		log.Fatalf("Unimplemented instruction 0x%X %s", inst.Addr, opcode)
+		log.Fatalf("Unimplemented instruction @ 0x%X: %s", inst.Addr, opcode)
 	}
 
-	return cpu.PC.Read() + uint16(inst.Opcode.Bytes)
+	return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[0])
 }
 
 func NewCpu() (*CPU, error) {
@@ -169,13 +169,6 @@ func (cpu *CPU) add8(reg RWByte, value uint8) uint8 {
 	return newValue
 }
 
-// Did the aVal carry over from the lower half of the byte to the upper half?
-func isHalfCarry8(aVal uint8, bVal uint8) bool {
-	fourBitMask := uint8(0xF)
-	bitFourMask := uint8(0x10)
-	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFourMask) == bitFourMask
-}
-
 func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	newValue := reg.Read() + value
 	reg.Write(newValue)
@@ -188,18 +181,24 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	return newValue
 }
 
+func (cpu *CPU) jump(opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+	if should_jump {
+		return cpu.mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0])
+	} else {
+		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
+	}
+}
+
+// Did the aVal carry over from the lower half of the byte to the upper half?
+func isHalfCarry8(aVal uint8, bVal uint8) bool {
+	fourBitMask := uint8(0xF)
+	bitFourMask := uint8(0x10)
+	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFourMask) == bitFourMask
+}
+
 // Did the aVal carry over from the lower half of the word to the upper half?
 func isHalfCarry16(aVal uint16, bVal uint16) bool {
 	twelveBitMask := uint16(0xFFFF)
 	bitTwelveMask := uint16(0x1000)
 	return (((aVal & twelveBitMask) + (bVal & twelveBitMask)) & bitTwelveMask) == bitTwelveMask
-}
-
-func (cpu *CPU) jump(should_jump bool) uint16 {
-	if should_jump {
-		return cpu.mmu.Read16(cpu.PC.Read() + 1)
-	} else {
-		// All JP instructions are 3 bytes except 0xE9 (JP HL), which is handled separately
-		return cpu.PC.Read() + 3
-	}
 }
