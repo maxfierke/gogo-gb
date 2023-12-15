@@ -24,7 +24,7 @@ func assertFlags(t *testing.T, cpu *CPU, zero bool, subtract bool, halfCarry boo
 
 func TestExecuteAdd8NonOverflowingTargetA(t *testing.T) {
 	cpu, _ := NewCpu()
-	inst, _ := cpu.opcodes.InstructionFromByte(0x87, false)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x87, false)
 
 	cpu.Reg.A.Write(0x7)
 
@@ -36,7 +36,7 @@ func TestExecuteAdd8NonOverflowingTargetA(t *testing.T) {
 
 func TestExecuteAdd8NonOverflowingTargetC(t *testing.T) {
 	cpu, _ := NewCpu()
-	inst, _ := cpu.opcodes.InstructionFromByte(0x81, false)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x81, false)
 
 	cpu.Reg.A.Write(0x7)
 	cpu.Reg.C.Write(0x3)
@@ -49,7 +49,7 @@ func TestExecuteAdd8NonOverflowingTargetC(t *testing.T) {
 
 func TestExecuteAdd8NonOverflowingTargetCWithCarry(t *testing.T) {
 	cpu, _ := NewCpu()
-	inst, _ := cpu.opcodes.InstructionFromByte(0x81, false)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x81, false)
 
 	cpu.Reg.A.Write(0x7)
 	cpu.Reg.C.Write(0x3)
@@ -63,7 +63,7 @@ func TestExecuteAdd8NonOverflowingTargetCWithCarry(t *testing.T) {
 
 func TestExecuteAdd8TargetBCarry(t *testing.T) {
 	cpu, _ := NewCpu()
-	inst, _ := cpu.opcodes.InstructionFromByte(0x80, false)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x80, false)
 
 	cpu.Reg.A.Write(0xFC)
 	cpu.Reg.B.Write(0x9)
@@ -76,7 +76,7 @@ func TestExecuteAdd8TargetBCarry(t *testing.T) {
 
 func TestExecuteAdd16TargetHL(t *testing.T) {
 	cpu, _ := NewCpu()
-	inst, _ := cpu.opcodes.InstructionFromByte(0x29, false)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x29, false)
 
 	cpu.Reg.HL.Write(0x2331)
 
@@ -88,7 +88,7 @@ func TestExecuteAdd16TargetHL(t *testing.T) {
 
 func TestExecuteAdd16TargetBCHalfCarry(t *testing.T) {
 	cpu, _ := NewCpu()
-	inst, _ := cpu.opcodes.InstructionFromByte(0x09, false)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x09, false)
 
 	cpu.Reg.HL.Write(0x0300)
 	cpu.Reg.BC.Write(0x0700)
@@ -101,7 +101,7 @@ func TestExecuteAdd16TargetBCHalfCarry(t *testing.T) {
 
 func TestExecuteAdd16TargetDECarry(t *testing.T) {
 	cpu, _ := NewCpu()
-	inst, _ := cpu.opcodes.InstructionFromByte(0x19, false)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x19, false)
 
 	cpu.Reg.HL.Write(0xF110)
 	cpu.Reg.DE.Write(0x0FF0)

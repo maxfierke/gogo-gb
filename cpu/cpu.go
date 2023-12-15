@@ -25,21 +25,23 @@ func (cpu *CPU) Step() {
 
 func (cpu *CPU) fetchAndDecode() *isa.Instruction {
 	// Fetch :)
-	opcodeByte := cpu.mmu.Read8(cpu.PC.Read())
+	addr := cpu.PC.Read()
+	opcodeByte := cpu.mmu.Read8(addr)
 	prefixed := opcodeByte == 0xCB
 
 	if prefixed {
-		opcodeByte = cpu.mmu.Read8(cpu.PC.Read() + 1)
+		addr += 1
+		opcodeByte = cpu.mmu.Read8(addr)
 	}
 
 	// Decode :D
-	inst, exist := cpu.opcodes.InstructionFromByte(opcodeByte, prefixed)
+	inst, exist := cpu.opcodes.InstructionFromByte(addr, opcodeByte, prefixed)
 
 	if !exist {
 		if prefixed {
-			log.Fatalf("Unimplemented instruction found: 0xCB%X", opcodeByte)
+			log.Fatalf("Unimplemented instruction found @ 0x%x: 0xCB%X", addr, opcodeByte)
 		} else {
-			log.Fatalf("Unimplemented instruction found: 0x%X", opcodeByte)
+			log.Fatalf("Unimplemented instruction found @ 0x%x: 0x%X", addr, opcodeByte)
 		}
 	}
 
