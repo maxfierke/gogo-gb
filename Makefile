@@ -29,6 +29,10 @@ clean:
 run:
 	go run .
 
+.PHONY: test
+test:
+	go test -v ./...
+
 .PHONY: bin/gogo-gb # This does exist, but we're not tracking its dependencies. Go is
 bin/gogo-gb:
 	go build -o bin/gogo-gb .
