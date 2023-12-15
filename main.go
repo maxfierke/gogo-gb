@@ -17,11 +17,6 @@ func main() {
 	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. Currently just 'cart-header', 'opcodes'")
 	flag.Parse()
 
-	opcodes, err := isa.LoadOpcodes()
-	if err != nil {
-		log.Fatalf("Unable to load opcodes: %v\n", err)
-	}
-
 	if debugPrintPtr != nil {
 		if *debugPrintPtr == "cart-header" {
 			cartFile, err := os.Open(*cartPath)
@@ -41,6 +36,11 @@ func main() {
 		}
 
 		if *debugPrintPtr == "opcodes" {
+			opcodes, err := isa.LoadOpcodes()
+			if err != nil {
+				log.Fatalf("Unable to load opcodes: %v\n", err)
+			}
+
 			opcodes.DebugPrint()
 		}
 	}
