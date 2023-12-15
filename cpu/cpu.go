@@ -113,7 +113,7 @@ func (cpu *CPU) Execute(inst *isa.Instruction) uint16 {
 	return cpu.PC.Read() + uint16(inst.Opcode.Bytes)
 }
 
-func NewCpu() *CPU {
+func NewCpu() (*CPU, error) {
 	cpu := new(CPU)
 	cpu.Reg = NewRegisters()
 	cpu.PC = &Register[uint16]{name: "PC", value: 0x0000}
@@ -121,7 +121,14 @@ func NewCpu() *CPU {
 
 	cpu.mmu = mem.NewMMU()
 
-	return cpu
+	opcodes, err := isa.LoadOpcodes()
+	if err != nil {
+		return nil, err
+	}
+
+	cpu.opcodes = opcodes
+
+	return cpu, nil
 }
 
 func (cpu *CPU) Reset() {
@@ -148,42 +155,42 @@ func (cpu *CPU) ResetToBootROM() {
 }
 
 func (cpu *CPU) add8(reg RWByte, value uint8) uint8 {
-	newValue, didCarry := overflowingAdd8(reg.Read(), value)
+	oldValue := reg.Read()
+	newValue := oldValue + value
 	reg.Write(newValue)
 
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = false
-	cpu.Reg.F.Carry = didCarry
-
-	// Did the newValue carry over from the lower half of the byte to the upper half?
-	cpu.Reg.F.HalfCarry = (newValue&0xF)+(value&0xF) > 0xF
+	cpu.Reg.F.Carry = newValue < oldValue
+	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, value)
 
 	return newValue
+}
+
+// Did the aVal carry over from the lower half of the byte to the upper half?
+func isHalfCarry8(aVal uint8, bVal uint8) bool {
+	fourBitMask := uint8(0xF)
+	bitFourMask := uint8(0x10)
+	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFourMask) == bitFourMask
 }
 
 func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
-	newValue, didCarry := overflowingAdd16(reg.Read(), value)
+	newValue := reg.Read() + value
 	reg.Write(newValue)
 
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = false
-	cpu.Reg.F.Carry = didCarry
-
-	// Did the newValue carry over from the lower byte to the upper byte?
-	cpu.Reg.F.HalfCarry = (newValue&0xFFF)+(value&0xFFF) > 0xFFF
+	cpu.Reg.F.Carry = newValue < value
+	cpu.Reg.F.HalfCarry = isHalfCarry16(newValue, value)
 
 	return newValue
 }
 
-// Are these necessary?
-func overflowingAdd8(x, y uint8) (uint8, bool) {
-	sum16 := uint16(x) + uint16(y)
-	return x + y, uint8(sum16>>7) == 1
-}
-
-func overflowingAdd16(x, y uint16) (uint16, bool) {
-	sum32 := uint32(x) + uint32(y)
-	return x + y, uint16(sum32>>15) == 1
+// Did the aVal carry over from the lower half of the word to the upper half?
+func isHalfCarry16(aVal uint16, bVal uint16) bool {
+	twelveBitMask := uint16(0xFFFF)
+	bitTwelveMask := uint16(0x1000)
+	return (((aVal & twelveBitMask) + (bVal & twelveBitMask)) & bitTwelveMask) == bitTwelveMask
 }
 
 func (cpu *CPU) jump(should_jump bool) uint16 {
