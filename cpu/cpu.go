@@ -11,27 +11,26 @@ type CPU struct {
 	Reg Registers
 	PC  *Register[uint16]
 	SP  *Register[uint16]
-	mmu *mem.MMU
 
 	opcodes *isa.Opcodes
 }
 
-func (cpu *CPU) Step() {
-	inst := cpu.fetchAndDecode()
-	nextPc, _ := cpu.Execute(inst)
+func (cpu *CPU) Step(mmu *mem.MMU) {
+	inst := cpu.fetchAndDecode(mmu)
+	nextPc, _ := cpu.Execute(mmu, inst)
 
 	cpu.PC.Write(nextPc)
 }
 
-func (cpu *CPU) fetchAndDecode() *isa.Instruction {
+func (cpu *CPU) fetchAndDecode(mmu *mem.MMU) *isa.Instruction {
 	// Fetch :)
 	addr := cpu.PC.Read()
-	opcodeByte := cpu.mmu.Read8(addr)
+	opcodeByte := mmu.Read8(addr)
 	prefixed := opcodeByte == 0xCB
 
 	if prefixed {
 		addr += 1
-		opcodeByte = cpu.mmu.Read8(addr)
+		opcodeByte = mmu.Read8(addr)
 	}
 
 	// Decode :D
@@ -48,7 +47,7 @@ func (cpu *CPU) fetchAndDecode() *isa.Instruction {
 	return inst
 }
 
-func (cpu *CPU) Execute(inst *isa.Instruction) (nextPC uint16, cycles uint8) {
+func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cycles uint8) {
 	opcode := inst.Opcode
 
 	switch opcode.Addr {
@@ -86,25 +85,25 @@ func (cpu *CPU) Execute(inst *isa.Instruction) (nextPC uint16, cycles uint8) {
 		cpu.add8(cpu.Reg.A, cpu.Reg.L.Read())
 	case 0x86:
 		// ADD A, (HL)
-		cpu.add8(cpu.Reg.A, cpu.mmu.Read8(cpu.Reg.HL.Read()))
+		cpu.add8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()))
 	case 0x87:
 		// ADD A, A
 		cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
 	case 0xC2:
 		// JP NZ, a16
-		return cpu.jump(opcode, !cpu.Reg.F.Zero)
+		return cpu.jump(mmu, opcode, !cpu.Reg.F.Zero)
 	case 0xC3:
 		// JP a16
-		return cpu.jump(opcode, true)
+		return cpu.jump(mmu, opcode, true)
 	case 0xCA:
 		// JP Z, a16
-		return cpu.jump(opcode, cpu.Reg.F.Zero)
+		return cpu.jump(mmu, opcode, cpu.Reg.F.Zero)
 	case 0xD2:
 		// JP NC, a16
-		return cpu.jump(opcode, !cpu.Reg.F.Carry)
+		return cpu.jump(mmu, opcode, !cpu.Reg.F.Carry)
 	case 0xDA:
 		// JP C, a16
-		return cpu.jump(opcode, cpu.Reg.F.Carry)
+		return cpu.jump(mmu, opcode, cpu.Reg.F.Carry)
 	case 0xE9:
 		// JP HL
 		return cpu.Reg.HL.Read(), uint8(opcode.Cycles[0])
@@ -115,13 +114,11 @@ func (cpu *CPU) Execute(inst *isa.Instruction) (nextPC uint16, cycles uint8) {
 	return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[0])
 }
 
-func NewCpu() (*CPU, error) {
+func NewCPU() (*CPU, error) {
 	cpu := new(CPU)
 	cpu.Reg = NewRegisters()
 	cpu.PC = &Register[uint16]{name: "PC", value: 0x0000}
 	cpu.SP = &Register[uint16]{name: "SP", value: 0x0000}
-
-	cpu.mmu = mem.NewMMU()
 
 	opcodes, err := isa.LoadOpcodes()
 	if err != nil {
@@ -138,7 +135,7 @@ func (cpu *CPU) Reset() {
 	cpu.PC.Write(0x0000)
 	cpu.SP.Write(0x0000)
 
-	// TODO: Reset memory, interrupts, etc.
+	// TODO: Reset interrupts, etc.
 }
 
 // Reset CPU and registers to post-boot ROM state
@@ -181,9 +178,9 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	return newValue
 }
 
-func (cpu *CPU) jump(opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
 	if should_jump {
-		return cpu.mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0])
+		return mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0])
 	} else {
 		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
 	}
