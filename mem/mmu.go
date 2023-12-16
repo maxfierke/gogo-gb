@@ -14,9 +14,46 @@ type MMUHandler struct {
 	handler MemHandler
 }
 
+type MemRead struct {
+	replacement byte
+	passthrough bool
+}
+
+func ReadReplace(replacement byte) MemRead {
+	return MemRead{
+		replacement: replacement,
+		passthrough: false,
+	}
+}
+
+func ReadPassthrough() MemRead {
+	return MemRead{
+		replacement: 0x00,
+		passthrough: true,
+	}
+}
+
+type MemWrite struct {
+	replacement byte
+	passthrough bool
+	blocked     bool
+}
+
+func WriteReplacement(value byte) MemWrite {
+	return MemWrite{replacement: value, passthrough: false, blocked: false}
+}
+
+func WritePassthrough() MemWrite {
+	return MemWrite{replacement: 0x00, passthrough: true, blocked: false}
+}
+
+func WriteBlocked() MemWrite {
+	return MemWrite{replacement: 0x00, passthrough: false, blocked: true}
+}
+
 type MemHandler interface {
-	OnRead(mmu *MMU, addr uint16) (replacement byte, passthrough bool)
-	OnWrite(mmu *MMU, addr uint16, value byte) (replacement byte, passthrough bool, block bool)
+	OnRead(mmu *MMU, addr uint16) MemRead
+	OnWrite(mmu *MMU, addr uint16, value byte) MemWrite
 }
 
 type MemHandlerHandle struct {
@@ -96,10 +133,10 @@ func (mmu *MMU) Read8(addr uint16) byte {
 		for i := 0; i < len(addrHandlers); i++ {
 			handler := addrHandlers[i]
 
-			replacement, passthrough := handler.handler.OnRead(mmu, addr)
+			memread := handler.handler.OnRead(mmu, addr)
 
-			if !passthrough {
-				return replacement
+			if !memread.passthrough {
+				return memread.replacement
 			}
 		}
 	}
@@ -116,14 +153,14 @@ func (mmu *MMU) Write8(addr uint16, value byte) {
 		for i := 0; i < len(addrHandlers); i++ {
 			handler := addrHandlers[i]
 
-			replacement, passthrough, block := handler.handler.OnWrite(mmu, addr, value)
+			memwrite := handler.handler.OnWrite(mmu, addr, value)
 
-			if block {
+			if memwrite.blocked {
 				return
 			}
 
-			if !passthrough {
-				mmu.ram[addr] = replacement
+			if !memwrite.passthrough {
+				mmu.ram[addr] = memwrite.replacement
 				return
 			}
 		}
