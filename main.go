@@ -8,6 +8,7 @@ import (
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu/isa"
+	"github.com/maxfierke/gogo-gb/hardware"
 )
 
 func main() {
@@ -17,7 +18,7 @@ func main() {
 	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. Currently just 'cart-header', 'opcodes'")
 	flag.Parse()
 
-	if debugPrintPtr != nil {
+	if debugPrintPtr != nil && *debugPrintPtr != "" {
 		if *debugPrintPtr == "cart-header" {
 			cartFile, err := os.Open(*cartPath)
 			if *cartPath == "" || err != nil {
@@ -43,5 +44,33 @@ func main() {
 
 			opcodes.DebugPrint()
 		}
+	} else {
+		dmg, err := hardware.NewDMG()
+		if err != nil {
+			log.Fatalf("Unable to initialize DMG: %v\n", err)
+		}
+
+		cartFile, err := os.Open(*cartPath)
+		if *cartPath == "" || err != nil {
+			log.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (exists): %v\n", err)
+		}
+		defer cartFile.Close()
+
+		cartReader, err := cart.NewReader(cartFile)
+		if err == cart.ErrHeader {
+			log.Printf("Warning: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
+		} else if err != nil {
+			log.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (exists): %v\n", err)
+		}
+
+		err = dmg.LoadCartridge(cartReader)
+		if err == cart.ErrHeader {
+			log.Printf("Warning: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
+		} else if err != nil {
+			log.Fatalf("Unable to load cartridge: %v\n", err)
+		}
+
+		log.Println("Loaded cartridge successfully")
+		dmg.DebugPrint()
 	}
 }
