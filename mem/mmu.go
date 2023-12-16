@@ -1,7 +1,5 @@
 package mem
 
-const RAMSize = 0xFFFF
-
 type MMU struct {
 	ram           []byte
 	handleCounter uint
@@ -39,7 +37,7 @@ type MemWrite struct {
 	blocked     bool
 }
 
-func WriteReplacement(value byte) MemWrite {
+func WriteReplace(value byte) MemWrite {
 	return MemWrite{replacement: value, passthrough: false, blocked: false}
 }
 
@@ -47,7 +45,7 @@ func WritePassthrough() MemWrite {
 	return MemWrite{replacement: 0x00, passthrough: true, blocked: false}
 }
 
-func WriteBlocked() MemWrite {
+func WriteBlock() MemWrite {
 	return MemWrite{replacement: 0x00, passthrough: false, blocked: true}
 }
 
@@ -65,16 +63,16 @@ type MemRegion struct {
 	End   uint16
 }
 
-type MemAddressable interface {
+type MemBus interface {
 	Read8(addr uint16) byte
 	Write8(addr uint16, value byte)
 	Read16(addr uint16) uint16
 	Write16(addr uint16, value uint16)
 }
 
-func NewMMU() *MMU {
+func NewMMU(ram []byte) *MMU {
 	return &MMU{
-		ram:           make([]byte, RAMSize),
+		ram:           ram,
 		handleCounter: 0,
 		handles:       map[MemHandlerHandle]MemRegion{},
 		handlers:      map[uint16][]MMUHandler{},

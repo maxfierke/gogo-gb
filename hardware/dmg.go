@@ -1,4 +1,4 @@
-package dmg
+package hardware
 
 import (
 	"github.com/maxfierke/gogo-gb/cpu"
@@ -16,7 +16,8 @@ func NewDMG() (*DMG, error) {
 		return nil, err
 	}
 
-	mmu := mem.NewMMU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
 
 	return &DMG{
 		cpu: cpu,
