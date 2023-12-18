@@ -24,9 +24,13 @@ func NewCartridge(r *Reader) (*Cartridge, error) {
 	rom := make([]byte, r.Header.RomSizeBytes())
 	copy(rom, r.headerBuf[:])
 
+	ram := make([]byte, r.Header.RamSizeBytes())
+
 	switch r.Header.CartType {
 	case CART_TYPE_MBC0:
 		cartridge.mbc = mbc.NewMBC0(rom)
+	case CART_TYPE_MBC5, CART_TYPE_MBC5_RAM, CART_TYPE_MBC5_RAM_BAT:
+		cartridge.mbc = mbc.NewMBC5(rom, ram)
 	default:
 		return nil, fmt.Errorf("unsupported or unknown MBC type: %s", r.Header.CartTypeName())
 	}

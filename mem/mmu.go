@@ -63,6 +63,14 @@ type MemRegion struct {
 	End   uint16
 }
 
+func (region *MemRegion) Contains(addr uint16, exclusive bool) bool {
+	if exclusive {
+		return region.Start >= addr && addr < region.End
+	} else {
+		return region.Start >= addr && addr <= region.End
+	}
+}
+
 type MemBus interface {
 	Read8(addr uint16) byte
 	Write8(addr uint16, value byte)

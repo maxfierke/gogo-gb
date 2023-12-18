@@ -6,11 +6,9 @@ import (
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
-const (
-	mbc0_rom_bank_start = 0x0000
-	mbc0_rom_bank_end   = 0x7FFF
-	mbc0_ram_bank_start = 0xA000
-	mbc0_ram_bank_end   = 0xBFFF
+var (
+	mbc0_rom_bank = mem.MemRegion{Start: 0x0000, End: 0x7FFF}
+	mbc0_ram_bank = mem.MemRegion{Start: 0xA000, End: 0xBFFF}
 )
 
 type MBC0 struct {
@@ -22,7 +20,7 @@ func NewMBC0(rom []byte) *MBC0 {
 }
 
 func (m *MBC0) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	if addr <= mbc0_rom_bank_end {
+	if addr <= mbc0_rom_bank.End {
 		return mem.ReadReplace(m.rom[addr])
 	}
 
@@ -30,12 +28,12 @@ func (m *MBC0) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 }
 
 func (m *MBC0) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
-	if addr <= mbc0_rom_bank_end {
+	if addr <= mbc0_rom_bank.End {
 		// Put the Read-Only in ROM
 		return mem.WriteBlock()
 	}
 
-	if addr >= mbc0_ram_bank_start && addr <= mbc0_ram_bank_end {
+	if mbc0_ram_bank.Contains(addr, false) {
 		// RAM is RAM and this is a fake cartridge, so...
 		return mem.WritePassthrough()
 	}
