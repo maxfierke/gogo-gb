@@ -27,6 +27,8 @@ func NewDMG() (*DMG, error) {
 	ram := make([]byte, 0xFFFF)
 	mmu := mem.NewMMU(ram)
 
+	cpu.ResetToBootROM() // TODO: Load an actual boot ROOM
+
 	return &DMG{
 		cpu: cpu,
 		mmu: mmu,
@@ -53,5 +55,17 @@ func (dmg *DMG) LoadCartridge(r *cart.Reader) error {
 func (dmg *DMG) DebugPrint() {
 	if dmg.cartridge != nil {
 		dmg.cartridge.DebugPrint()
+	}
+}
+
+func (dmg *DMG) Step() bool {
+	dmg.cpu.Step(dmg.mmu)
+
+	return true
+}
+
+func (dmg *DMG) Run() {
+	for dmg.Step() {
+
 	}
 }

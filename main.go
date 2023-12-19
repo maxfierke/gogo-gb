@@ -72,5 +72,6 @@ func main() {
 
 		log.Println("Loaded cartridge successfully")
 		dmg.DebugPrint()
+		dmg.Run()
 	}
 }

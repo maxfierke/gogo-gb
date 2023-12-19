@@ -15,11 +15,13 @@ type CPU struct {
 	opcodes *isa.Opcodes
 }
 
-func (cpu *CPU) Step(mmu *mem.MMU) {
+func (cpu *CPU) Step(mmu *mem.MMU) uint8 {
 	inst := cpu.fetchAndDecode(mmu)
-	nextPc, _ := cpu.Execute(mmu, inst)
+	nextPc, cycles := cpu.Execute(mmu, inst)
 
 	cpu.PC.Write(nextPc)
+
+	return cycles
 }
 
 func (cpu *CPU) fetchAndDecode(mmu *mem.MMU) *isa.Instruction {
