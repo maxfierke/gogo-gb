@@ -29,6 +29,8 @@ func NewCartridge(r *Reader) (*Cartridge, error) {
 	switch r.Header.CartType {
 	case CART_TYPE_MBC0:
 		cartridge.mbc = mbc.NewMBC0(rom)
+	case CART_TYPE_MBC1, CART_TYPE_MBC1_RAM, CART_TYPE_MBC1_RAM_BAT:
+		cartridge.mbc = mbc.NewMBC1(rom, ram)
 	case CART_TYPE_MBC5, CART_TYPE_MBC5_RAM, CART_TYPE_MBC5_RAM_BAT:
 		cartridge.mbc = mbc.NewMBC5(rom, ram)
 	default:
