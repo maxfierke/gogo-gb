@@ -259,6 +259,29 @@ func TestExecuteJumpHL(t *testing.T) {
 	assertNextPC(t, nextPC, expectedNextPC)
 }
 
+func TestExecutePushPop(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.B.Write(0x4)
+	cpu.Reg.C.Write(0x89)
+	cpu.SP.Write(0x10)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC5, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xF), 0x4)
+	assertRegEquals(t, mmu.Read8(0xE), 0x89)
+	assertRegEquals(t, cpu.SP.Read(), 0xE)
+
+	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD1, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.Reg.D.Read(), 0x04)
+	assertRegEquals(t, cpu.Reg.E.Read(), 0x89)
+}
+
 func TestCPUReset(t *testing.T) {
 	cpu, _ := NewCPU()
 

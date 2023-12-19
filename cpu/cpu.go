@@ -91,24 +91,48 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x87:
 		// ADD A, A
 		cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
+	case 0xC1:
+		// POP BC
+		cpu.Reg.BC.Write(cpu.pop(mmu))
 	case 0xC2:
 		// JP NZ, a16
 		return cpu.jump(mmu, opcode, !cpu.Reg.F.Zero)
 	case 0xC3:
 		// JP a16
 		return cpu.jump(mmu, opcode, true)
+	case 0xC5:
+		// PUSH BC
+		cpu.push(mmu, cpu.Reg.BC.Read())
 	case 0xCA:
 		// JP Z, a16
 		return cpu.jump(mmu, opcode, cpu.Reg.F.Zero)
+	case 0xD1:
+		// POP DE
+		cpu.Reg.DE.Write(cpu.pop(mmu))
 	case 0xD2:
 		// JP NC, a16
 		return cpu.jump(mmu, opcode, !cpu.Reg.F.Carry)
+	case 0xD5:
+		// PUSH DE
+		cpu.push(mmu, cpu.Reg.DE.Read())
 	case 0xDA:
 		// JP C, a16
 		return cpu.jump(mmu, opcode, cpu.Reg.F.Carry)
+	case 0xE1:
+		// POP HL
+		cpu.Reg.HL.Write(cpu.pop(mmu))
+	case 0xE5:
+		// PUSH HL
+		cpu.push(mmu, cpu.Reg.HL.Read())
 	case 0xE9:
 		// JP HL
 		return cpu.Reg.HL.Read(), uint8(opcode.Cycles[0])
+	case 0xF1:
+		// POP AF
+		cpu.Reg.AF.Write(cpu.pop(mmu))
+	case 0xF5:
+		// PUSH AF
+		cpu.push(mmu, cpu.Reg.AF.Read())
 	default:
 		log.Fatalf("Unimplemented instruction @ 0x%X: %s", inst.Addr, opcode)
 	}
@@ -186,6 +210,17 @@ func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC
 	} else {
 		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
 	}
+}
+
+func (cpu *CPU) pop(mmu *mem.MMU) uint16 {
+	value := mmu.Read16(cpu.SP.Read())
+	cpu.SP.Inc(2)
+	return value
+}
+
+func (cpu *CPU) push(mmu *mem.MMU, value uint16) {
+	cpu.SP.Dec(2)
+	mmu.Write16(cpu.SP.Read(), value)
 }
 
 // Did the aVal carry over from the lower half of the byte to the upper half?
