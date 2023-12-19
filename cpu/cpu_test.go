@@ -282,6 +282,24 @@ func TestExecutePushPop(t *testing.T) {
 	assertRegEquals(t, cpu.Reg.E.Read(), 0x89)
 }
 
+func TestExecuteRst(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.PC.Write(0x100)
+	cpu.SP.Write(0x10)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xFF, false)
+
+	expectedNextPC := uint16(0x38)
+	nextPC, _ := cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read16(0x0E), 0x101)
+	assertRegEquals(t, cpu.SP.Read(), 0x0E)
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
 func TestCPUReset(t *testing.T) {
 	cpu, _ := NewCPU()
 
