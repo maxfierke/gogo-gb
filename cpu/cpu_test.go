@@ -122,6 +122,85 @@ func TestExecuteAdd16TargetDECarry(t *testing.T) {
 	assertFlags(t, cpu, false, false, true, true)
 }
 
+func TestExecuteInc8(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3C, false)
+
+	cpu.Reg.A.Write(0x7)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x8)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteInc8HalfCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3C, false)
+
+	cpu.Reg.A.Write(0xF)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x10)
+	assertFlags(t, cpu, false, false, true, false)
+}
+
+func TestExecuteInc8Overflow(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3C, false)
+
+	cpu.Reg.A.Write(0xFF)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x00)
+	assertFlags(t, cpu, true, false, true, false)
+}
+
+func TestExecuteInc16ByteOverflow(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x03, false)
+
+	cpu.Reg.BC.Write(0xFF)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.BC.Read(), 0x100)
+	assertRegEquals(t, cpu.Reg.B.Read(), 0x1)
+	assertRegEquals(t, cpu.Reg.C.Read(), 0x0)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteInc16Overflow(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x03, false)
+
+	cpu.Reg.BC.Write(0xFFFF)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.BC.Read(), 0x0)
+	assertRegEquals(t, cpu.Reg.B.Read(), 0x0)
+	assertRegEquals(t, cpu.Reg.C.Read(), 0x0)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteIncHLIndirect(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.HL.Write(0xFFF8)
+	mmu.Write8(0xFFF8, 0x03)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x34, false)
+
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, ram[0xFFF8], 0x04)
+}
+
 func TestExecuteJump(t *testing.T) {
 	cpu, _ := NewCPU()
 	ram := make([]byte, 0xFFFF)

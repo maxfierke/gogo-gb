@@ -55,18 +55,57 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	switch opcode.Addr {
 	case 0x00:
 		// NOP
+	case 0x03:
+		// INC BC
+		cpu.Reg.BC.Inc(1)
+	case 0x04:
+		// INC B
+		cpu.inc8(cpu.Reg.B)
 	case 0x09:
 		// ADD HL, BC
 		cpu.add16(cpu.Reg.HL, cpu.Reg.BC.Read())
+	case 0x0C:
+		// INC C
+		cpu.inc8(cpu.Reg.C)
+	case 0x13:
+		// INC DE
+		cpu.Reg.DE.Inc(1)
+	case 0x14:
+		// INC D
+		cpu.inc8(cpu.Reg.D)
 	case 0x19:
 		// ADD HL, DE
 		cpu.add16(cpu.Reg.HL, cpu.Reg.DE.Read())
+	case 0x1C:
+		// INC E
+		cpu.inc8(cpu.Reg.E)
+	case 0x23:
+		// INC HL
+		cpu.Reg.HL.Inc(1)
+	case 0x24:
+		// INC H
+		cpu.inc8(cpu.Reg.H)
 	case 0x29:
 		// ADD HL, HL
 		cpu.add16(cpu.Reg.HL, cpu.Reg.HL.Read())
+	case 0x2C:
+		// INC L
+		cpu.inc8(cpu.Reg.L)
+	case 0x33:
+		// INC SP
+		cpu.SP.Inc(1)
+	case 0x34:
+		// INC (HL)
+		value := mmu.Read8(cpu.Reg.HL.Read())
+		fauxReg := &Register[uint8]{name: "(HL)", value: value}
+		cpu.add8(fauxReg, 1)
+		mmu.Write8(cpu.Reg.HL.Read(), fauxReg.Read())
 	case 0x39:
 		// ADD HL, SP
 		cpu.add16(cpu.Reg.HL, cpu.SP.Read())
+	case 0x3C:
+		// INC A
+		cpu.inc8(cpu.Reg.A)
 	case 0x80:
 		// ADD A, B
 		cpu.add8(cpu.Reg.A, cpu.Reg.B.Read())
@@ -212,6 +251,18 @@ func (cpu *CPU) add8(reg RWByte, value uint8) uint8 {
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.Carry = newValue < oldValue
 	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, value)
+
+	return newValue
+}
+
+func (cpu *CPU) inc8(reg RWByte) uint8 {
+	oldValue := reg.Read()
+	newValue := oldValue + 1
+	reg.Write(newValue)
+
+	cpu.Reg.F.Zero = newValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, 1)
 
 	return newValue
 }
