@@ -361,6 +361,52 @@ func TestExecutePushPop(t *testing.T) {
 	assertRegEquals(t, cpu.Reg.E.Read(), 0x89)
 }
 
+func TestExecuteRet(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.BC.Write(0x0489)
+	cpu.PC.Write(0x100)
+	cpu.SP.Write(0x10)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC5, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xF), 0x4)
+	assertRegEquals(t, mmu.Read8(0xE), 0x89)
+	assertRegEquals(t, cpu.SP.Read(), 0xE)
+
+	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC9, false)
+	nextPc, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPc, 0x0489)
+}
+
+func TestExecuteRetFail(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.BC.Write(0x0489)
+	cpu.PC.Write(0x100)
+	cpu.SP.Write(0x10)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC5, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xF), 0x4)
+	assertRegEquals(t, mmu.Read8(0xE), 0x89)
+	assertRegEquals(t, cpu.SP.Read(), 0xE)
+
+	cpu.Reg.F.Carry = true
+
+	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD0, false)
+	nextPc, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPc, 0x101)
+}
+
 func TestExecuteRst(t *testing.T) {
 	cpu, _ := NewCPU()
 	ram := make([]byte, 0xFFFF)

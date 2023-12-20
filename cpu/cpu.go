@@ -130,6 +130,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x87:
 		// ADD A, A
 		cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
+	case 0xC0:
+		// RET NZ
+		return cpu.ret(mmu, opcode, !cpu.Reg.F.Zero)
 	case 0xC1:
 		// POP BC
 		cpu.Reg.BC.Write(cpu.pop(mmu))
@@ -145,12 +148,21 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xC7:
 		// RST 00H
 		return cpu.rst(mmu, opcode, 0x00)
+	case 0xC8:
+		// RET Z
+		return cpu.ret(mmu, opcode, cpu.Reg.F.Zero)
+	case 0xC9:
+		// RET
+		return cpu.ret(mmu, opcode, true)
 	case 0xCA:
 		// JP Z, a16
 		return cpu.jump(mmu, opcode, cpu.Reg.F.Zero)
 	case 0xCF:
 		// RST 08H
 		return cpu.rst(mmu, opcode, 0x08)
+	case 0xD0:
+		// RET NC
+		return cpu.ret(mmu, opcode, !cpu.Reg.F.Carry)
 	case 0xD1:
 		// POP DE
 		cpu.Reg.DE.Write(cpu.pop(mmu))
@@ -163,6 +175,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xD7:
 		// RST 10H
 		return cpu.rst(mmu, opcode, 0x10)
+	case 0xD8:
+		// RET C
+		return cpu.ret(mmu, opcode, cpu.Reg.F.Carry)
 	case 0xDA:
 		// JP C, a16
 		return cpu.jump(mmu, opcode, cpu.Reg.F.Carry)
@@ -277,6 +292,14 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	cpu.Reg.F.HalfCarry = isHalfCarry16(newValue, value)
 
 	return newValue
+}
+
+func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+	if should_jump {
+		return cpu.pop(mmu), uint8(opcode.Cycles[0])
+	} else {
+		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
+	}
 }
 
 func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
