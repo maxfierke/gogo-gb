@@ -92,15 +92,16 @@ func (mmu *MMU) AddHandler(region MemRegion, handler MemHandler) MemHandlerHandl
 
 	mmu.handles[handle] = region
 
-	for i := region.Start; i <= region.End; i++ {
-		val, exist := mmu.handlers[i]
+	for addr := uint(region.Start); addr <= uint(region.End); addr++ {
+		addr16 := uint16(addr)
+		val, exist := mmu.handlers[addr16]
 
 		if !exist {
 			val = make([]MMUHandler, 0)
-			mmu.handlers[i] = val
+			mmu.handlers[addr16] = val
 		}
 
-		mmu.handlers[i] = append(val, MMUHandler{handle: handle, handler: handler})
+		mmu.handlers[addr16] = append(val, MMUHandler{handle: handle, handler: handler})
 	}
 
 	return handle
@@ -115,8 +116,9 @@ func (mmu *MMU) RemoveHandler(handle MemHandlerHandle) {
 
 	delete(mmu.handles, handle)
 
-	for addr := region.Start; addr <= region.End; addr++ {
-		val, exist := mmu.handlers[addr]
+	for addr := uint(region.Start); addr <= uint(region.End); addr++ {
+		addr16 := uint16(addr)
+		val, exist := mmu.handlers[addr16]
 
 		if exist {
 			newVal := make([]MMUHandler, len(val)-1)
@@ -127,7 +129,7 @@ func (mmu *MMU) RemoveHandler(handle MemHandlerHandle) {
 				}
 			}
 
-			mmu.handlers[addr] = newVal
+			mmu.handlers[addr16] = newVal
 		}
 	}
 }
