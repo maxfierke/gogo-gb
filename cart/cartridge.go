@@ -3,6 +3,7 @@ package cart
 import (
 	"errors"
 	"fmt"
+	"io"
 
 	"github.com/maxfierke/gogo-gb/cart/mbc"
 	"github.com/maxfierke/gogo-gb/mem"
@@ -23,6 +24,10 @@ func NewCartridge(r *Reader) (*Cartridge, error) {
 
 	rom := make([]byte, r.Header.RomSizeBytes())
 	copy(rom, r.headerBuf[:])
+	_, err := io.ReadFull(r, rom[HEADER_END+1:])
+	if err != nil {
+		return nil, err
+	}
 
 	ram := make([]byte, r.Header.RamSizeBytes())
 
