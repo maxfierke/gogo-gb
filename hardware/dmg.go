@@ -12,6 +12,8 @@ var (
 	ErrCartridgeAlreadyLoaded = errors.New("cartridge already loaded")
 )
 
+const DMGRamSize = 0xFFFF + 1
+
 type DMG struct {
 	cpu       *cpu.CPU
 	mmu       *mem.MMU
@@ -24,7 +26,7 @@ func NewDMG() (*DMG, error) {
 		return nil, err
 	}
 
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, DMGRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.ResetToBootROM() // TODO: Load an actual boot ROOM
