@@ -40,9 +40,9 @@ func (cpu *CPU) fetchAndDecode(mmu *mem.MMU) *isa.Instruction {
 
 	if !exist {
 		if prefixed {
-			log.Fatalf("Unimplemented instruction found @ 0x%x: 0xCB%X", addr, opcodeByte)
+			log.Fatalf("Unimplemented instruction found @ 0x%04X: 0xCB%02X", addr, opcodeByte)
 		} else {
-			log.Fatalf("Unimplemented instruction found @ 0x%x: 0x%X", addr, opcodeByte)
+			log.Fatalf("Unimplemented instruction found @ 0x%04X: 0x%02X", addr, opcodeByte)
 		}
 	}
 
@@ -212,7 +212,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		// RST 38H
 		return cpu.rst(mmu, opcode, 0x38)
 	default:
-		log.Fatalf("Unimplemented instruction @ 0x%X: %s", inst.Addr, opcode)
+		log.Fatalf("Unimplemented instruction @ %s", inst)
 	}
 
 	return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[0])

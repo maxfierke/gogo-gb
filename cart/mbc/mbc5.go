@@ -108,5 +108,5 @@ func (m *MBC5) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		return mem.WriteBlock()
 	}
 
-	panic(fmt.Sprintf("Attempting to write 0x%x @ 0x%x, which is out-of-bounds for MBC5", value, addr))
+	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for MBC5", value, addr))
 }
