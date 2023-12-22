@@ -5,6 +5,7 @@ import (
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
+	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
@@ -18,6 +19,7 @@ type DMG struct {
 	cpu       *cpu.CPU
 	mmu       *mem.MMU
 	ic        *devices.InterruptController
+	lcd       *devices.LCD
 	cartridge *cart.Cartridge
 }
 
@@ -28,6 +30,7 @@ func NewDMG() (*DMG, error) {
 	}
 
 	ic := devices.NewInterruptController()
+	lcd := devices.NewLCD()
 
 	ram := make([]byte, DMGRamSize)
 	mmu := mem.NewMMU(ram)
@@ -41,6 +44,7 @@ func NewDMG() (*DMG, error) {
 		cpu: cpu,
 		mmu: mmu,
 		ic:  ic,
+		lcd: lcd,
 	}, nil
 }
 
