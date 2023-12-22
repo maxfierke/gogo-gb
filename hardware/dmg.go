@@ -17,6 +17,7 @@ const DMGRamSize = 0xFFFF + 1
 type DMG struct {
 	cpu       *cpu.CPU
 	mmu       *mem.MMU
+	ic        *devices.InterruptController
 	cartridge *cart.Cartridge
 }
 
@@ -26,14 +27,20 @@ func NewDMG() (*DMG, error) {
 		return nil, err
 	}
 
+	ic := devices.NewInterruptController()
+
 	ram := make([]byte, DMGRamSize)
 	mmu := mem.NewMMU(ram)
+
+	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
 
 	cpu.ResetToBootROM() // TODO: Load an actual boot ROOM
 
 	return &DMG{
 		cpu: cpu,
 		mmu: mmu,
+		ic:  ic,
 	}, nil
 }
 

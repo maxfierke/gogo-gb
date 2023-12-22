@@ -12,10 +12,35 @@ type CPU struct {
 	PC  *Register[uint16]
 	SP  *Register[uint16]
 
+	ime     bool
+	halted  bool
 	opcodes *isa.Opcodes
 }
 
+func NewCPU() (*CPU, error) {
+	cpu := new(CPU)
+	cpu.Reg = NewRegisters()
+	cpu.PC = &Register[uint16]{name: "PC", value: 0x0000}
+	cpu.SP = &Register[uint16]{name: "SP", value: 0x0000}
+	cpu.halted = false
+	cpu.ime = true
+
+	opcodes, err := isa.LoadOpcodes()
+	if err != nil {
+		return nil, err
+	}
+
+	cpu.opcodes = opcodes
+
+	return cpu, nil
+}
+
 func (cpu *CPU) Step(mmu *mem.MMU) uint8 {
+	if cpu.halted {
+		// HALT is 4 cycles
+		return 4
+	}
+
 	inst := cpu.fetchAndDecode(mmu)
 	nextPc, cycles := cpu.Execute(mmu, inst)
 
@@ -218,28 +243,12 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[0])
 }
 
-func NewCPU() (*CPU, error) {
-	cpu := new(CPU)
-	cpu.Reg = NewRegisters()
-	cpu.PC = &Register[uint16]{name: "PC", value: 0x0000}
-	cpu.SP = &Register[uint16]{name: "SP", value: 0x0000}
-
-	opcodes, err := isa.LoadOpcodes()
-	if err != nil {
-		return nil, err
-	}
-
-	cpu.opcodes = opcodes
-
-	return cpu, nil
-}
-
 func (cpu *CPU) Reset() {
 	cpu.Reg.Reset()
 	cpu.PC.Write(0x0000)
 	cpu.SP.Write(0x0000)
-
-	// TODO: Reset interrupts, etc.
+	cpu.ime = true
+	cpu.halted = false
 }
 
 // Reset CPU and registers to post-boot ROM state
@@ -255,6 +264,8 @@ func (cpu *CPU) ResetToBootROM() {
 	cpu.Reg.L.Write(0x4D)
 	cpu.SP.Write(0xFFFE)
 	cpu.PC.Write(0x100)
+	cpu.ime = true
+	cpu.halted = false
 }
 
 func (cpu *CPU) add8(reg RWByte, value uint8) uint8 {
