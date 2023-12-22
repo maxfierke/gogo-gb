@@ -167,6 +167,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xC3:
 		// JP a16
 		return cpu.jump(mmu, opcode, true)
+	case 0xC4:
+		// CALL NZ, a16
+		return cpu.call(mmu, opcode, !cpu.Reg.F.Zero)
 	case 0xC5:
 		// PUSH BC
 		cpu.push(mmu, cpu.Reg.BC.Read())
@@ -182,6 +185,12 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xCA:
 		// JP Z, a16
 		return cpu.jump(mmu, opcode, cpu.Reg.F.Zero)
+	case 0xCC:
+		// CALL Z, a16
+		return cpu.call(mmu, opcode, cpu.Reg.F.Zero)
+	case 0xCD:
+		// CALL a16
+		return cpu.call(mmu, opcode, true)
 	case 0xCF:
 		// RST 08H
 		return cpu.rst(mmu, opcode, 0x08)
@@ -194,6 +203,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xD2:
 		// JP NC, a16
 		return cpu.jump(mmu, opcode, !cpu.Reg.F.Carry)
+	case 0xD4:
+		// CALL NC, a16
+		return cpu.call(mmu, opcode, !cpu.Reg.F.Carry)
 	case 0xD5:
 		// PUSH DE
 		cpu.push(mmu, cpu.Reg.DE.Read())
@@ -210,6 +222,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xDA:
 		// JP C, a16
 		return cpu.jump(mmu, opcode, cpu.Reg.F.Carry)
+	case 0xDC:
+		// CALL C, a16
+		return cpu.call(mmu, opcode, cpu.Reg.F.Carry)
 	case 0xDF:
 		// RST 18H
 		return cpu.rst(mmu, opcode, 0x18)
@@ -315,12 +330,15 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	return newValue
 }
 
-func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+	nextPC = cpu.PC.Read() + uint16(opcode.Bytes)
+
 	if should_jump {
-		return cpu.pop(mmu), uint8(opcode.Cycles[0])
-	} else {
-		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
+		cpu.push(mmu, nextPC)
+		return mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0])
 	}
+
+	return nextPC, uint8(opcode.Cycles[0])
 }
 
 func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
@@ -340,6 +358,14 @@ func (cpu *CPU) pop(mmu *mem.MMU) uint16 {
 func (cpu *CPU) push(mmu *mem.MMU, value uint16) {
 	cpu.SP.Dec(2)
 	mmu.Write16(cpu.SP.Read(), value)
+}
+
+func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+	if should_jump {
+		return cpu.pop(mmu), uint8(opcode.Cycles[0])
+	} else {
+		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
+	}
 }
 
 func (cpu *CPU) rst(mmu *mem.MMU, opcode *isa.Opcode, value byte) (uint16, uint8) {

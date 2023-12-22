@@ -201,6 +201,130 @@ func TestExecuteIncHLIndirect(t *testing.T) {
 	assertRegEquals(t, ram[0xFFF8], 0x04)
 }
 
+func TestExecuteCall(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.PC.Write(0x100)
+	cpu.SP.Write(0x10)
+
+	mmu.Write8(0x102, 0x04)
+	mmu.Write8(0x101, 0x89)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xCD, false)
+	nextPc, _ := cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xF), 0x01)
+	assertRegEquals(t, mmu.Read8(0xE), 0x03)
+	assertRegEquals(t, cpu.SP.Read(), 0xE)
+	assertNextPC(t, nextPc, 0x0489)
+}
+
+func TestExecuteCallNotZero(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.PC.Write(0x100)
+	cpu.SP.Write(0x10)
+	cpu.Reg.F.Zero = true
+
+	mmu.Write8(0x102, 0x04)
+	mmu.Write8(0x101, 0x89)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC4, false)
+	nextPc, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPc, 0x103)
+
+	cpu.Reg.F.Zero = false
+	nextPc, _ = cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xF), 0x01)
+	assertRegEquals(t, mmu.Read8(0xE), 0x03)
+	assertRegEquals(t, cpu.SP.Read(), 0xE)
+	assertNextPC(t, nextPc, 0x0489)
+}
+
+func TestExecuteCallZero(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.PC.Write(0x100)
+	cpu.SP.Write(0x10)
+	cpu.Reg.F.Zero = false
+
+	mmu.Write8(0x102, 0x04)
+	mmu.Write8(0x101, 0x89)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xCC, false)
+	nextPc, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPc, 0x103)
+
+	cpu.Reg.F.Zero = true
+	nextPc, _ = cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xF), 0x01)
+	assertRegEquals(t, mmu.Read8(0xE), 0x03)
+	assertRegEquals(t, cpu.SP.Read(), 0xE)
+	assertNextPC(t, nextPc, 0x0489)
+}
+
+func TestExecuteCallNotCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.PC.Write(0x100)
+	cpu.SP.Write(0x10)
+	cpu.Reg.F.Carry = true
+
+	mmu.Write8(0x102, 0x04)
+	mmu.Write8(0x101, 0x89)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD4, false)
+	nextPc, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPc, 0x103)
+
+	cpu.Reg.F.Carry = false
+	nextPc, _ = cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xF), 0x01)
+	assertRegEquals(t, mmu.Read8(0xE), 0x03)
+	assertRegEquals(t, cpu.SP.Read(), 0xE)
+	assertNextPC(t, nextPc, 0x0489)
+}
+
+func TestExecuteCallCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.PC.Write(0x100)
+	cpu.SP.Write(0x10)
+	cpu.Reg.F.Carry = false
+
+	mmu.Write8(0x102, 0x04)
+	mmu.Write8(0x101, 0x89)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xDC, false)
+	nextPc, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPc, 0x103)
+
+	cpu.Reg.F.Carry = true
+	nextPc, _ = cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xF), 0x01)
+	assertRegEquals(t, mmu.Read8(0xE), 0x03)
+	assertRegEquals(t, cpu.SP.Read(), 0xE)
+	assertNextPC(t, nextPc, 0x0489)
+}
+
 func TestExecuteJump(t *testing.T) {
 	cpu, _ := NewCPU()
 	ram := make([]byte, 0xFFFF)
