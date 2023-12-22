@@ -131,6 +131,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x3C:
 		// INC A
 		cpu.inc8(cpu.Reg.A)
+	case 0x76:
+		// HALT
+		cpu.halted = true
 	case 0x80:
 		// ADD A, B
 		cpu.add8(cpu.Reg.A, cpu.Reg.B.Read())

@@ -575,6 +575,19 @@ func TestExecuteEi(t *testing.T) {
 	}
 }
 
+func TestExecuteHalt(t *testing.T) {
+	cpu, _ := NewCPU()
+	cpu.halted = false
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x76, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	if !cpu.halted {
+		t.Errorf("Expected CPU to be halted")
+	}
+}
+
 func TestExecuteRetI(t *testing.T) {
 	cpu, _ := NewCPU()
 	cpu.ime = false
