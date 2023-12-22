@@ -98,24 +98,36 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x14:
 		// INC D
 		cpu.inc8(cpu.Reg.D)
+	case 0x18:
+		// JR e8
+		return cpu.jump_rel(mmu, opcode, true)
 	case 0x19:
 		// ADD HL, DE
 		cpu.add16(cpu.Reg.HL, cpu.Reg.DE.Read())
 	case 0x1C:
 		// INC E
 		cpu.inc8(cpu.Reg.E)
+	case 0x20:
+		// JR NZ, e8
+		return cpu.jump_rel(mmu, opcode, !cpu.Reg.F.Zero)
 	case 0x23:
 		// INC HL
 		cpu.Reg.HL.Inc(1)
 	case 0x24:
 		// INC H
 		cpu.inc8(cpu.Reg.H)
+	case 0x28:
+		// JR Z, e8
+		return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Zero)
 	case 0x29:
 		// ADD HL, HL
 		cpu.add16(cpu.Reg.HL, cpu.Reg.HL.Read())
 	case 0x2C:
 		// INC L
 		cpu.inc8(cpu.Reg.L)
+	case 0x30:
+		// JR NC, e8
+		return cpu.jump_rel(mmu, opcode, !cpu.Reg.F.Carry)
 	case 0x33:
 		// INC SP
 		cpu.SP.Inc(1)
@@ -125,6 +137,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		fauxReg := &Register[uint8]{name: "(HL)", value: value}
 		cpu.add8(fauxReg, 1)
 		mmu.Write8(cpu.Reg.HL.Read(), fauxReg.Read())
+	case 0x38:
+		// JR C, e8
+		return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Carry)
 	case 0x39:
 		// ADD HL, SP
 		cpu.add16(cpu.Reg.HL, cpu.SP.Read())
@@ -349,6 +364,17 @@ func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC
 		return mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0])
 	} else {
 		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
+	}
+}
+
+func (cpu *CPU) jump_rel(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+	nextPC = cpu.PC.Read() + uint16(opcode.Bytes)
+
+	if should_jump {
+		nextPcDiff := int8(mmu.Read8(cpu.PC.Read() + 1))
+		return nextPC + uint16(nextPcDiff), uint8(opcode.Cycles[0])
+	} else {
+		return nextPC, uint8(opcode.Cycles[1])
 	}
 }
 

@@ -462,6 +462,125 @@ func TestExecuteJumpHL(t *testing.T) {
 	assertNextPC(t, nextPC, expectedNextPC)
 }
 
+func TestExecuteJumpRel(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	mmu.Write8(0xF9, 0x04)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x18, false)
+
+	expectedNextPC := uint16(0xFE)
+	nextPC, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+
+	mmu.Write8(0xF9, 0xFC)
+	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x18, false)
+
+	expectedNextPC = uint16(0xF6)
+	nextPC, _ = cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteJumpRelZero(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+	cpu.Reg.F.Zero = true
+
+	mmu.Write8(0xF9, 0x04)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x28, false)
+
+	expectedNextPC := uint16(0xFE)
+	nextPC, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteJumpRelCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+	cpu.Reg.F.Carry = true
+
+	mmu.Write8(0xF9, 0x04)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x38, false)
+
+	expectedNextPC := uint16(0xFE)
+	nextPC, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteNoJumpRelCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+	cpu.Reg.F.Carry = true
+
+	mmu.Write8(0xF9, 0x04)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x38, false)
+
+	expectedNextPC := uint16(0xFE)
+	nextPC, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteNoJumpRelNoCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+	cpu.Reg.F.Carry = false
+
+	mmu.Write8(0xF9, 0x04)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x30, false)
+
+	expectedNextPC := uint16(0xFE)
+	nextPC, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteJumpRelNoZero(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+	cpu.Reg.F.Zero = false
+
+	mmu.Write8(0xF9, 0x04)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x20, false)
+
+	expectedNextPC := uint16(0xFE)
+	nextPC, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
+func TestExecuteJumpRelNoCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+	cpu.Reg.F.Carry = false
+
+	mmu.Write8(0xF9, 0x04)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x30, false)
+
+	expectedNextPC := uint16(0xFE)
+	nextPC, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPC, expectedNextPC)
+}
+
 func TestExecutePushPop(t *testing.T) {
 	cpu, _ := NewCPU()
 	ram := make([]byte, 0xFFFF)
