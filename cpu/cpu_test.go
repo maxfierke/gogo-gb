@@ -425,6 +425,59 @@ func TestExecuteRst(t *testing.T) {
 	assertNextPC(t, nextPC, expectedNextPC)
 }
 
+func TestExecuteDi(t *testing.T) {
+	cpu, _ := NewCPU()
+	cpu.ime = true
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xF3, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	if cpu.ime {
+		t.Errorf("Expected IME flag to be disabled, but it was enabled")
+	}
+}
+
+func TestExecuteEi(t *testing.T) {
+	cpu, _ := NewCPU()
+	cpu.ime = false
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xFB, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	if !cpu.ime {
+		t.Errorf("Expected IME flag to be enabled, but it was disabled")
+	}
+}
+
+func TestExecuteRetI(t *testing.T) {
+	cpu, _ := NewCPU()
+	cpu.ime = false
+	ram := make([]byte, 0xFFFF)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.BC.Write(0x0489)
+	cpu.PC.Write(0x100)
+	cpu.SP.Write(0x10)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC5, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xF), 0x4)
+	assertRegEquals(t, mmu.Read8(0xE), 0x89)
+	assertRegEquals(t, cpu.SP.Read(), 0xE)
+
+	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD9, false)
+	nextPc, _ := cpu.Execute(mmu, inst)
+
+	assertNextPC(t, nextPc, 0x0489)
+
+	if !cpu.ime {
+		t.Errorf("Expected IME flag to be enabled, but it was disabled")
+	}
+}
+
 func TestCPUReset(t *testing.T) {
 	cpu, _ := NewCPU()
 
@@ -434,6 +487,8 @@ func TestCPUReset(t *testing.T) {
 	cpu.Reg.HL.Write(0xDEF0)
 	cpu.PC.Write(0x1010)
 	cpu.SP.Write(0x0202)
+	cpu.ime = false
+	cpu.halted = true
 
 	cpu.Reset()
 
@@ -447,4 +502,12 @@ func TestCPUReset(t *testing.T) {
 	assertRegEquals(t, cpu.Reg.L.Read(), 0x00)
 	assertRegEquals(t, cpu.PC.Read(), 0x0000)
 	assertRegEquals(t, cpu.SP.Read(), 0x0000)
+
+	if !cpu.ime {
+		t.Errorf("Expected IME flag to be enabled, but it was disabled")
+	}
+
+	if cpu.halted {
+		t.Errorf("Expected not to be halted")
+	}
 }

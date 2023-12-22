@@ -203,6 +203,10 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xD8:
 		// RET C
 		return cpu.ret(mmu, opcode, cpu.Reg.F.Carry)
+	case 0xD9:
+		// RETI
+		cpu.ime = true
+		return cpu.ret(mmu, opcode, true)
 	case 0xDA:
 		// JP C, a16
 		return cpu.jump(mmu, opcode, cpu.Reg.F.Carry)
@@ -227,12 +231,18 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xF1:
 		// POP AF
 		cpu.Reg.AF.Write(cpu.pop(mmu))
+	case 0xF3:
+		// DI
+		cpu.ime = false
 	case 0xF5:
 		// PUSH AF
 		cpu.push(mmu, cpu.Reg.AF.Read())
 	case 0xF7:
 		// RST 30H
 		return cpu.rst(mmu, opcode, 0x30)
+	case 0xFB:
+		// EI
+		cpu.ime = true
 	case 0xFF:
 		// RST 38H
 		return cpu.rst(mmu, opcode, 0x38)
