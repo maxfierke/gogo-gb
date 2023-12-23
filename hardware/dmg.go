@@ -40,7 +40,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, cartridge) // MBCs ROM Banks
-	mmu.AddHandler(mem.MemRegion{Start: 0x0A00, End: 0xBFFF}, cartridge) // MBCs RAM Banks
+	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, cartridge) // MBCs RAM Banks
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd) // LCD control registers
 
