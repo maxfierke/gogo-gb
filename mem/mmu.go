@@ -65,9 +65,9 @@ type MemRegion struct {
 
 func (region *MemRegion) Contains(addr uint16, exclusive bool) bool {
 	if exclusive {
-		return region.Start >= addr && addr < region.End
+		return region.Start <= addr && addr < region.End
 	} else {
-		return region.Start >= addr && addr <= region.End
+		return region.Start <= addr && addr <= region.End
 	}
 }
 

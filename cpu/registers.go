@@ -73,12 +73,14 @@ func (reg *Register[T]) Write(value T) {
 	reg.value = value
 }
 
-func (reg *Register[T]) Inc(value T) {
+func (reg *Register[T]) Inc(value T) T {
 	reg.value += value
+	return reg.value
 }
 
-func (reg *Register[T]) Dec(value T) {
+func (reg *Register[T]) Dec(value T) T {
 	reg.value -= value
+	return reg.value
 }
 
 type RWByte interface {
@@ -106,12 +108,16 @@ func (reg *CompoundRegister) Write(value uint16) {
 	reg.low.Write(uint8(value & 0xFF))
 }
 
-func (reg *CompoundRegister) Inc(value uint16) {
-	reg.Write(reg.Read() + value)
+func (reg *CompoundRegister) Inc(value uint16) uint16 {
+	newValue := reg.Read() + value
+	reg.Write(newValue)
+	return newValue
 }
 
-func (reg *CompoundRegister) Dec(value uint16) {
-	reg.Write(reg.Read() - value)
+func (reg *CompoundRegister) Dec(value uint16) uint16 {
+	newValue := reg.Read() - value
+	reg.Write(newValue)
+	return newValue
 }
 
 type Registers struct {

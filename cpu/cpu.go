@@ -80,18 +80,42 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	switch opcode.Addr {
 	case 0x00:
 		// NOP
+	case 0x01:
+		// LD BC, n16
+		cpu.load16(cpu.Reg.BC, cpu.readNext16(mmu))
+	case 0x02:
+		// LD (BC), A
+		cpu.load8Indirect(mmu, cpu.Reg.BC.Read(), cpu.Reg.A)
 	case 0x03:
 		// INC BC
 		cpu.Reg.BC.Inc(1)
 	case 0x04:
 		// INC B
 		cpu.inc8(cpu.Reg.B)
+	case 0x06:
+		// LD B, n8
+		cpu.load8(cpu.Reg.B, cpu.readNext8(mmu))
+	case 0x08:
+		// LD (a16), SP
+		cpu.load16Indirect(mmu, cpu.readNext16(mmu), cpu.SP)
 	case 0x09:
 		// ADD HL, BC
 		cpu.add16(cpu.Reg.HL, cpu.Reg.BC.Read())
+	case 0x0A:
+		// LD A, (BC)
+		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.Reg.BC.Read()))
 	case 0x0C:
 		// INC C
 		cpu.inc8(cpu.Reg.C)
+	case 0x0E:
+		// LD C, n8
+		cpu.load8(cpu.Reg.C, cpu.readNext8(mmu))
+	case 0x11:
+		// LD DE, n16
+		cpu.load16(cpu.Reg.DE, cpu.readNext16(mmu))
+	case 0x12:
+		// LD (DE), A
+		cpu.load8Indirect(mmu, cpu.Reg.DE.Read(), cpu.Reg.A)
 	case 0x13:
 		// INC DE
 		cpu.Reg.DE.Inc(1)
@@ -104,30 +128,57 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x19:
 		// ADD HL, DE
 		cpu.add16(cpu.Reg.HL, cpu.Reg.DE.Read())
+	case 0x1A:
+		// LD A, (DE)
+		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.Reg.DE.Read()))
 	case 0x1C:
 		// INC E
 		cpu.inc8(cpu.Reg.E)
 	case 0x20:
 		// JR NZ, e8
 		return cpu.jump_rel(mmu, opcode, !cpu.Reg.F.Zero)
+	case 0x21:
+		// LD HL, n16
+		cpu.load16(cpu.Reg.HL, cpu.readNext16(mmu))
+	case 0x22:
+		// LD (HL+), A
+		cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), cpu.Reg.A)
+		cpu.Reg.HL.Inc(1)
 	case 0x23:
 		// INC HL
 		cpu.Reg.HL.Inc(1)
 	case 0x24:
 		// INC H
 		cpu.inc8(cpu.Reg.H)
+	case 0x26:
+		// LD H, n8
+		cpu.load8(cpu.Reg.H, cpu.readNext8(mmu))
 	case 0x28:
 		// JR Z, e8
 		return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Zero)
 	case 0x29:
 		// ADD HL, HL
 		cpu.add16(cpu.Reg.HL, cpu.Reg.HL.Read())
+	case 0x2A:
+		// LDI A, (HL+)
+		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()))
+		cpu.Reg.HL.Inc(1)
 	case 0x2C:
 		// INC L
 		cpu.inc8(cpu.Reg.L)
+	case 0x2E:
+		// LD L, n8
+		cpu.load8(cpu.Reg.L, cpu.readNext8(mmu))
 	case 0x30:
 		// JR NC, e8
 		return cpu.jump_rel(mmu, opcode, !cpu.Reg.F.Carry)
+	case 0x31:
+		// LD SP, n16
+		cpu.load16(cpu.SP, cpu.readNext16(mmu))
+	case 0x32:
+		// LD (HL-), A
+		cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), cpu.Reg.A)
+		cpu.Reg.HL.Dec(1)
 	case 0x33:
 		// INC SP
 		cpu.SP.Inc(1)
@@ -143,12 +194,187 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x39:
 		// ADD HL, SP
 		cpu.add16(cpu.Reg.HL, cpu.SP.Read())
+	case 0x3A:
+		// LD A, (HL-)
+		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()))
+		cpu.Reg.HL.Dec(1)
 	case 0x3C:
 		// INC A
 		cpu.inc8(cpu.Reg.A)
+	case 0x3E:
+		// LD A, n8
+		cpu.load8(cpu.Reg.A, cpu.readNext8(mmu))
+	case 0x40:
+		// LD B, B
+		cpu.load8(cpu.Reg.B, cpu.Reg.B.Read())
+	case 0x41:
+		// LD B, C
+		cpu.load8(cpu.Reg.B, cpu.Reg.C.Read())
+	case 0x42:
+		// LD B, D
+		cpu.load8(cpu.Reg.B, cpu.Reg.D.Read())
+	case 0x43:
+		// LD B, E
+		cpu.load8(cpu.Reg.B, cpu.Reg.E.Read())
+	case 0x44:
+		// LD B, H
+		cpu.load8(cpu.Reg.B, cpu.Reg.H.Read())
+	case 0x45:
+		// LD B, L
+		cpu.load8(cpu.Reg.B, cpu.Reg.L.Read())
+	case 0x46:
+		// LD B, (HL)
+		cpu.load8(cpu.Reg.B, mmu.Read8(cpu.Reg.HL.Read()))
+	case 0x47:
+		// LD B, A
+		cpu.load8(cpu.Reg.B, cpu.Reg.A.Read())
+	case 0x48:
+		// LD C, B
+		cpu.load8(cpu.Reg.C, cpu.Reg.B.Read())
+	case 0x49:
+		// LD C, C
+		cpu.load8(cpu.Reg.C, cpu.Reg.C.Read())
+	case 0x4A:
+		// LD C, D
+		cpu.load8(cpu.Reg.C, cpu.Reg.D.Read())
+	case 0x4B:
+		// LD C, E
+		cpu.load8(cpu.Reg.C, cpu.Reg.E.Read())
+	case 0x4C:
+		// LD C, H
+		cpu.load8(cpu.Reg.C, cpu.Reg.H.Read())
+	case 0x4D:
+		// LD C, L
+		cpu.load8(cpu.Reg.C, cpu.Reg.L.Read())
+	case 0x4E:
+		// LD C, (HL)
+		cpu.load8(cpu.Reg.C, mmu.Read8(cpu.Reg.HL.Read()))
+	case 0x4F:
+		// LD C, A
+		cpu.load8(cpu.Reg.C, cpu.Reg.A.Read())
+	case 0x50:
+		// LD D, B
+		cpu.load8(cpu.Reg.D, cpu.Reg.B.Read())
+	case 0x51:
+		// LD D, C
+		cpu.load8(cpu.Reg.D, cpu.Reg.C.Read())
+	case 0x52:
+		// LD D, D
+		cpu.load8(cpu.Reg.D, cpu.Reg.D.Read())
+	case 0x53:
+		// LD D, E
+		cpu.load8(cpu.Reg.D, cpu.Reg.E.Read())
+	case 0x54:
+		// LD D, H
+		cpu.load8(cpu.Reg.D, cpu.Reg.H.Read())
+	case 0x55:
+		// LD D, L
+		cpu.load8(cpu.Reg.D, cpu.Reg.L.Read())
+	case 0x56:
+		// LD D, (HL)
+		cpu.load8(cpu.Reg.D, mmu.Read8(cpu.Reg.HL.Read()))
+	case 0x57:
+		// LD D, A
+		cpu.load8(cpu.Reg.D, cpu.Reg.A.Read())
+	case 0x58:
+		// LD E, B
+		cpu.load8(cpu.Reg.E, cpu.Reg.B.Read())
+	case 0x59:
+		// LD E, C
+		cpu.load8(cpu.Reg.E, cpu.Reg.C.Read())
+	case 0x5A:
+		// LD E, D
+		cpu.load8(cpu.Reg.E, cpu.Reg.D.Read())
+	case 0x5B:
+		// LD E, E
+		cpu.load8(cpu.Reg.E, cpu.Reg.E.Read())
+	case 0x5C:
+		// LD E, H
+		cpu.load8(cpu.Reg.E, cpu.Reg.H.Read())
+	case 0x5D:
+		// LD E, L
+		cpu.load8(cpu.Reg.E, cpu.Reg.L.Read())
+	case 0x5E:
+		// LD E, (HL)
+		cpu.load8(cpu.Reg.E, mmu.Read8(cpu.Reg.HL.Read()))
+	case 0x5F:
+		// LD E, A
+		cpu.load8(cpu.Reg.E, cpu.Reg.A.Read())
+	case 0x60:
+		// LD H, B
+		cpu.load8(cpu.Reg.H, cpu.Reg.B.Read())
+	case 0x61:
+		// LD H, C
+		cpu.load8(cpu.Reg.H, cpu.Reg.C.Read())
+	case 0x62:
+		// LD H, D
+		cpu.load8(cpu.Reg.H, cpu.Reg.D.Read())
+	case 0x63:
+		// LD H, E
+		cpu.load8(cpu.Reg.H, cpu.Reg.E.Read())
+	case 0x64:
+		// LD H, H
+		cpu.load8(cpu.Reg.H, cpu.Reg.H.Read())
+	case 0x65:
+		// LD H, L
+		cpu.load8(cpu.Reg.H, cpu.Reg.L.Read())
+	case 0x66:
+		// LD H, (HL)
+		cpu.load8(cpu.Reg.H, mmu.Read8(cpu.Reg.HL.Read()))
+	case 0x67:
+		// LD H, A
+		cpu.load8(cpu.Reg.H, cpu.Reg.A.Read())
+	case 0x68:
+		// LD L, B
+		cpu.load8(cpu.Reg.L, cpu.Reg.B.Read())
+	case 0x69:
+		// LD L, C
+		cpu.load8(cpu.Reg.L, cpu.Reg.C.Read())
+	case 0x6A:
+		// LD L, D
+		cpu.load8(cpu.Reg.L, cpu.Reg.D.Read())
+	case 0x6B:
+		// LD L, E
+		cpu.load8(cpu.Reg.L, cpu.Reg.E.Read())
+	case 0x6C:
+		// LD L, H
+		cpu.load8(cpu.Reg.L, cpu.Reg.H.Read())
+	case 0x6D:
+		// LD L, L
+		cpu.load8(cpu.Reg.L, cpu.Reg.L.Read())
+	case 0x6E:
+		// LD L, (HL)
+		cpu.load8(cpu.Reg.L, mmu.Read8(cpu.Reg.HL.Read()))
+	case 0x6F:
+		// LD L, A
+		cpu.load8(cpu.Reg.L, cpu.Reg.A.Read())
 	case 0x76:
 		// HALT
 		cpu.halted = true
+	case 0x78:
+		// LD A, B
+		cpu.load8(cpu.Reg.A, cpu.Reg.B.Read())
+	case 0x79:
+		// LD A, C
+		cpu.load8(cpu.Reg.A, cpu.Reg.C.Read())
+	case 0x7A:
+		// LD A, D
+		cpu.load8(cpu.Reg.A, cpu.Reg.D.Read())
+	case 0x7B:
+		// LD A, E
+		cpu.load8(cpu.Reg.A, cpu.Reg.E.Read())
+	case 0x7C:
+		// LD A, H
+		cpu.load8(cpu.Reg.A, cpu.Reg.H.Read())
+	case 0x7D:
+		// LD A, L
+		cpu.load8(cpu.Reg.A, cpu.Reg.L.Read())
+	case 0x7E:
+		// LD A, (HL)
+		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()))
+	case 0x7F:
+		// LD A, A
+		cpu.load8(cpu.Reg.A, cpu.Reg.A.Read())
 	case 0x80:
 		// ADD A, B
 		cpu.add8(cpu.Reg.A, cpu.Reg.B.Read())
@@ -258,6 +484,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xE9:
 		// JP HL
 		return cpu.Reg.HL.Read(), uint8(opcode.Cycles[0])
+	case 0xEA:
+		// LD (a16), A
+		cpu.load8Indirect(mmu, cpu.readNext16(mmu), cpu.Reg.A)
 	case 0xEF:
 		// RST 28H
 		return cpu.rst(mmu, opcode, 0x28)
@@ -273,9 +502,15 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xF7:
 		// RST 30H
 		return cpu.rst(mmu, opcode, 0x30)
+	case 0xF9:
+		// LD SP, HL
+		cpu.load16(cpu.SP, cpu.Reg.HL.Read())
 	case 0xFB:
 		// EI
 		cpu.ime = true
+	case 0xFA:
+		// LD A, (a16)
+		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.readNext16(mmu)))
 	case 0xFF:
 		// RST 38H
 		return cpu.rst(mmu, opcode, 0x38)
@@ -359,9 +594,25 @@ func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC
 	return nextPC, uint8(opcode.Cycles[0])
 }
 
+func (cpu *CPU) load8(reg RWByte, value byte) {
+	reg.Write(value)
+}
+
+func (cpu *CPU) load8Indirect(mmu *mem.MMU, addr uint16, reg RWByte) {
+	mmu.Write8(addr, reg.Read())
+}
+
+func (cpu *CPU) load16(reg RWTwoByte, value uint16) {
+	reg.Write(value)
+}
+
+func (cpu *CPU) load16Indirect(mmu *mem.MMU, addr uint16, reg RWTwoByte) {
+	mmu.Write16(addr, reg.Read())
+}
+
 func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
 	if should_jump {
-		return mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0])
+		return cpu.readNext16(mmu), uint8(opcode.Cycles[0])
 	} else {
 		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
 	}
@@ -371,7 +622,7 @@ func (cpu *CPU) jump_rel(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (ne
 	nextPC = cpu.PC.Read() + uint16(opcode.Bytes)
 
 	if should_jump {
-		nextPcDiff := int8(mmu.Read8(cpu.PC.Read() + 1))
+		nextPcDiff := int8(cpu.readNext8(mmu))
 		return nextPC + uint16(nextPcDiff), uint8(opcode.Cycles[0])
 	} else {
 		return nextPC, uint8(opcode.Cycles[1])
@@ -387,6 +638,14 @@ func (cpu *CPU) pop(mmu *mem.MMU) uint16 {
 func (cpu *CPU) push(mmu *mem.MMU, value uint16) {
 	cpu.SP.Dec(2)
 	mmu.Write16(cpu.SP.Read(), value)
+}
+
+func (cpu *CPU) readNext8(mmu *mem.MMU) byte {
+	return mmu.Read8(cpu.PC.Read() + 1)
+}
+
+func (cpu *CPU) readNext16(mmu *mem.MMU) uint16 {
+	return mmu.Read16(cpu.PC.Read() + 1)
 }
 
 func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {

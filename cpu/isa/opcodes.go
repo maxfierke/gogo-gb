@@ -19,15 +19,24 @@ type OperandFlags struct {
 type Operand struct {
 	Name      string `json:"name"`
 	Immediate bool   `json:"immediate"`
-	Increment *bool  `json:"increment,omitempty"`
+	Increment bool   `json:"increment,omitempty"`
+	Decrement bool   `json:"decrement,omitempty"`
 	Bytes     int    `json:"bytes,omitempty"`
 }
 
 func (operand *Operand) String() string {
-	if !operand.Immediate {
-		return fmt.Sprintf("(%s)", operand.Name)
+	name := operand.Name
+
+	if operand.Increment {
+		name = fmt.Sprintf("%s+", name)
+	} else if operand.Decrement {
+		name = fmt.Sprintf("%s-", name)
 	}
-	return operand.Name
+
+	if !operand.Immediate {
+		return fmt.Sprintf("(%s)", name)
+	}
+	return name
 }
 
 type Opcode struct {
@@ -42,21 +51,10 @@ type Opcode struct {
 }
 
 func (opcode *Opcode) String() string {
-	mnemonic := opcode.Mnemonic
 	operands := make([]string, 0, len(opcode.Operands))
 
 	for i := range opcode.Operands {
 		operandText := opcode.Operands[i].String()
-
-		increment := opcode.Operands[i].Increment
-		if increment != nil {
-			if *increment {
-				mnemonic = fmt.Sprintf("%sI", mnemonic)
-			} else {
-				mnemonic = fmt.Sprintf("%sD", mnemonic)
-			}
-		}
-
 		operands = append(operands, operandText)
 	}
 
@@ -66,7 +64,13 @@ func (opcode *Opcode) String() string {
 		comment = fmt.Sprintf("; %s", opcode.Comment)
 	}
 
-	return fmt.Sprintf("%s %s %s", mnemonic, strings.Join(operands, ", "), comment)
+	return fmt.Sprintf(
+		"0x%02X %s %s %s",
+		opcode.Addr,
+		opcode.Mnemonic,
+		strings.Join(operands, ", "),
+		comment,
+	)
 }
 
 type OpcodesJSON struct {

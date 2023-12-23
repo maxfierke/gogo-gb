@@ -32,6 +32,8 @@ func assertNextPC(t *testing.T, nextPC uint16, expectedNextPC uint16) {
 
 var NULL_MMU = mem.NewMMU([]byte{})
 
+const testRamSize = 0xFFFF + 1
+
 func TestExecuteAdd8NonOverflowingTargetA(t *testing.T) {
 	cpu, _ := NewCPU()
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x87, false)
@@ -188,7 +190,7 @@ func TestExecuteInc16Overflow(t *testing.T) {
 
 func TestExecuteIncHLIndirect(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.Reg.HL.Write(0xFFF8)
@@ -203,7 +205,7 @@ func TestExecuteIncHLIndirect(t *testing.T) {
 
 func TestExecuteCall(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.PC.Write(0x100)
@@ -223,7 +225,7 @@ func TestExecuteCall(t *testing.T) {
 
 func TestExecuteCallNotZero(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.PC.Write(0x100)
@@ -249,7 +251,7 @@ func TestExecuteCallNotZero(t *testing.T) {
 
 func TestExecuteCallZero(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.PC.Write(0x100)
@@ -275,7 +277,7 @@ func TestExecuteCallZero(t *testing.T) {
 
 func TestExecuteCallNotCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.PC.Write(0x100)
@@ -301,7 +303,7 @@ func TestExecuteCallNotCarry(t *testing.T) {
 
 func TestExecuteCallCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.PC.Write(0x100)
@@ -327,7 +329,7 @@ func TestExecuteCallCarry(t *testing.T) {
 
 func TestExecuteJump(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 
@@ -344,7 +346,7 @@ func TestExecuteJump(t *testing.T) {
 
 func TestExecuteJumpZero(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.F.Zero = true
@@ -362,7 +364,7 @@ func TestExecuteJumpZero(t *testing.T) {
 
 func TestExecuteJumpCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.F.Carry = true
@@ -380,7 +382,7 @@ func TestExecuteJumpCarry(t *testing.T) {
 
 func TestExecuteNoJumpCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.F.Carry = true
@@ -398,7 +400,7 @@ func TestExecuteNoJumpCarry(t *testing.T) {
 
 func TestExecuteNoJumpNoCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 
@@ -415,7 +417,7 @@ func TestExecuteNoJumpNoCarry(t *testing.T) {
 
 func TestExecuteJumpNoZero(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 
@@ -432,7 +434,7 @@ func TestExecuteJumpNoZero(t *testing.T) {
 
 func TestExecuteJumpNoCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 
@@ -449,7 +451,7 @@ func TestExecuteJumpNoCarry(t *testing.T) {
 
 func TestExecuteJumpHL(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.HL.Write(0x02FC)
@@ -464,7 +466,7 @@ func TestExecuteJumpHL(t *testing.T) {
 
 func TestExecuteJumpRel(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 
@@ -487,7 +489,7 @@ func TestExecuteJumpRel(t *testing.T) {
 
 func TestExecuteJumpRelZero(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.F.Zero = true
@@ -503,7 +505,7 @@ func TestExecuteJumpRelZero(t *testing.T) {
 
 func TestExecuteJumpRelCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.F.Carry = true
@@ -519,7 +521,7 @@ func TestExecuteJumpRelCarry(t *testing.T) {
 
 func TestExecuteNoJumpRelCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.F.Carry = true
@@ -535,7 +537,7 @@ func TestExecuteNoJumpRelCarry(t *testing.T) {
 
 func TestExecuteNoJumpRelNoCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.F.Carry = false
@@ -551,7 +553,7 @@ func TestExecuteNoJumpRelNoCarry(t *testing.T) {
 
 func TestExecuteJumpRelNoZero(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.F.Zero = false
@@ -567,7 +569,7 @@ func TestExecuteJumpRelNoZero(t *testing.T) {
 
 func TestExecuteJumpRelNoCarry(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 	cpu.PC.Write(0xF8)
 	cpu.Reg.F.Carry = false
@@ -581,9 +583,173 @@ func TestExecuteJumpRelNoCarry(t *testing.T) {
 	assertNextPC(t, nextPC, expectedNextPC)
 }
 
+func TestExecuteLD8RegToReg(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.B.Write(0x01)
+	cpu.Reg.C.Write(0x33)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x41, false)
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.B.Read(), 0x33)
+}
+
+func TestExecuteLD8ImmToReg(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	cpu.Reg.A.Write(0x01)
+	mmu.Write8(0xF9, 0x04)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3E, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x04)
+}
+
+func TestExecuteLD8IndirectToReg(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	cpu.Reg.A.Write(0x01)
+	mmu.Write16(0xF9, 0x0620)
+	mmu.Write16(0x0620, 0x04)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xFA, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x04)
+}
+
+func TestExecuteLD8HLIndirectToReg(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.B.Write(0x01)
+	cpu.Reg.HL.Write(0x0620)
+	mmu.Write16(0x0620, 0x04)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x46, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.Reg.B.Read(), 0x04)
+}
+
+func TestExecuteLD8RegToIndirect(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.BC.Write(0x0620)
+	mmu.Write16(0x0620, 0x04)
+	cpu.Reg.A.Write(0x33)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x02, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0x0620), 0x33)
+}
+
+func TestExecuteLD8RegToHLIndirectInc(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.HL.Write(0x0620)
+	mmu.Write16(0x0620, 0x04)
+	cpu.Reg.A.Write(0x33)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x22, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0x0620), 0x33)
+	assertRegEquals(t, cpu.Reg.HL.Read(), 0x0621)
+}
+
+func TestExecuteLD8RegToHLIndirectDec(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.HL.Write(0x0620)
+	mmu.Write16(0x0620, 0x04)
+	cpu.Reg.A.Write(0x33)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x32, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0x0620), 0x33)
+	assertRegEquals(t, cpu.Reg.HL.Read(), 0x061F)
+}
+
+func TestExecuteLD8RegToIndirectImm(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	mmu.Write16(0xF9, 0x0620)
+	mmu.Write16(0x0620, 0x04)
+	cpu.Reg.A.Write(0x33)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xEA, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0x0620), 0x33)
+}
+
+func TestExecuteLD16RegToReg(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.SP.Write(0x0102)
+	cpu.Reg.HL.Write(0x3322)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xF9, false)
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.SP.Read(), 0x3322)
+}
+
+func TestExecuteLD16ImmToReg(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	cpu.Reg.BC.Write(0x0201)
+	mmu.Write16(0xF9, 0x0413)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x01, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.Reg.BC.Read(), 0x0413)
+}
+
+func TestExecuteLD16RegToIndirectImm(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	mmu.Write16(0xF9, 0x0620)
+	mmu.Write16(0x0620, 0x0402)
+	cpu.SP.Write(0x3322)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x08, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read16(0x0620), 0x3322)
+}
+
 func TestExecutePushPop(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.Reg.B.Write(0x4)
@@ -606,7 +772,7 @@ func TestExecutePushPop(t *testing.T) {
 
 func TestExecuteRet(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.Reg.BC.Write(0x0489)
@@ -628,7 +794,7 @@ func TestExecuteRet(t *testing.T) {
 
 func TestExecuteRetFail(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.Reg.BC.Write(0x0489)
@@ -652,7 +818,7 @@ func TestExecuteRetFail(t *testing.T) {
 
 func TestExecuteRst(t *testing.T) {
 	cpu, _ := NewCPU()
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.PC.Write(0x100)
@@ -710,7 +876,7 @@ func TestExecuteHalt(t *testing.T) {
 func TestExecuteRetI(t *testing.T) {
 	cpu, _ := NewCPU()
 	cpu.ime = false
-	ram := make([]byte, 0xFFFF)
+	ram := make([]byte, testRamSize)
 	mmu := mem.NewMMU(ram)
 
 	cpu.Reg.BC.Write(0x0489)
