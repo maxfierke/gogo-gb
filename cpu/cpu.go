@@ -472,9 +472,17 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xDF:
 		// RST 18H
 		return cpu.rst(mmu, opcode, 0x18)
+	case 0xE0:
+		// LDH (a8), A
+		addr := 0xFF00 + uint16(cpu.readNext8(mmu))
+		cpu.load8Indirect(mmu, addr, cpu.Reg.A)
 	case 0xE1:
 		// POP HL
 		cpu.Reg.HL.Write(cpu.pop(mmu))
+	case 0xE2:
+		// LD (0xFF00 + C), A
+		addr := 0xFF00 + uint16(cpu.Reg.C.Read())
+		cpu.load8Indirect(mmu, addr, cpu.Reg.A)
 	case 0xE5:
 		// PUSH HL
 		cpu.push(mmu, cpu.Reg.HL.Read())
@@ -490,9 +498,19 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xEF:
 		// RST 28H
 		return cpu.rst(mmu, opcode, 0x28)
+	case 0xF0:
+		// LDH A, (a8)
+		addr := 0xFF00 + uint16(cpu.readNext8(mmu))
+		value := mmu.Read8(addr)
+		cpu.load8(cpu.Reg.A, value)
 	case 0xF1:
 		// POP AF
 		cpu.Reg.AF.Write(cpu.pop(mmu))
+	case 0xF2:
+		// LD A, (0xFF00 + C)
+		addr := 0xFF00 + uint16(cpu.Reg.C.Read())
+		value := mmu.Read8(addr)
+		cpu.load8(cpu.Reg.A, value)
 	case 0xF3:
 		// DI
 		cpu.ime = false

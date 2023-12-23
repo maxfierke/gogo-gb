@@ -704,6 +704,70 @@ func TestExecuteLD8RegToIndirectImm(t *testing.T) {
 	assertRegEquals(t, mmu.Read8(0x0620), 0x33)
 }
 
+func TestExecuteLD8RegToIndirectImmH(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	mmu.Write8(0xF9, 0x20)
+	mmu.Write8(0xFF20, 0x04)
+	cpu.Reg.A.Write(0x33)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xE0, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xFF20), 0x33)
+}
+
+func TestExecuteLD8RegToIndirectC(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	cpu.Reg.C.Write(0x20)
+	mmu.Write8(0xFF20, 0x04)
+	cpu.Reg.A.Write(0x33)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xE2, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, mmu.Read8(0xFF20), 0x33)
+}
+
+func TestExecuteLD8ImmToRegH(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	mmu.Write8(0xF9, 0x04)
+	mmu.Write8(0xFF04, 0x33)
+	cpu.Reg.A.Write(0x01)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xF0, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x33)
+}
+
+func TestExecuteLD8IndirectToRegH(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0xF8)
+
+	cpu.Reg.A.Write(0x01)
+	cpu.Reg.C.Write(0x20)
+	mmu.Write16(0xFF20, 0x04)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xF2, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x04)
+}
+
 func TestExecuteLD16RegToReg(t *testing.T) {
 	cpu, _ := NewCPU()
 
