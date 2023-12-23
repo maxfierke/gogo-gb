@@ -40,14 +40,15 @@ func (operand *Operand) String() string {
 }
 
 type Opcode struct {
-	Addr      uint8
-	Mnemonic  string `json:"mnemonic"`
-	Comment   string
-	Bytes     int          `json:"bytes"`
-	Cycles    []int        `json:"cycles"`
-	Operands  []Operand    `json:"operands"`
-	Immediate bool         `json:"immediate"`
-	Flags     OperandFlags `json:"flags"`
+	Addr       uint8
+	CbPrefixed bool
+	Mnemonic   string `json:"mnemonic"`
+	Comment    string
+	Bytes      int          `json:"bytes"`
+	Cycles     []int        `json:"cycles"`
+	Operands   []Operand    `json:"operands"`
+	Immediate  bool         `json:"immediate"`
+	Flags      OperandFlags `json:"flags"`
 }
 
 func (opcode *Opcode) String() string {
@@ -165,6 +166,7 @@ func parseOpcodeJson(jsonBytes []byte) (*Opcodes, error) {
 
 		opcode := opcodesJSON.CbPrefixed[k]
 		opcode.Addr = addr
+		opcode.CbPrefixed = true
 		opcodes.CbPrefixed[addr] = opcode
 	}
 
