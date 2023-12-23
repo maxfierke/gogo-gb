@@ -320,6 +320,43 @@ func TestExecuteDecHLIndirect(t *testing.T) {
 	assertRegEquals(t, ram[0xFFF8], 0x03)
 }
 
+func TestExecuteOr8(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x20)
+	cpu.Reg.B.Write(0x3)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xB0, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x23)
+}
+
+func TestExecuteOr8Zeros(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x20)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xB0, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x20)
+}
+
+func TestExecuteOr8A(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x7)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xB7, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x7)
+}
+
 func TestExecuteCall(t *testing.T) {
 	cpu, _ := NewCPU()
 	ram := make([]byte, testRamSize)

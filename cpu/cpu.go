@@ -462,6 +462,30 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x97:
 		// SUB A, A
 		cpu.sub8(cpu.Reg.A, cpu.Reg.A.Read())
+	case 0xB0:
+		// OR A, B
+		cpu.or(cpu.Reg.B.Read())
+	case 0xB1:
+		// OR A, C
+		cpu.or(cpu.Reg.C.Read())
+	case 0xB2:
+		// OR A, D
+		cpu.or(cpu.Reg.D.Read())
+	case 0xB3:
+		// OR A, E
+		cpu.or(cpu.Reg.E.Read())
+	case 0xB4:
+		// OR A, H
+		cpu.or(cpu.Reg.H.Read())
+	case 0xB5:
+		// OR A, L
+		cpu.or(cpu.Reg.L.Read())
+	case 0xB6:
+		// OR A, (HL)
+		cpu.or(mmu.Read8(cpu.Reg.HL.Read()))
+	case 0xB7:
+		// OR A, A
+		cpu.or(cpu.Reg.A.Read())
 	case 0xC0:
 		// RET NZ
 		return cpu.ret(mmu, opcode, !cpu.Reg.F.Zero)
@@ -583,6 +607,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xF5:
 		// PUSH AF
 		cpu.push(mmu, cpu.Reg.AF.Read())
+	case 0xF6:
+		// OR A, n8
+		cpu.or(cpu.readNext8(mmu))
 	case 0xF7:
 		// RST 30H
 		return cpu.rst(mmu, opcode, 0x30)
@@ -690,6 +717,18 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	cpu.Reg.F.HalfCarry = isHalfCarry16(newValue, value)
 
 	return newValue
+}
+
+func (cpu *CPU) or(value byte) byte {
+	orValue := cpu.Reg.A.Read() | value
+	cpu.Reg.A.Write(orValue)
+
+	cpu.Reg.F.Zero = orValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.Carry = false
+	cpu.Reg.F.HalfCarry = false
+
+	return orValue
 }
 
 func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
