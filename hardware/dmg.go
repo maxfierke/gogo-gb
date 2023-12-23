@@ -35,6 +35,8 @@ func NewDMG() (*DMG, error) {
 	ram := make([]byte, DMGRamSize)
 	mmu := mem.NewMMU(ram)
 
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd)
+
 	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
 

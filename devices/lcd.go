@@ -15,7 +15,7 @@ func NewLCD() *LCD {
 
 func (lcd *LCD) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if addr == lcd_reg_ly {
-		return mem.ReadReplace(0x9) // gameboy-doctor
+		return mem.ReadReplace(0x90) // gameboy-doctor
 	}
 
 	return mem.ReadPassthrough()
