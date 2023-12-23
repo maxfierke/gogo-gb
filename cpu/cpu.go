@@ -438,6 +438,30 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x87:
 		// ADD A, A
 		cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
+	case 0x90:
+		// SUB A, B
+		cpu.sub8(cpu.Reg.A, cpu.Reg.B.Read())
+	case 0x91:
+		// SUB A, C
+		cpu.sub8(cpu.Reg.A, cpu.Reg.C.Read())
+	case 0x92:
+		// SUB A, D
+		cpu.sub8(cpu.Reg.A, cpu.Reg.D.Read())
+	case 0x93:
+		// SUB A, E
+		cpu.sub8(cpu.Reg.A, cpu.Reg.E.Read())
+	case 0x94:
+		// SUB A, H
+		cpu.sub8(cpu.Reg.A, cpu.Reg.H.Read())
+	case 0x95:
+		// SUB A, L
+		cpu.sub8(cpu.Reg.A, cpu.Reg.L.Read())
+	case 0x96:
+		// SUB A, (HL)
+		cpu.sub8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()))
+	case 0x97:
+		// SUB A, A
+		cpu.sub8(cpu.Reg.A, cpu.Reg.A.Read())
 	case 0xC0:
 		// RET NZ
 		return cpu.ret(mmu, opcode, !cpu.Reg.F.Zero)
@@ -492,6 +516,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xD5:
 		// PUSH DE
 		cpu.push(mmu, cpu.Reg.DE.Read())
+	case 0xD6:
+		// SUB A, n8
+		cpu.sub8(cpu.Reg.A, cpu.readNext8(mmu))
 	case 0xD7:
 		// RST 10H
 		return cpu.rst(mmu, opcode, 0x10)

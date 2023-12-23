@@ -124,6 +124,58 @@ func TestExecuteAdd16TargetDECarry(t *testing.T) {
 	assertFlags(t, cpu, false, false, true, true)
 }
 
+func TestExecuteSub8NonUnderflowingTargetA(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x97, false)
+
+	cpu.Reg.A.Write(0x7)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x0)
+	assertFlags(t, cpu, true, true, false, false)
+}
+
+func TestExecuteSub8NonUnderflowingTargetC(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x91, false)
+
+	cpu.Reg.A.Write(0x7)
+	cpu.Reg.C.Write(0x3)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x4)
+	assertFlags(t, cpu, false, true, false, false)
+}
+
+func TestExecuteSub8NonUnderflowingTargetCWithCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x91, false)
+
+	cpu.Reg.A.Write(0x7)
+	cpu.Reg.C.Write(0x3)
+	cpu.Reg.F.Carry = true
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x4)
+	assertFlags(t, cpu, false, true, false, false)
+}
+
+func TestExecuteSub8TargetBCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x90, false)
+
+	cpu.Reg.A.Write(0x4)
+	cpu.Reg.B.Write(0x9)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0xFB)
+	assertFlags(t, cpu, false, true, true, true)
+}
+
 func TestExecuteInc8(t *testing.T) {
 	cpu, _ := NewCPU()
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3C, false)
