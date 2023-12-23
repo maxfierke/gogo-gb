@@ -320,6 +320,46 @@ func TestExecuteDecHLIndirect(t *testing.T) {
 	assertRegEquals(t, ram[0xFFF8], 0x03)
 }
 
+func TestExecuteAnd(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x7)
+	cpu.Reg.B.Write(0x3)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xA0, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x03)
+	assertFlags(t, cpu, false, false, true, false)
+}
+
+func TestExecuteAndZeros(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x20)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xA0, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x00)
+	assertFlags(t, cpu, true, false, true, false)
+}
+
+func TestExecuteAndA(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x7)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xA7, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x7)
+	assertFlags(t, cpu, false, false, true, false)
+}
+
 func TestExecuteCompareNonUnderflowTarget(t *testing.T) {
 	cpu, _ := NewCPU()
 

@@ -462,6 +462,30 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x97:
 		// SUB A, A
 		cpu.sub8(cpu.Reg.A, cpu.Reg.A.Read())
+	case 0xA0:
+		// AND A, B
+		cpu.and(cpu.Reg.B.Read())
+	case 0xA1:
+		// AND A, C
+		cpu.and(cpu.Reg.C.Read())
+	case 0xA2:
+		// AND A, D
+		cpu.and(cpu.Reg.D.Read())
+	case 0xA3:
+		// AND A, E
+		cpu.and(cpu.Reg.E.Read())
+	case 0xA4:
+		// AND A, H
+		cpu.and(cpu.Reg.H.Read())
+	case 0xA5:
+		// AND A, L
+		cpu.and(cpu.Reg.L.Read())
+	case 0xA6:
+		// AND A, (HL)
+		cpu.and(mmu.Read8(cpu.Reg.HL.Read()))
+	case 0xA7:
+		// AND A, A
+		cpu.and(cpu.Reg.A.Read())
 	case 0xB0:
 		// OR A, B
 		cpu.or(cpu.Reg.B.Read())
@@ -600,6 +624,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xE5:
 		// PUSH HL
 		cpu.push(mmu, cpu.Reg.HL.Read())
+	case 0xE6:
+		// AND A, n8
+		cpu.and(cpu.readNext8(mmu))
 	case 0xE7:
 		// RST 20H
 		return cpu.rst(mmu, opcode, 0x20)
@@ -744,6 +771,18 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	cpu.Reg.F.HalfCarry = isHalfCarry16(newValue, value)
 
 	return newValue
+}
+
+func (cpu *CPU) and(value byte) byte {
+	andValue := cpu.Reg.A.Read() & value
+	cpu.Reg.A.Write(andValue)
+
+	cpu.Reg.F.Zero = andValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.Carry = false
+	cpu.Reg.F.HalfCarry = true
+
+	return andValue
 }
 
 func (cpu *CPU) compare(compareValue byte) {
