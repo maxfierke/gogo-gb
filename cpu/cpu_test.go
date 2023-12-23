@@ -320,7 +320,64 @@ func TestExecuteDecHLIndirect(t *testing.T) {
 	assertRegEquals(t, ram[0xFFF8], 0x03)
 }
 
-func TestExecuteOr8(t *testing.T) {
+func TestExecuteCompareNonUnderflowTarget(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x7)
+	cpu.Reg.B.Write(0x3)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xB8, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x7)
+	assertFlags(t, cpu, false, true, false, false)
+}
+
+func TestExecuteCompareNonOverflowTargetWithCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x7)
+	cpu.Reg.B.Write(0x3)
+	cpu.Reg.F.Carry = true
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xB8, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x7)
+	assertFlags(t, cpu, false, true, false, false)
+}
+
+func TestExecuteCompareCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x4)
+	cpu.Reg.B.Write(0x9)
+	cpu.Reg.F.Carry = true
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xB8, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x4)
+	assertFlags(t, cpu, false, true, true, true)
+}
+
+func TestExecuteCompareNonUnderflowTargetA(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x7)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xBF, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x7)
+	assertFlags(t, cpu, true, true, false, false)
+}
+
+func TestExecuteOr(t *testing.T) {
 	cpu, _ := NewCPU()
 
 	cpu.Reg.A.Write(0x20)
@@ -333,7 +390,7 @@ func TestExecuteOr8(t *testing.T) {
 	assertRegEquals(t, cpu.Reg.A.Read(), 0x23)
 }
 
-func TestExecuteOr8Zeros(t *testing.T) {
+func TestExecuteOrZeros(t *testing.T) {
 	cpu, _ := NewCPU()
 
 	cpu.Reg.A.Write(0x20)
@@ -345,7 +402,7 @@ func TestExecuteOr8Zeros(t *testing.T) {
 	assertRegEquals(t, cpu.Reg.A.Read(), 0x20)
 }
 
-func TestExecuteOr8A(t *testing.T) {
+func TestExecuteOrA(t *testing.T) {
 	cpu, _ := NewCPU()
 
 	cpu.Reg.A.Write(0x7)

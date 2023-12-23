@@ -486,6 +486,30 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xB7:
 		// OR A, A
 		cpu.or(cpu.Reg.A.Read())
+	case 0xB8:
+		// CP A, B
+		cpu.compare(cpu.Reg.B.Read())
+	case 0xB9:
+		// CP A, C
+		cpu.compare(cpu.Reg.C.Read())
+	case 0xBA:
+		// CP A, D
+		cpu.compare(cpu.Reg.D.Read())
+	case 0xBB:
+		// CP A, E
+		cpu.compare(cpu.Reg.E.Read())
+	case 0xBC:
+		// CP A, H
+		cpu.compare(cpu.Reg.H.Read())
+	case 0xBD:
+		// CP A, L
+		cpu.compare(cpu.Reg.L.Read())
+	case 0xBE:
+		// CP A, (HL)
+		cpu.compare(mmu.Read8(cpu.Reg.HL.Read()))
+	case 0xBF:
+		// CP A, A
+		cpu.compare(cpu.Reg.A.Read())
 	case 0xC0:
 		// RET NZ
 		return cpu.ret(mmu, opcode, !cpu.Reg.F.Zero)
@@ -622,6 +646,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xFA:
 		// LD A, (a16)
 		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.readNext16(mmu)))
+	case 0xFE:
+		// CP A, n8
+		cpu.compare(cpu.readNext8(mmu))
 	case 0xFF:
 		// RST 38H
 		return cpu.rst(mmu, opcode, 0x38)
@@ -717,6 +744,15 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	cpu.Reg.F.HalfCarry = isHalfCarry16(newValue, value)
 
 	return newValue
+}
+
+func (cpu *CPU) compare(compareValue byte) {
+	value := cpu.Reg.A.Read()
+
+	cpu.Reg.F.Zero = value == compareValue
+	cpu.Reg.F.Subtract = true
+	cpu.Reg.F.Carry = value < compareValue
+	cpu.Reg.F.HalfCarry = (value & 0xF) < (compareValue & 0xF)
 }
 
 func (cpu *CPU) or(value byte) byte {
