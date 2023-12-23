@@ -579,6 +579,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xC5:
 		// PUSH BC
 		cpu.push(mmu, cpu.Reg.BC.Read())
+	case 0xC6:
+		// ADD A, n8
+		cpu.add8(cpu.Reg.A, cpu.readNext8(mmu))
 	case 0xC7:
 		// RST 00H
 		return cpu.rst(mmu, opcode, 0x00)
