@@ -428,9 +428,10 @@ func TestExecuteOr(t *testing.T) {
 	cpu.Execute(NULL_MMU, inst)
 
 	assertRegEquals(t, cpu.Reg.A.Read(), 0x23)
+	assertFlags(t, cpu, false, false, false, false)
 }
 
-func TestExecuteOrZeros(t *testing.T) {
+func TestExecuteOrWithZero(t *testing.T) {
 	cpu, _ := NewCPU()
 
 	cpu.Reg.A.Write(0x20)
@@ -440,6 +441,20 @@ func TestExecuteOrZeros(t *testing.T) {
 	cpu.Execute(NULL_MMU, inst)
 
 	assertRegEquals(t, cpu.Reg.A.Read(), 0x20)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteOrWithZeros(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x0)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xB0, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x0)
+	assertFlags(t, cpu, true, false, false, false)
 }
 
 func TestExecuteOrA(t *testing.T) {
@@ -452,6 +467,47 @@ func TestExecuteOrA(t *testing.T) {
 	cpu.Execute(NULL_MMU, inst)
 
 	assertRegEquals(t, cpu.Reg.A.Read(), 0x7)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteXor(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x21)
+	cpu.Reg.B.Write(0x3)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xA8, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x22)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteXorZeros(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x08)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xA8, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x08)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteXorA(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0x7)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xAF, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x0)
+	assertFlags(t, cpu, true, false, false, false)
 }
 
 func TestExecuteCall(t *testing.T) {

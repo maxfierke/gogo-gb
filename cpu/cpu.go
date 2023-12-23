@@ -486,6 +486,30 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xA7:
 		// AND A, A
 		cpu.and(cpu.Reg.A.Read())
+	case 0xA8:
+		// XOR A, B
+		cpu.xor(cpu.Reg.B.Read())
+	case 0xA9:
+		// XOR A, C
+		cpu.xor(cpu.Reg.C.Read())
+	case 0xAA:
+		// XOR A, D
+		cpu.xor(cpu.Reg.D.Read())
+	case 0xAB:
+		// XOR A, E
+		cpu.xor(cpu.Reg.E.Read())
+	case 0xAC:
+		// XOR A, H
+		cpu.xor(cpu.Reg.H.Read())
+	case 0xAD:
+		// XOR A, L
+		cpu.xor(cpu.Reg.L.Read())
+	case 0xAE:
+		// XOR A, (HL)
+		cpu.xor(mmu.Read8(cpu.Reg.HL.Read()))
+	case 0xAF:
+		// XOR A, A
+		cpu.xor(cpu.Reg.A.Read())
 	case 0xB0:
 		// OR A, B
 		cpu.or(cpu.Reg.B.Read())
@@ -636,6 +660,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0xEA:
 		// LD (a16), A
 		cpu.load8Indirect(mmu, cpu.readNext16(mmu), cpu.Reg.A)
+	case 0xEE:
+		// XOR A, n8
+		cpu.xor(cpu.readNext8(mmu))
 	case 0xEF:
 		// RST 28H
 		return cpu.rst(mmu, opcode, 0x28)
@@ -804,6 +831,18 @@ func (cpu *CPU) or(value byte) byte {
 	cpu.Reg.F.HalfCarry = false
 
 	return orValue
+}
+
+func (cpu *CPU) xor(value byte) byte {
+	xorValue := cpu.Reg.A.Read() ^ value
+	cpu.Reg.A.Write(xorValue)
+
+	cpu.Reg.F.Zero = xorValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.Carry = false
+	cpu.Reg.F.HalfCarry = false
+
+	return xorValue
 }
 
 func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
