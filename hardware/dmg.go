@@ -1,16 +1,11 @@
 package hardware
 
 import (
-	"errors"
-
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
+	"github.com/maxfierke/gogo-gb/debug"
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/mem"
-)
-
-var (
-	ErrCartridgeAlreadyLoaded = errors.New("cartridge already loaded")
 )
 
 const DMGRamSize = 0xFFFF + 1
@@ -18,24 +13,36 @@ const DMGRamSize = 0xFFFF + 1
 type DMG struct {
 	cpu       *cpu.CPU
 	mmu       *mem.MMU
+	cartridge *cart.Cartridge
+	debugger  debug.Debugger
 	ic        *devices.InterruptController
 	lcd       *devices.LCD
-	cartridge *cart.Cartridge
 }
 
 func NewDMG() (*DMG, error) {
+	debugger := debug.NewNullDebugger()
+	return NewDMGDebug(debugger)
+}
+
+func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 	cpu, err := cpu.NewCPU()
 	if err != nil {
 		return nil, err
 	}
 
+	cartridge := cart.NewCartridge()
 	ic := devices.NewInterruptController()
 	lcd := devices.NewLCD()
 
 	ram := make([]byte, DMGRamSize)
 	mmu := mem.NewMMU(ram)
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd)
+	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
+
+	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, cartridge) // MBCs ROM Banks
+	mmu.AddHandler(mem.MemRegion{Start: 0x0A00, End: 0xBFFF}, cartridge) // MBCs RAM Banks
+
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd) // LCD control registers
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
@@ -43,44 +50,35 @@ func NewDMG() (*DMG, error) {
 	cpu.ResetToBootROM() // TODO: Load an actual boot ROOM
 
 	return &DMG{
-		cpu: cpu,
-		mmu: mmu,
-		ic:  ic,
-		lcd: lcd,
+		cpu:       cpu,
+		mmu:       mmu,
+		cartridge: cartridge,
+		debugger:  debugger,
+		ic:        ic,
+		lcd:       lcd,
 	}, nil
 }
 
 func (dmg *DMG) LoadCartridge(r *cart.Reader) error {
-	if dmg.cartridge != nil {
-		return ErrCartridgeAlreadyLoaded
-	}
-
-	cartridge, err := cart.NewCartridge(r)
-	if err != nil {
-		return err
-	}
-
-	dmg.cartridge = cartridge
-	dmg.mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, dmg.cartridge) // MBCs ROM Banks
-	dmg.mmu.AddHandler(mem.MemRegion{Start: 0x0A00, End: 0xBFFF}, dmg.cartridge) // MBCs RAM Banks
-
-	return nil
+	return dmg.cartridge.LoadCartridge(r)
 }
 
 func (dmg *DMG) DebugPrint() {
-	if dmg.cartridge != nil {
-		dmg.cartridge.DebugPrint()
-	}
+	dmg.cartridge.DebugPrint()
 }
 
 func (dmg *DMG) Step() bool {
+	dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
+
 	dmg.cpu.Step(dmg.mmu)
 
 	return true
 }
 
 func (dmg *DMG) Run() {
-	for dmg.Step() {
+	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
 
+	for dmg.Step() {
+		dmg.debugger.OnExecute(dmg.cpu, dmg.mmu)
 	}
 }

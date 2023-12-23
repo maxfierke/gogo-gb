@@ -8,6 +8,7 @@ import (
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu/isa"
+	"github.com/maxfierke/gogo-gb/debug"
 	"github.com/maxfierke/gogo-gb/hardware"
 )
 
@@ -45,7 +46,7 @@ func main() {
 			opcodes.DebugPrint()
 		}
 	} else {
-		dmg, err := hardware.NewDMG()
+		dmg, err := hardware.NewDMGDebug(debug.NewGBDoctorDebugger())
 		if err != nil {
 			log.Fatalf("Unable to initialize DMG: %v\n", err)
 		}
