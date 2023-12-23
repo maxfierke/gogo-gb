@@ -203,6 +203,71 @@ func TestExecuteIncHLIndirect(t *testing.T) {
 	assertRegEquals(t, ram[0xFFF8], 0x04)
 }
 
+func TestExecuteDec8(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3D, false)
+
+	cpu.Reg.A.Write(0x7)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x6)
+	assertFlags(t, cpu, false, true, false, false)
+}
+
+func TestExecuteDec8HalfCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3D, false)
+
+	cpu.Reg.A.Write(0x80)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x7F)
+	assertFlags(t, cpu, false, true, true, false)
+}
+
+func TestExecuteDec8Underflow(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3D, false)
+
+	cpu.Reg.A.Write(0x0)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0xFF)
+	assertFlags(t, cpu, false, true, true, false)
+}
+
+func TestExecuteDec16ByteUnderflow(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x0B, false)
+
+	cpu.Reg.BC.Write(0x0000)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.BC.Read(), 0xFFFF)
+	assertRegEquals(t, cpu.Reg.B.Read(), 0xFF)
+	assertRegEquals(t, cpu.Reg.C.Read(), 0xFF)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteDecHLIndirect(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+
+	cpu.Reg.HL.Write(0xFFF8)
+	mmu.Write8(0xFFF8, 0x04)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x35, false)
+
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, ram[0xFFF8], 0x03)
+}
+
 func TestExecuteCall(t *testing.T) {
 	cpu, _ := NewCPU()
 	ram := make([]byte, testRamSize)

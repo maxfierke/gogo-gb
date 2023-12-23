@@ -92,6 +92,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x04:
 		// INC B
 		cpu.inc8(cpu.Reg.B)
+	case 0x05:
+		// DEC B
+		cpu.dec8(cpu.Reg.B)
 	case 0x06:
 		// LD B, n8
 		cpu.load8(cpu.Reg.B, cpu.readNext8(mmu))
@@ -104,9 +107,15 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x0A:
 		// LD A, (BC)
 		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.Reg.BC.Read()))
+	case 0x0B:
+		// DEC BC
+		cpu.Reg.BC.Dec(1)
 	case 0x0C:
 		// INC C
 		cpu.inc8(cpu.Reg.C)
+	case 0x0D:
+		// DEC C
+		cpu.dec8(cpu.Reg.C)
 	case 0x0E:
 		// LD C, n8
 		cpu.load8(cpu.Reg.C, cpu.readNext8(mmu))
@@ -122,6 +131,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x14:
 		// INC D
 		cpu.inc8(cpu.Reg.D)
+	case 0x15:
+		// DEC D
+		cpu.dec8(cpu.Reg.D)
 	case 0x18:
 		// JR e8
 		return cpu.jump_rel(mmu, opcode, true)
@@ -131,9 +143,15 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x1A:
 		// LD A, (DE)
 		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.Reg.DE.Read()))
+	case 0x1B:
+		// DEC DE
+		cpu.Reg.DE.Dec(1)
 	case 0x1C:
 		// INC E
 		cpu.inc8(cpu.Reg.E)
+	case 0x1D:
+		// DEC E
+		cpu.dec8(cpu.Reg.E)
 	case 0x20:
 		// JR NZ, e8
 		return cpu.jump_rel(mmu, opcode, !cpu.Reg.F.Zero)
@@ -150,6 +168,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	case 0x24:
 		// INC H
 		cpu.inc8(cpu.Reg.H)
+	case 0x25:
+		// DEC H
+		cpu.dec8(cpu.Reg.H)
 	case 0x26:
 		// LD H, n8
 		cpu.load8(cpu.Reg.H, cpu.readNext8(mmu))
@@ -163,9 +184,15 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		// LDI A, (HL+)
 		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()))
 		cpu.Reg.HL.Inc(1)
+	case 0x2B:
+		// DEC HL
+		cpu.Reg.HL.Dec(1)
 	case 0x2C:
 		// INC L
 		cpu.inc8(cpu.Reg.L)
+	case 0x2D:
+		// DEC L
+		cpu.dec8(cpu.Reg.L)
 	case 0x2E:
 		// LD L, n8
 		cpu.load8(cpu.Reg.L, cpu.readNext8(mmu))
@@ -188,6 +215,12 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		fauxReg := &Register[uint8]{name: "(HL)", value: value}
 		cpu.add8(fauxReg, 1)
 		mmu.Write8(cpu.Reg.HL.Read(), fauxReg.Read())
+	case 0x35:
+		// DEC (HL)
+		value := mmu.Read8(cpu.Reg.HL.Read())
+		fauxReg := &Register[uint8]{name: "(HL)", value: value}
+		cpu.sub8(fauxReg, 1)
+		mmu.Write8(cpu.Reg.HL.Read(), fauxReg.Read())
 	case 0x38:
 		// JR C, e8
 		return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Carry)
@@ -198,9 +231,15 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		// LD A, (HL-)
 		cpu.load8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()))
 		cpu.Reg.HL.Dec(1)
+	case 0x3B:
+		// DEC SP
+		cpu.SP.Dec(1)
 	case 0x3C:
 		// INC A
 		cpu.inc8(cpu.Reg.A)
+	case 0x3D:
+		// DEC A
+		cpu.dec8(cpu.Reg.A)
 	case 0x3E:
 		// LD A, n8
 		cpu.load8(cpu.Reg.A, cpu.readNext8(mmu))
@@ -585,6 +624,31 @@ func (cpu *CPU) inc8(reg RWByte) uint8 {
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, 1)
+
+	return newValue
+}
+
+func (cpu *CPU) sub8(reg RWByte, value uint8) uint8 {
+	oldValue := reg.Read()
+	newValue := oldValue - value
+	reg.Write(newValue)
+
+	cpu.Reg.F.Zero = newValue == 0
+	cpu.Reg.F.Subtract = true
+	cpu.Reg.F.Carry = newValue > oldValue
+	cpu.Reg.F.HalfCarry = isHalfCarry8(newValue, value)
+
+	return newValue
+}
+
+func (cpu *CPU) dec8(reg RWByte) uint8 {
+	oldValue := reg.Read()
+	newValue := oldValue - 1
+	reg.Write(newValue)
+
+	cpu.Reg.F.Zero = newValue == 0
+	cpu.Reg.F.Subtract = true
+	cpu.Reg.F.HalfCarry = isHalfCarry8(newValue, 1)
 
 	return newValue
 }
