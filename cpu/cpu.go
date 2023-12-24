@@ -390,6 +390,24 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x6F:
 			// LD L, A
 			cpu.load8(cpu.Reg.L, cpu.Reg.A.Read())
+		case 0x70:
+			// LD (HL), B
+			cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), cpu.Reg.B)
+		case 0x71:
+			// LD (HL), C
+			cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), cpu.Reg.C)
+		case 0x72:
+			// LD (HL), D
+			cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), cpu.Reg.D)
+		case 0x73:
+			// LD (HL), E
+			cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), cpu.Reg.E)
+		case 0x74:
+			// LD (HL), H
+			cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), cpu.Reg.H)
+		case 0x75:
+			// LD (HL), L
+			cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), cpu.Reg.L)
 		case 0x76:
 			// HALT
 			cpu.halted = true
