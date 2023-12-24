@@ -102,12 +102,12 @@ func TestExecuteAdd16TargetBCHalfCarry(t *testing.T) {
 	cpu, _ := NewCPU()
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x09, false)
 
-	cpu.Reg.HL.Write(0x0300)
-	cpu.Reg.BC.Write(0x0700)
+	cpu.Reg.HL.Write(0x4C00)
+	cpu.Reg.BC.Write(0x4C00)
 
 	cpu.Execute(NULL_MMU, inst)
 
-	assertRegEquals(t, cpu.Reg.HL.Read(), 0x0A00)
+	assertRegEquals(t, cpu.Reg.HL.Read(), 0x9800)
 	assertFlags(t, cpu, false, false, true, false)
 }
 

@@ -779,6 +779,18 @@ func (cpu *CPU) add8(reg RWByte, value uint8) uint8 {
 	return newValue
 }
 
+func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
+	oldValue := reg.Read()
+	newValue := oldValue + value
+	reg.Write(newValue)
+
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.Carry = newValue < value
+	cpu.Reg.F.HalfCarry = isHalfCarry16(oldValue, value)
+
+	return newValue
+}
+
 func (cpu *CPU) inc8(reg RWByte) uint8 {
 	oldValue := reg.Read()
 	newValue := oldValue + 1
@@ -812,18 +824,6 @@ func (cpu *CPU) dec8(reg RWByte) uint8 {
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = true
 	cpu.Reg.F.HalfCarry = isHalfCarry8(newValue, 1)
-
-	return newValue
-}
-
-func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
-	newValue := reg.Read() + value
-	reg.Write(newValue)
-
-	cpu.Reg.F.Zero = newValue == 0
-	cpu.Reg.F.Subtract = false
-	cpu.Reg.F.Carry = newValue < value
-	cpu.Reg.F.HalfCarry = isHalfCarry16(newValue, value)
 
 	return newValue
 }
@@ -953,14 +953,14 @@ func (cpu *CPU) rst(mmu *mem.MMU, opcode *isa.Opcode, value byte) (uint16, uint8
 
 // Did the aVal carry over from the lower half of the byte to the upper half?
 func isHalfCarry8(aVal uint8, bVal uint8) bool {
-	fourBitMask := uint8(0xF)
-	bitFourMask := uint8(0x10)
-	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFourMask) == bitFourMask
+	fourBitMask := uint8(0b0_1111)
+	bitFiveMask := uint8(0b1_0000)
+	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFiveMask) == bitFiveMask
 }
 
-// Did the aVal carry over from the lower half of the word to the upper half?
+// Did the aVal carry over from the lower half of the top byte in the word to the upper half?
 func isHalfCarry16(aVal uint16, bVal uint16) bool {
-	twelveBitMask := uint16(0xFFFF)
-	bitTwelveMask := uint16(0x1000)
-	return (((aVal & twelveBitMask) + (bVal & twelveBitMask)) & bitTwelveMask) == bitTwelveMask
+	twelveBitMask := uint16(0b0_1111_1111_1111)
+	bitThirteenMask := uint16(0b1_0000_0000_0000)
+	return (((aVal & twelveBitMask) + (bVal & twelveBitMask)) & bitThirteenMask) == bitThirteenMask
 }
