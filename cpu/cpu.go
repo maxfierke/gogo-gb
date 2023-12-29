@@ -652,28 +652,52 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.add8(cpu.Reg.A, cpu.Reg.A.Read(), true)
 		case 0x90:
 			// SUB A, B
-			cpu.sub8(cpu.Reg.A, cpu.Reg.B.Read())
+			cpu.sub8(cpu.Reg.A, cpu.Reg.B.Read(), false)
 		case 0x91:
 			// SUB A, C
-			cpu.sub8(cpu.Reg.A, cpu.Reg.C.Read())
+			cpu.sub8(cpu.Reg.A, cpu.Reg.C.Read(), false)
 		case 0x92:
 			// SUB A, D
-			cpu.sub8(cpu.Reg.A, cpu.Reg.D.Read())
+			cpu.sub8(cpu.Reg.A, cpu.Reg.D.Read(), false)
 		case 0x93:
 			// SUB A, E
-			cpu.sub8(cpu.Reg.A, cpu.Reg.E.Read())
+			cpu.sub8(cpu.Reg.A, cpu.Reg.E.Read(), false)
 		case 0x94:
 			// SUB A, H
-			cpu.sub8(cpu.Reg.A, cpu.Reg.H.Read())
+			cpu.sub8(cpu.Reg.A, cpu.Reg.H.Read(), false)
 		case 0x95:
 			// SUB A, L
-			cpu.sub8(cpu.Reg.A, cpu.Reg.L.Read())
+			cpu.sub8(cpu.Reg.A, cpu.Reg.L.Read(), false)
 		case 0x96:
 			// SUB A, (HL)
-			cpu.sub8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()))
+			cpu.sub8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()), false)
 		case 0x97:
 			// SUB A, A
-			cpu.sub8(cpu.Reg.A, cpu.Reg.A.Read())
+			cpu.sub8(cpu.Reg.A, cpu.Reg.A.Read(), false)
+		case 0x98:
+			// SBC A, B
+			cpu.sub8(cpu.Reg.A, cpu.Reg.B.Read(), true)
+		case 0x99:
+			// SBC A, C
+			cpu.sub8(cpu.Reg.A, cpu.Reg.C.Read(), true)
+		case 0x9A:
+			// SBC A, D
+			cpu.sub8(cpu.Reg.A, cpu.Reg.D.Read(), true)
+		case 0x9B:
+			// SBC A, E
+			cpu.sub8(cpu.Reg.A, cpu.Reg.E.Read(), true)
+		case 0x9C:
+			// SBC A, H
+			cpu.sub8(cpu.Reg.A, cpu.Reg.H.Read(), true)
+		case 0x9D:
+			// SBC A, L
+			cpu.sub8(cpu.Reg.A, cpu.Reg.L.Read(), true)
+		case 0x9E:
+			// SBC A, (HL)
+			cpu.sub8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()), true)
+		case 0x9F:
+			// SBC A, A
+			cpu.sub8(cpu.Reg.A, cpu.Reg.A.Read(), true)
 		case 0xA0:
 			// AND A, B
 			cpu.and(cpu.Reg.B.Read())
@@ -810,7 +834,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			// CALL a16
 			return cpu.call(mmu, opcode, true)
 		case 0xCE:
-			// ADD A, n8
+			// ADC A, n8
 			cpu.add8(cpu.Reg.A, cpu.readNext8(mmu), true)
 		case 0xCF:
 			// RST 08H
@@ -832,7 +856,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.push(mmu, cpu.Reg.DE.Read())
 		case 0xD6:
 			// SUB A, n8
-			cpu.sub8(cpu.Reg.A, cpu.readNext8(mmu))
+			cpu.sub8(cpu.Reg.A, cpu.readNext8(mmu), false)
 		case 0xD7:
 			// RST 10H
 			return cpu.rst(mmu, opcode, 0x10)
@@ -1033,15 +1057,22 @@ func (cpu *CPU) inc8(reg RWByte) uint8 {
 	return newValue
 }
 
-func (cpu *CPU) sub8(reg RWByte, value uint8) uint8 {
+func (cpu *CPU) sub8(reg RWByte, value uint8, with_carry bool) uint8 {
 	oldValue := reg.Read()
 	newValue := oldValue - value
+
+	carry := uint8(0)
+	if with_carry && cpu.Reg.F.Carry {
+		carry = 1
+		newValue -= carry
+	}
+
 	reg.Write(newValue)
 
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = true
 	cpu.Reg.F.Carry = newValue > oldValue
-	cpu.Reg.F.HalfCarry = isHalfCarry8(newValue, value)
+	cpu.Reg.F.HalfCarry = isHalfCarry8(newValue, value-carry)
 
 	return newValue
 }
@@ -1220,14 +1251,14 @@ func (cpu *CPU) srl(value byte) byte {
 	return newValue
 }
 
-// Did the aVal carry over from the lower half of the byte to the upper half?
+// Did the aVal carry over from the lower 4 bits to the upper 4 bits?
 func isHalfCarry8(aVal uint8, bVal uint8) bool {
 	fourBitMask := uint8(0xF)
 	bitFiveMask := uint8(1 << 4)
 	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFiveMask) == bitFiveMask
 }
 
-// Did the aVal carry over from the lower half of the top byte in the word to the upper half?
+// Did the aVal carry over from the lower 4 bits of the top byte in the word to the upper 4 bits?
 func isHalfCarry16(aVal uint16, bVal uint16) bool {
 	twelveBitMask := uint16(0xFFF)
 	bitThirteenMask := uint16(1 << 12)
