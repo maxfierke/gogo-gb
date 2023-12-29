@@ -78,7 +78,35 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	opcode := inst.Opcode
 
 	if opcode.CbPrefixed {
-		log.Fatalf("Unimplemented instruction @ %s", inst)
+		switch opcode.Addr {
+		case 0x38:
+			// SRL B
+			cpu.Reg.B.Write(cpu.srl(cpu.Reg.B.Read()))
+		case 0x39:
+			// SRL C
+			cpu.Reg.C.Write(cpu.srl(cpu.Reg.C.Read()))
+		case 0x3A:
+			// SRL D
+			cpu.Reg.D.Write(cpu.srl(cpu.Reg.D.Read()))
+		case 0x3B:
+			// SRL E
+			cpu.Reg.E.Write(cpu.srl(cpu.Reg.E.Read()))
+		case 0x3C:
+			// SRL H
+			cpu.Reg.H.Write(cpu.srl(cpu.Reg.H.Read()))
+		case 0x3D:
+			// SRL L
+			cpu.Reg.L.Write(cpu.srl(cpu.Reg.L.Read()))
+		case 0x3E:
+			// SRL (HL)
+			addr := cpu.Reg.HL.Read()
+			mmu.Write8(addr, cpu.srl(mmu.Read8(addr)))
+		case 0x3F:
+			// SRL A
+			cpu.Reg.A.Write(cpu.srl(cpu.Reg.A.Read()))
+		default:
+			log.Fatalf("Unimplemented instruction @ %s", inst)
+		}
 	} else {
 		switch opcode.Addr {
 		case 0x00:
@@ -1015,6 +1043,15 @@ func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC 
 func (cpu *CPU) rst(mmu *mem.MMU, opcode *isa.Opcode, value byte) (uint16, uint8) {
 	cpu.push(mmu, cpu.PC.Read()+1)
 	return uint16(value), uint8(opcode.Cycles[0])
+}
+
+func (cpu *CPU) srl(value byte) byte {
+	newValue := value >> 1
+	cpu.Reg.F.Zero = newValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.HalfCarry = false
+	cpu.Reg.F.Carry = (value & 0x1) == 0x1
+	return newValue
 }
 
 // Did the aVal carry over from the lower half of the byte to the upper half?
