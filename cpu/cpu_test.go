@@ -505,6 +505,25 @@ func TestExecuteAndA(t *testing.T) {
 	assertFlags(t, cpu, false, false, true, false)
 }
 
+func TestExecuteCcf(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.F.Zero = true
+	cpu.Reg.F.Subtract = true
+	cpu.Reg.F.HalfCarry = true
+	cpu.Reg.F.Carry = true
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3F, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertFlags(t, cpu, true, false, false, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertFlags(t, cpu, true, false, false, true)
+}
+
 func TestExecuteCompareNonUnderflowTarget(t *testing.T) {
 	cpu, _ := NewCPU()
 
@@ -560,6 +579,19 @@ func TestExecuteCompareNonUnderflowTargetA(t *testing.T) {
 
 	assertRegEquals(t, cpu.Reg.A.Read(), 0x7)
 	assertFlags(t, cpu, true, true, false, false)
+}
+
+func TestExecuteCpl(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.A.Write(0b1011_0100)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x2F, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0b0100_1011)
+	assertFlags(t, cpu, false, true, true, false)
 }
 
 func TestExecuteOr(t *testing.T) {
@@ -1550,6 +1582,21 @@ func TestExecuteRRCA(t *testing.T) {
 
 	assertRegEquals(t, cpu.Reg.A.Read(), 0x80)
 	assertFlags(t, cpu, false, false, false, true)
+}
+
+func TestExecuteScf(t *testing.T) {
+	cpu, _ := NewCPU()
+
+	cpu.Reg.F.Zero = true
+	cpu.Reg.F.Subtract = true
+	cpu.Reg.F.HalfCarry = true
+	cpu.Reg.F.Carry = false
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x37, false)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertFlags(t, cpu, true, false, false, true)
 }
 
 func TestExecuteSRL(t *testing.T) {

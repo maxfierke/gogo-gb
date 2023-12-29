@@ -358,6 +358,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x2E:
 			// LD L, n8
 			cpu.load8(cpu.Reg.L, cpu.readNext8(mmu))
+		case 0x2F:
+			// CPL
+			cpu.cpl()
 		case 0x30:
 			// JR NC, e8
 			return cpu.jump_rel(mmu, opcode, !cpu.Reg.F.Carry)
@@ -388,6 +391,11 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			value := cpu.readNext8(mmu)
 			cell := ByteCell{value: value}
 			cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), &cell)
+		case 0x37:
+			// SCF
+			cpu.Reg.F.Subtract = false
+			cpu.Reg.F.HalfCarry = false
+			cpu.Reg.F.Carry = true
 		case 0x38:
 			// JR C, e8
 			return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Carry)
@@ -410,6 +418,11 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x3E:
 			// LD A, n8
 			cpu.load8(cpu.Reg.A, cpu.readNext8(mmu))
+		case 0x3F:
+			// CCF
+			cpu.Reg.F.Subtract = false
+			cpu.Reg.F.HalfCarry = false
+			cpu.Reg.F.Carry = !cpu.Reg.F.Carry
 		case 0x40:
 			// LD B, B
 			cpu.load8(cpu.Reg.B, cpu.Reg.B.Read())
@@ -1108,6 +1121,16 @@ func (cpu *CPU) compare(compareValue byte) {
 	cpu.Reg.F.Subtract = true
 	cpu.Reg.F.Carry = value < compareValue
 	cpu.Reg.F.HalfCarry = (value & 0xF) < (compareValue & 0xF)
+}
+
+func (cpu *CPU) cpl() {
+	value := cpu.Reg.A.Read()
+	newValue := value ^ 0xFF
+
+	cpu.Reg.A.Write(newValue)
+
+	cpu.Reg.F.Subtract = true
+	cpu.Reg.F.HalfCarry = true
 }
 
 func (cpu *CPU) or(value byte) byte {
