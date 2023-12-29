@@ -38,15 +38,34 @@ bin/gogo-gb:
 	go build -o bin/gogo-gb .
 
 .PHONY: cpu_instrs
-cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/01-special.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 1 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/02-interrupts.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 2 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/03-op\ sp,hl.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 3 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/04-op\ r,imm.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 4 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/05-op\ rp.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 5 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/06-ld\ r,r.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 6 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 7 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/08-misc\ instrs.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 8 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/09-op\ r,r.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 9 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/10-bit\ ops.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 10 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
-#	bin/gogo-gb --cart './vendor/gb-test-roms/cpu_instrs/individual/11-op a,(hl).gb' | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 11 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms/cpu_instrs/individual/*.gb
+#  These are pending
+#    01-special.gb
+#    04-op r,imm.gb
+#    09-op r,r.gb
+#    10-bit ops.gb
+#    11-op a,(hl).gb
+#  These are broken upstream
+#    02-interrupts.gb
+	@CPU_TESTS=( \
+    "03-op sp,hl.gb" \
+    "05-op rp.gb" \
+    "06-ld r,r.gb" \
+    "07-jr,jp,call,ret,rst.gb" \
+    "08-misc instrs.gb" \
+  ); \
+  for file in "$${CPU_TESTS[@]}"; do \
+    test_name=$${file%*.gb}; \
+    test_num=$$((10#$${test_name%-*})); \
+    echo "=== Starting cpu_instrs test $$file ==="; \
+    bin/gogo-gb --cart "vendor/gb-test-roms/cpu_instrs/individual/$$file" | \
+      ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs "$$test_num" || \
+      { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }; \
+    echo "=== Finished cpu_instrs test $$file ===" ; \
+  done
+
+vendor/gameboy-doctor/gameboy-doctor:
+	git submodule init
+
+vendor/gb-test-roms/cpu_instrs/individual/*.gb:
+	git submodule init
