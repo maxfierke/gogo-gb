@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"log"
+	"math/bits"
 
 	"github.com/maxfierke/gogo-gb/cpu/isa"
 	"github.com/maxfierke/gogo-gb/mem"
@@ -79,6 +80,31 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 
 	if opcode.CbPrefixed {
 		switch opcode.Addr {
+		case 0x00:
+			// RLC B
+			cpu.Reg.B.Write(cpu.rotl(cpu.Reg.B.Read(), true, false))
+		case 0x01:
+			// RLC C
+			cpu.Reg.C.Write(cpu.rotl(cpu.Reg.C.Read(), true, false))
+		case 0x02:
+			// RLC D
+			cpu.Reg.D.Write(cpu.rotl(cpu.Reg.D.Read(), true, false))
+		case 0x03:
+			// RLC E
+			cpu.Reg.E.Write(cpu.rotl(cpu.Reg.E.Read(), true, false))
+		case 0x04:
+			// RLC H
+			cpu.Reg.H.Write(cpu.rotl(cpu.Reg.H.Read(), true, false))
+		case 0x05:
+			// RLC L
+			cpu.Reg.L.Write(cpu.rotl(cpu.Reg.L.Read(), true, false))
+		case 0x06:
+			// RLC (HL)
+			addr := cpu.Reg.HL.Read()
+			mmu.Write8(addr, cpu.rotl(mmu.Read8(addr), true, false))
+		case 0x07:
+			// RLC A
+			cpu.Reg.A.Write(cpu.rotl(cpu.Reg.A.Read(), true, false))
 		case 0x08:
 			// RRC B
 			cpu.Reg.B.Write(cpu.rotr(cpu.Reg.B.Read(), true, false))
@@ -104,6 +130,31 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x0F:
 			// RRC A
 			cpu.Reg.A.Write(cpu.rotr(cpu.Reg.A.Read(), true, false))
+		case 0x10:
+			// RL B
+			cpu.Reg.B.Write(cpu.rotl(cpu.Reg.B.Read(), true, true))
+		case 0x11:
+			// RL C
+			cpu.Reg.C.Write(cpu.rotl(cpu.Reg.C.Read(), true, true))
+		case 0x12:
+			// RL D
+			cpu.Reg.D.Write(cpu.rotl(cpu.Reg.D.Read(), true, true))
+		case 0x13:
+			// RL E
+			cpu.Reg.E.Write(cpu.rotl(cpu.Reg.E.Read(), true, true))
+		case 0x14:
+			// RL H
+			cpu.Reg.H.Write(cpu.rotl(cpu.Reg.H.Read(), true, true))
+		case 0x15:
+			// RL L
+			cpu.Reg.L.Write(cpu.rotl(cpu.Reg.L.Read(), true, true))
+		case 0x16:
+			// RL (HL)
+			addr := cpu.Reg.HL.Read()
+			mmu.Write8(addr, cpu.rotl(mmu.Read8(addr), true, true))
+		case 0x17:
+			// RL A
+			cpu.Reg.A.Write(cpu.rotl(cpu.Reg.A.Read(), true, true))
 		case 0x18:
 			// RR B
 			cpu.Reg.B.Write(cpu.rotr(cpu.Reg.B.Read(), true, true))
@@ -179,6 +230,15 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x06:
 			// LD B, n8
 			cpu.load8(cpu.Reg.B, cpu.readNext8(mmu))
+		case 0x07:
+			// RLCA
+			value := cpu.Reg.A.Read()
+			newValue := bits.RotateLeft8(value, 1)
+			cpu.Reg.F.Zero = false
+			cpu.Reg.F.Subtract = false
+			cpu.Reg.F.HalfCarry = false
+			cpu.Reg.F.Carry = (value & 0x80) != 0x0
+			cpu.Reg.A.Write(newValue)
 		case 0x08:
 			// LD (a16), SP
 			cpu.load16Indirect(mmu, cpu.readNext16(mmu), cpu.SP)
@@ -202,7 +262,13 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.load8(cpu.Reg.C, cpu.readNext8(mmu))
 		case 0x0F:
 			// RRCA
-			cpu.Reg.A.Write(cpu.rotr(cpu.Reg.A.Read(), false, false))
+			value := cpu.Reg.A.Read()
+			newValue := bits.RotateLeft8(value, -1)
+			cpu.Reg.F.Zero = false
+			cpu.Reg.F.Subtract = false
+			cpu.Reg.F.HalfCarry = false
+			cpu.Reg.F.Carry = (value & 0x1) != 0x0
+			cpu.Reg.A.Write(newValue)
 		case 0x11:
 			// LD DE, n16
 			cpu.load16(cpu.Reg.DE, cpu.readNext16(mmu))
@@ -218,6 +284,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x15:
 			// DEC D
 			cpu.dec8(cpu.Reg.D)
+		case 0x17:
+			// RLA
+			cpu.Reg.A.Write(cpu.rotl(cpu.Reg.A.Read(), false, true))
 		case 0x18:
 			// JR e8
 			return cpu.jump_rel(mmu, opcode, true)
@@ -1094,6 +1163,21 @@ func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC 
 	} else {
 		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
 	}
+}
+
+func (cpu *CPU) rotl(value byte, zero bool, through_carry bool) byte {
+	carryBit := byte(0x0)
+
+	if through_carry && cpu.Reg.F.Carry {
+		carryBit = 1
+	}
+
+	newValue := (value << 1) | carryBit
+	cpu.Reg.F.Zero = zero && newValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.HalfCarry = false
+	cpu.Reg.F.Carry = (value & 0x80) != 0x0
+	return newValue
 }
 
 func (cpu *CPU) rotr(value byte, zero bool, through_carry bool) byte {
