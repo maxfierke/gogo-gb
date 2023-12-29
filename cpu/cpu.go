@@ -284,6 +284,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x15:
 			// DEC D
 			cpu.dec8(cpu.Reg.D)
+		case 0x16:
+			// LD D, n8
+			cpu.load8(cpu.Reg.D, cpu.readNext8(mmu))
 		case 0x17:
 			// RLA
 			cpu.Reg.A.Write(cpu.rotl(cpu.Reg.A.Read(), false, true))
@@ -305,6 +308,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x1D:
 			// DEC E
 			cpu.dec8(cpu.Reg.E)
+		case 0x1E:
+			// LD E, n8
+			cpu.load8(cpu.Reg.E, cpu.readNext8(mmu))
 		case 0x1F:
 			// RRA
 			cpu.Reg.A.Write(cpu.rotr(cpu.Reg.A.Read(), false, true))
@@ -377,6 +383,11 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cell := ByteCell{value: value}
 			cpu.sub8(&cell, 1)
 			mmu.Write8(cpu.Reg.HL.Read(), cell.Read())
+		case 0x36:
+			// LD (HL), n8
+			value := cpu.readNext8(mmu)
+			cell := ByteCell{value: value}
+			cpu.load8Indirect(mmu, cpu.Reg.HL.Read(), &cell)
 		case 0x38:
 			// JR C, e8
 			return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Carry)
