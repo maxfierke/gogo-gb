@@ -120,6 +120,32 @@ func (reg *CompoundRegister) Dec(value uint16) uint16 {
 	return newValue
 }
 
+// A register-like interface for a single byte value
+type ByteCell struct {
+	value byte
+}
+
+func (bc *ByteCell) Read() byte {
+	return bc.value
+}
+
+func (bc *ByteCell) Write(value byte) {
+	bc.value = value
+}
+
+// A register-like interface for a single word value
+type WordCell struct {
+	value uint16
+}
+
+func (wc *WordCell) Read() uint16 {
+	return wc.value
+}
+
+func (wc *WordCell) Write(value uint16) {
+	wc.value = value
+}
+
 type Registers struct {
 	A *Register[uint8]
 	B *Register[uint8]

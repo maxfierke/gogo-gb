@@ -368,15 +368,15 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x34:
 			// INC (HL)
 			value := mmu.Read8(cpu.Reg.HL.Read())
-			fauxReg := &Register[uint8]{name: "(HL)", value: value}
-			cpu.add8(fauxReg, 1, false)
-			mmu.Write8(cpu.Reg.HL.Read(), fauxReg.Read())
+			cell := ByteCell{value: value}
+			cpu.add8(&cell, 1, false)
+			mmu.Write8(cpu.Reg.HL.Read(), cell.Read())
 		case 0x35:
 			// DEC (HL)
 			value := mmu.Read8(cpu.Reg.HL.Read())
-			fauxReg := &Register[uint8]{name: "(HL)", value: value}
-			cpu.sub8(fauxReg, 1)
-			mmu.Write8(cpu.Reg.HL.Read(), fauxReg.Read())
+			cell := ByteCell{value: value}
+			cpu.sub8(&cell, 1)
+			mmu.Write8(cpu.Reg.HL.Read(), cell.Read())
 		case 0x38:
 			// JR C, e8
 			return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Carry)
@@ -903,9 +903,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			return cpu.rst(mmu, opcode, 0x30)
 		case 0xF8:
 			// LD HL, SP+e8
-			fauxReg := &Register[uint16]{name: "SP+e8", value: cpu.SP.Read()}
-			cpu.add8Signed(fauxReg, cpu.readNext8(mmu))
-			cpu.load16(cpu.Reg.HL, fauxReg.Read())
+			cell := WordCell{value: cpu.SP.Read()}
+			cpu.add8Signed(&cell, cpu.readNext8(mmu))
+			cpu.load16(cpu.Reg.HL, cell.Read())
 		case 0xF9:
 			// LD SP, HL
 			cpu.load16(cpu.SP, cpu.Reg.HL.Read())
