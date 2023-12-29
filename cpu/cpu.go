@@ -681,6 +681,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0xE7:
 			// RST 20H
 			return cpu.rst(mmu, opcode, 0x20)
+		case 0xE8:
+			// ADD SP, e8
+			cpu.add8Signed(cpu.SP, cpu.readNext8(mmu))
 		case 0xE9:
 			// JP HL
 			return cpu.Reg.HL.Read(), uint8(opcode.Cycles[0])
@@ -718,6 +721,11 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0xF7:
 			// RST 30H
 			return cpu.rst(mmu, opcode, 0x30)
+		case 0xF8:
+			// LD HL, SP+e8
+			fauxReg := &Register[uint16]{name: "SP+e8", value: cpu.SP.Read()}
+			cpu.add8Signed(fauxReg, cpu.readNext8(mmu))
+			cpu.load16(cpu.Reg.HL, fauxReg.Read())
 		case 0xF9:
 			// LD SP, HL
 			cpu.load16(cpu.SP, cpu.Reg.HL.Read())
@@ -787,6 +795,30 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.Carry = newValue < value
 	cpu.Reg.F.HalfCarry = isHalfCarry16(oldValue, value)
+
+	return newValue
+}
+
+func (cpu *CPU) add8Signed(reg RWTwoByte, value uint8) uint16 {
+	oldValue := reg.Read()
+
+	var delta uint16
+	if (value & 0x80) != 0 {
+		delta = (0xFF00 | uint16(value))
+	} else {
+		delta = uint16(value)
+	}
+
+	newValue := oldValue + delta
+
+	reg.Write(newValue)
+
+	carryMask := uint16(1<<8) - 1
+
+	cpu.Reg.F.Zero = false
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.Carry = (oldValue&carryMask)+(delta&carryMask) > carryMask
+	cpu.Reg.F.HalfCarry = isHalfCarry8(uint8(oldValue), value)
 
 	return newValue
 }
@@ -953,14 +985,14 @@ func (cpu *CPU) rst(mmu *mem.MMU, opcode *isa.Opcode, value byte) (uint16, uint8
 
 // Did the aVal carry over from the lower half of the byte to the upper half?
 func isHalfCarry8(aVal uint8, bVal uint8) bool {
-	fourBitMask := uint8(0b0_1111)
-	bitFiveMask := uint8(0b1_0000)
+	fourBitMask := uint8(0xF)
+	bitFiveMask := uint8(1 << 4)
 	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFiveMask) == bitFiveMask
 }
 
 // Did the aVal carry over from the lower half of the top byte in the word to the upper half?
 func isHalfCarry16(aVal uint16, bVal uint16) bool {
-	twelveBitMask := uint16(0b0_1111_1111_1111)
-	bitThirteenMask := uint16(0b1_0000_0000_0000)
+	twelveBitMask := uint16(0xFFF)
+	bitThirteenMask := uint16(1 << 12)
 	return (((aVal & twelveBitMask) + (bVal & twelveBitMask)) & bitThirteenMask) == bitThirteenMask
 }

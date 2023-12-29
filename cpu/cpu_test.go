@@ -86,6 +86,31 @@ func TestExecuteAdd8TargetBCarry(t *testing.T) {
 	assertFlags(t, cpu, false, false, true, true)
 }
 
+func TestExecuteAdd8SignedTargetSP(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xE8, false)
+
+	cpu.SP.Write(0xFFFE)
+	cpu.PC.Write(0x100)
+
+	mmu.Write8(0x101, 0xFC) // -4
+
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.SP.Read(), 0xFFFA)
+	assertFlags(t, cpu, false, false, true, true)
+
+	cpu.SP.Write(0xFFFA)
+	mmu.Write8(0x101, 0x4)
+
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.SP.Read(), 0xFFFE)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
 func TestExecuteAdd16TargetHL(t *testing.T) {
 	cpu, _ := NewCPU()
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x29, false)
@@ -1116,6 +1141,28 @@ func TestExecuteLD16RegToIndirectImm(t *testing.T) {
 	cpu.Execute(mmu, inst)
 
 	assertRegEquals(t, mmu.Read16(0x0620), 0x3322)
+}
+
+func TestExecuteLD16SPPlusSignedImmToHL(t *testing.T) {
+	cpu, _ := NewCPU()
+	ram := make([]byte, testRamSize)
+	mmu := mem.NewMMU(ram)
+	cpu.PC.Write(0x100)
+
+	cpu.SP.Write(0x0201)
+	mmu.Write8(0x101, 0x2)
+
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xF8, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.Reg.HL.Read(), 0x0203)
+
+	mmu.Write8(0x101, 0xFD) // -2
+
+	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xF8, false)
+	cpu.Execute(mmu, inst)
+
+	assertRegEquals(t, cpu.Reg.HL.Read(), 0x01FE)
 }
 
 func TestExecutePushPop(t *testing.T) {
