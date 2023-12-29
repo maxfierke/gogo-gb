@@ -39,14 +39,14 @@ bin/gogo-gb:
 
 .PHONY: cpu_instrs
 cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/01-special.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 1
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/02-interrupts.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 2
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/03-op\ sp,hl.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 3
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/04-op\ r,imm.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 4
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/05-op\ rp.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 5
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/06-ld\ r,r.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 6
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 7
-	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/08-misc\ instrs.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 8
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/09-op\ r,r.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 9
-#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/10-bit\ ops.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 10
-#	bin/gogo-gb --cart './vendor/gb-test-roms/cpu_instrs/individual/11-op a,(hl).gb' | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 11
+#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/01-special.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 1 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/02-interrupts.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 2 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/03-op\ sp,hl.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 3 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/04-op\ r,imm.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 4 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/05-op\ rp.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 5 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/06-ld\ r,r.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 6 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 7 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/08-misc\ instrs.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 8 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/09-op\ r,r.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 9 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+#	bin/gogo-gb --cart ./vendor/gb-test-roms/cpu_instrs/individual/10-bit\ ops.gb | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 10 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
+#	bin/gogo-gb --cart './vendor/gb-test-roms/cpu_instrs/individual/11-op a,(hl).gb' | ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs 11 || { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }
