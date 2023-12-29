@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
@@ -13,7 +12,7 @@ import (
 )
 
 func main() {
-	fmt.Println("welcome to gogo-gb, the go-getting gameboy emulator")
+	// fmt.Println("welcome to gogo-gb, the go-getting gameboy emulator")
 
 	cartPath := flag.String("cart", "", "Path to cartridge file (.gb, .gbc)")
 	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. Currently just 'cart-header', 'opcodes'")
@@ -71,8 +70,7 @@ func main() {
 			log.Fatalf("Unable to load cartridge: %v\n", err)
 		}
 
-		log.Println("Loaded cartridge successfully")
-		dmg.DebugPrint()
+		// dmg.DebugPrint()
 		dmg.Run()
 	}
 }
