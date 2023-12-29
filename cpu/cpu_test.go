@@ -344,6 +344,7 @@ func TestExecuteIncHLIndirect(t *testing.T) {
 	cpu.Execute(mmu, inst)
 
 	assertRegEquals(t, ram[0xFFF8], 0x04)
+	assertFlags(t, cpu, false, false, false, false)
 }
 
 func TestExecuteDec8(t *testing.T) {
@@ -409,6 +410,7 @@ func TestExecuteDecHLIndirect(t *testing.T) {
 	cpu.Execute(mmu, inst)
 
 	assertRegEquals(t, ram[0xFFF8], 0x03)
+	assertFlags(t, cpu, false, true, false, false)
 }
 
 func TestExecuteAnd(t *testing.T) {

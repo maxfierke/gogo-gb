@@ -375,13 +375,13 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			// INC (HL)
 			value := mmu.Read8(cpu.Reg.HL.Read())
 			cell := ByteCell{value: value}
-			cpu.add8(&cell, 1, false)
+			cpu.inc8(&cell)
 			mmu.Write8(cpu.Reg.HL.Read(), cell.Read())
 		case 0x35:
 			// DEC (HL)
 			value := mmu.Read8(cpu.Reg.HL.Read())
 			cell := ByteCell{value: value}
-			cpu.sub8(&cell, 1)
+			cpu.dec8(&cell)
 			mmu.Write8(cpu.Reg.HL.Read(), cell.Read())
 		case 0x36:
 			// LD (HL), n8
