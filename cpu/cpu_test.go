@@ -111,6 +111,72 @@ func TestExecuteAdd8SignedTargetSP(t *testing.T) {
 	assertFlags(t, cpu, false, false, false, false)
 }
 
+func TestExecuteAdd8NonOverflowingTargetANoCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x8F, false)
+
+	cpu.Reg.A.Write(0x7)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0xE)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteAdc8NonOverflowingTargetACarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x8F, false)
+
+	cpu.Reg.A.Write(0x7)
+	cpu.Reg.F.Carry = true
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0xF)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteAdc8NonOverflowingTargetC(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x89, false)
+
+	cpu.Reg.A.Write(0x7)
+	cpu.Reg.C.Write(0x3)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0xA)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteAdc8NonOverflowingTargetCWithCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x89, false)
+
+	cpu.Reg.A.Write(0x7)
+	cpu.Reg.C.Write(0x3)
+	cpu.Reg.F.Carry = true
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0xB)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteAdc8TargetBCarry(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x88, false)
+
+	cpu.Reg.A.Write(0xFC)
+	cpu.Reg.B.Write(0x3)
+	cpu.Reg.F.Carry = true
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x0)
+	assertFlags(t, cpu, true, false, true, true)
+}
+
 func TestExecuteAdd16TargetHL(t *testing.T) {
 	cpu, _ := NewCPU()
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x29, false)

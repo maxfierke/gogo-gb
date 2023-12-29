@@ -216,7 +216,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			// INC (HL)
 			value := mmu.Read8(cpu.Reg.HL.Read())
 			fauxReg := &Register[uint8]{name: "(HL)", value: value}
-			cpu.add8(fauxReg, 1)
+			cpu.add8(fauxReg, 1, false)
 			mmu.Write8(cpu.Reg.HL.Read(), fauxReg.Read())
 		case 0x35:
 			// DEC (HL)
@@ -440,28 +440,52 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.load8(cpu.Reg.A, cpu.Reg.A.Read())
 		case 0x80:
 			// ADD A, B
-			cpu.add8(cpu.Reg.A, cpu.Reg.B.Read())
+			cpu.add8(cpu.Reg.A, cpu.Reg.B.Read(), false)
 		case 0x81:
 			// ADD A, C
-			cpu.add8(cpu.Reg.A, cpu.Reg.C.Read())
+			cpu.add8(cpu.Reg.A, cpu.Reg.C.Read(), false)
 		case 0x82:
 			// ADD A, D
-			cpu.add8(cpu.Reg.A, cpu.Reg.D.Read())
+			cpu.add8(cpu.Reg.A, cpu.Reg.D.Read(), false)
 		case 0x83:
 			// ADD A, E
-			cpu.add8(cpu.Reg.A, cpu.Reg.E.Read())
+			cpu.add8(cpu.Reg.A, cpu.Reg.E.Read(), false)
 		case 0x84:
 			// ADD A, H
-			cpu.add8(cpu.Reg.A, cpu.Reg.H.Read())
+			cpu.add8(cpu.Reg.A, cpu.Reg.H.Read(), false)
 		case 0x85:
 			// ADD A, L
-			cpu.add8(cpu.Reg.A, cpu.Reg.L.Read())
+			cpu.add8(cpu.Reg.A, cpu.Reg.L.Read(), false)
 		case 0x86:
 			// ADD A, (HL)
-			cpu.add8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()))
+			cpu.add8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()), false)
 		case 0x87:
 			// ADD A, A
-			cpu.add8(cpu.Reg.A, cpu.Reg.A.Read())
+			cpu.add8(cpu.Reg.A, cpu.Reg.A.Read(), false)
+		case 0x88:
+			// ADC A, B
+			cpu.add8(cpu.Reg.A, cpu.Reg.B.Read(), true)
+		case 0x89:
+			// ADC A, C
+			cpu.add8(cpu.Reg.A, cpu.Reg.C.Read(), true)
+		case 0x8A:
+			// ADC A, D
+			cpu.add8(cpu.Reg.A, cpu.Reg.D.Read(), true)
+		case 0x8B:
+			// ADC A, E
+			cpu.add8(cpu.Reg.A, cpu.Reg.E.Read(), true)
+		case 0x8C:
+			// ADC A, H
+			cpu.add8(cpu.Reg.A, cpu.Reg.H.Read(), true)
+		case 0x8D:
+			// ADC A, L
+			cpu.add8(cpu.Reg.A, cpu.Reg.L.Read(), true)
+		case 0x8E:
+			// ADC A, (HL)
+			cpu.add8(cpu.Reg.A, mmu.Read8(cpu.Reg.HL.Read()), true)
+		case 0x8F:
+			// ADC A, A
+			cpu.add8(cpu.Reg.A, cpu.Reg.A.Read(), true)
 		case 0x90:
 			// SUB A, B
 			cpu.sub8(cpu.Reg.A, cpu.Reg.B.Read())
@@ -602,7 +626,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.push(mmu, cpu.Reg.BC.Read())
 		case 0xC6:
 			// ADD A, n8
-			cpu.add8(cpu.Reg.A, cpu.readNext8(mmu))
+			cpu.add8(cpu.Reg.A, cpu.readNext8(mmu), false)
 		case 0xC7:
 			// RST 00H
 			return cpu.rst(mmu, opcode, 0x00)
@@ -621,6 +645,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0xCD:
 			// CALL a16
 			return cpu.call(mmu, opcode, true)
+		case 0xCE:
+			// ADD A, n8
+			cpu.add8(cpu.Reg.A, cpu.readNext8(mmu), true)
 		case 0xCF:
 			// RST 08H
 			return cpu.rst(mmu, opcode, 0x08)
@@ -774,15 +801,22 @@ func (cpu *CPU) ResetToBootROM() {
 	cpu.halted = false
 }
 
-func (cpu *CPU) add8(reg RWByte, value uint8) uint8 {
+func (cpu *CPU) add8(reg RWByte, value uint8, with_carry bool) uint8 {
 	oldValue := reg.Read()
 	newValue := oldValue + value
+
+	carry := uint8(0)
+	if with_carry && cpu.Reg.F.Carry {
+		carry = 1
+		newValue += carry
+	}
+
 	reg.Write(newValue)
 
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.Carry = newValue < oldValue
-	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, value)
+	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, value+carry)
 
 	return newValue
 }
