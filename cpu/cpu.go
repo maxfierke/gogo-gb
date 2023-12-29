@@ -79,6 +79,56 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 
 	if opcode.CbPrefixed {
 		switch opcode.Addr {
+		case 0x08:
+			// RRC B
+			cpu.Reg.B.Write(cpu.rotr(cpu.Reg.B.Read(), true, false))
+		case 0x09:
+			// RRC C
+			cpu.Reg.C.Write(cpu.rotr(cpu.Reg.C.Read(), true, false))
+		case 0x0A:
+			// RRC D
+			cpu.Reg.D.Write(cpu.rotr(cpu.Reg.D.Read(), true, false))
+		case 0x0B:
+			// RRC E
+			cpu.Reg.E.Write(cpu.rotr(cpu.Reg.E.Read(), true, false))
+		case 0x0C:
+			// RRC H
+			cpu.Reg.H.Write(cpu.rotr(cpu.Reg.H.Read(), true, false))
+		case 0x0D:
+			// RRC L
+			cpu.Reg.L.Write(cpu.rotr(cpu.Reg.L.Read(), true, false))
+		case 0x0E:
+			// RRC (HL)
+			addr := cpu.Reg.HL.Read()
+			mmu.Write8(addr, cpu.rotr(mmu.Read8(addr), true, false))
+		case 0x0F:
+			// RRC A
+			cpu.Reg.A.Write(cpu.rotr(cpu.Reg.A.Read(), true, false))
+		case 0x18:
+			// RR B
+			cpu.Reg.B.Write(cpu.rotr(cpu.Reg.B.Read(), true, true))
+		case 0x19:
+			// RR C
+			cpu.Reg.C.Write(cpu.rotr(cpu.Reg.C.Read(), true, true))
+		case 0x1A:
+			// RR D
+			cpu.Reg.D.Write(cpu.rotr(cpu.Reg.D.Read(), true, true))
+		case 0x1B:
+			// RR E
+			cpu.Reg.E.Write(cpu.rotr(cpu.Reg.E.Read(), true, true))
+		case 0x1C:
+			// RR H
+			cpu.Reg.H.Write(cpu.rotr(cpu.Reg.H.Read(), true, true))
+		case 0x1D:
+			// RR L
+			cpu.Reg.L.Write(cpu.rotr(cpu.Reg.L.Read(), true, true))
+		case 0x1E:
+			// RR (HL)
+			addr := cpu.Reg.HL.Read()
+			mmu.Write8(addr, cpu.rotr(mmu.Read8(addr), true, true))
+		case 0x1F:
+			// RR A
+			cpu.Reg.A.Write(cpu.rotr(cpu.Reg.A.Read(), true, true))
 		case 0x38:
 			// SRL B
 			cpu.Reg.B.Write(cpu.srl(cpu.Reg.B.Read()))
@@ -150,6 +200,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x0E:
 			// LD C, n8
 			cpu.load8(cpu.Reg.C, cpu.readNext8(mmu))
+		case 0x0F:
+			// RRCA
+			cpu.Reg.A.Write(cpu.rotr(cpu.Reg.A.Read(), false, false))
 		case 0x11:
 			// LD DE, n16
 			cpu.load16(cpu.Reg.DE, cpu.readNext16(mmu))
@@ -183,6 +236,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x1D:
 			// DEC E
 			cpu.dec8(cpu.Reg.E)
+		case 0x1F:
+			// RRA
+			cpu.Reg.A.Write(cpu.rotr(cpu.Reg.A.Read(), false, true))
 		case 0x20:
 			// JR NZ, e8
 			return cpu.jump_rel(mmu, opcode, !cpu.Reg.F.Zero)
@@ -1038,6 +1094,21 @@ func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC 
 	} else {
 		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
 	}
+}
+
+func (cpu *CPU) rotr(value byte, zero bool, through_carry bool) byte {
+	carryBit := byte(0x0)
+
+	if through_carry && cpu.Reg.F.Carry {
+		carryBit = 1 << 7
+	}
+
+	newValue := carryBit | (value >> 1)
+	cpu.Reg.F.Zero = zero && newValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.HalfCarry = false
+	cpu.Reg.F.Carry = (value & 0x1) != 0x0
+	return newValue
 }
 
 func (cpu *CPU) rst(mmu *mem.MMU, opcode *isa.Opcode, value byte) (uint16, uint8) {

@@ -1384,6 +1384,63 @@ func TestExecuteRetI(t *testing.T) {
 	}
 }
 
+func TestExecuteRR(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x1F, true)
+
+	cpu.Reg.A.Write(0b1011_0101)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0b0101_1010)
+	assertFlags(t, cpu, false, false, false, true)
+
+	cpu.Reg.A.Write(0b1011_0101)
+	cpu.Reg.F.Carry = true
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0b1101_1010)
+	assertFlags(t, cpu, false, false, false, true)
+}
+
+func TestExecuteRRA(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x1F, false)
+
+	cpu.Reg.A.Write(0x1)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x0)
+	assertFlags(t, cpu, false, false, false, true)
+}
+
+func TestExecuteRRC(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x0F, true)
+
+	cpu.Reg.A.Write(0x1)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x0)
+	assertFlags(t, cpu, true, false, false, true)
+}
+
+func TestExecuteRRCA(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x0F, false)
+
+	cpu.Reg.A.Write(0x1)
+	cpu.Reg.F.Carry = true
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x0)
+	assertFlags(t, cpu, false, false, false, true)
+}
+
 func TestExecuteSRL(t *testing.T) {
 	cpu, _ := NewCPU()
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3F, true)
