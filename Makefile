@@ -5,6 +5,8 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
+GO ?= go
+
 all: build
 
 .PHONY: help
@@ -22,20 +24,20 @@ build: bin/gogo-gb
 
 .PHONY: clean
 clean:
-	go clean
+	$(GO) clean
 	rm -f bin/gogo-gb
 
 .PHONY: run
 run:
-	go run .
+	$(GO) run .
 
 .PHONY: test
 test:
-	go test -v ./...
+	$(GO) test -v ./...
 
 .PHONY: bin/gogo-gb # This does exist, but we're not tracking its dependencies. Go is
 bin/gogo-gb:
-	go build -o bin/gogo-gb .
+	$(GO) build -o bin/gogo-gb .
 
 .PHONY: cpu_instrs
 cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms/cpu_instrs/individual/*.gb
