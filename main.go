@@ -12,16 +12,15 @@ import (
 )
 
 func main() {
-	// fmt.Println("welcome to gogo-gb, the go-getting gameboy emulator")
-
-	cartPath := flag.String("cart", "", "Path to cartridge file (.gb, .gbc)")
-	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. Currently just 'cart-header', 'opcodes'")
+	cartPathPtr := flag.String("cart", "", "Path to cartridge file (.gb, .gbc)")
+	debuggerPtr := flag.String("debugger", "none", "Specify debugger to use (\"none\", \"gameboy-doctor\")")
+	debugPrintPtr := flag.String("debug-print", "", "Print out something for debugging purposes. (\"cart-header\", \"opcodes\")")
 	flag.Parse()
 
 	if debugPrintPtr != nil && *debugPrintPtr != "" {
 		if *debugPrintPtr == "cart-header" {
-			cartFile, err := os.Open(*cartPath)
-			if *cartPath == "" || err != nil {
+			cartFile, err := os.Open(*cartPathPtr)
+			if *cartPathPtr == "" || err != nil {
 				log.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (exists): %v\n", err)
 			}
 			defer cartFile.Close()
@@ -45,14 +44,19 @@ func main() {
 			opcodes.DebugPrint()
 		}
 	} else {
-		dmg, err := hardware.NewDMGDebug(debug.NewGBDoctorDebugger())
+		debugger, err := debug.NewDebugger(*debuggerPtr)
+		if err != nil {
+			log.Fatalf("Unable to initialize Debugger: %v\n", err)
+		}
+
+		dmg, err := hardware.NewDMGDebug(debugger)
 		if err != nil {
 			log.Fatalf("Unable to initialize DMG: %v\n", err)
 		}
 
-		cartFile, err := os.Open(*cartPath)
-		if *cartPath == "" || err != nil {
-			log.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (exists): %v\n", err)
+		cartFile, err := os.Open(*cartPathPtr)
+		if *cartPathPtr == "" || err != nil {
+			log.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %v\n", err)
 		}
 		defer cartFile.Close()
 
@@ -60,7 +64,7 @@ func main() {
 		if err == cart.ErrHeader {
 			log.Printf("Warning: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 		} else if err != nil {
-			log.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (exists): %v\n", err)
+			log.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %v\n", err)
 		}
 
 		err = dmg.LoadCartridge(cartReader)
@@ -70,7 +74,6 @@ func main() {
 			log.Fatalf("Unable to load cartridge: %v\n", err)
 		}
 
-		// dmg.DebugPrint()
 		dmg.Run()
 	}
 }

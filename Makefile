@@ -58,7 +58,8 @@ cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms
     test_name=$${file%*.gb}; \
     test_num=$$((10#$${test_name%-*})); \
     echo "=== Starting cpu_instrs test $$file ==="; \
-    bin/gogo-gb --cart "vendor/gb-test-roms/cpu_instrs/individual/$$file" | \
+    bin/gogo-gb --cart "vendor/gb-test-roms/cpu_instrs/individual/$$file" \
+                --debugger=gameboy-doctor | \
       ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs "$$test_num" || \
       { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }; \
     echo "=== Finished cpu_instrs test $$file ===" ; \

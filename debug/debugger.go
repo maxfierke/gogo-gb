@@ -1,6 +1,8 @@
 package debug
 
 import (
+	"fmt"
+
 	"github.com/maxfierke/gogo-gb/cpu"
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -11,6 +13,17 @@ type Debugger interface {
 	OnExecute(cpu *cpu.CPU, mmu *mem.MMU)
 	OnRead(mmu *mem.MMU, addr uint16) mem.MemRead
 	OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite
+}
+
+func NewDebugger(name string) (Debugger, error) {
+	switch name {
+	case "gameboy-doctor":
+		return NewGBDoctorDebugger(), nil
+	case "none":
+		return NewNullDebugger(), nil
+	default:
+		return nil, fmt.Errorf("unrecognized debugger: %v", name)
+	}
 }
 
 type NullDebugger struct{}
