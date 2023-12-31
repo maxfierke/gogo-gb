@@ -1276,6 +1276,8 @@ func (cpu *CPU) rotl(value byte, zero bool, through_carry bool) byte {
 
 	if through_carry && cpu.Reg.F.Carry {
 		carryBit = 1
+	} else if !through_carry {
+		carryBit = (value >> 7)
 	}
 
 	newValue := (value << 1) | carryBit
@@ -1291,6 +1293,8 @@ func (cpu *CPU) rotr(value byte, zero bool, through_carry bool) byte {
 
 	if through_carry && cpu.Reg.F.Carry {
 		carryBit = 1 << 7
+	} else if !through_carry {
+		carryBit = (value << 7)
 	}
 
 	newValue := carryBit | (value >> 1)

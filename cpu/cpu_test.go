@@ -1510,8 +1510,8 @@ func TestExecuteRLC(t *testing.T) {
 
 	cpu.Execute(NULL_MMU, inst)
 
-	assertRegEquals(t, cpu.Reg.A.Read(), 0x0)
-	assertFlags(t, cpu, true, false, false, true)
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x1)
+	assertFlags(t, cpu, false, false, false, true)
 }
 
 func TestExecuteRLCA(t *testing.T) {
@@ -1567,8 +1567,8 @@ func TestExecuteRRC(t *testing.T) {
 
 	cpu.Execute(NULL_MMU, inst)
 
-	assertRegEquals(t, cpu.Reg.A.Read(), 0x0)
-	assertFlags(t, cpu, true, false, false, true)
+	assertRegEquals(t, cpu.Reg.A.Read(), 0x80)
+	assertFlags(t, cpu, false, false, false, true)
 }
 
 func TestExecuteRRCA(t *testing.T) {
