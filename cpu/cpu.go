@@ -1019,8 +1019,8 @@ func (cpu *CPU) add8(reg RWByte, value uint8, with_carry bool) uint8 {
 
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = false
-	cpu.Reg.F.Carry = newValue < oldValue
-	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, value+carry)
+	cpu.Reg.F.Carry = isCarry8(oldValue, value, carry)
+	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, value, carry)
 
 	return newValue
 }
@@ -1031,7 +1031,7 @@ func (cpu *CPU) add16(reg RWTwoByte, value uint16) uint16 {
 	reg.Write(newValue)
 
 	cpu.Reg.F.Subtract = false
-	cpu.Reg.F.Carry = newValue < value
+	cpu.Reg.F.Carry = isCarry16(oldValue, value)
 	cpu.Reg.F.HalfCarry = isHalfCarry16(oldValue, value)
 
 	return newValue
@@ -1056,7 +1056,7 @@ func (cpu *CPU) add8Signed(reg RWTwoByte, value uint8) uint16 {
 	cpu.Reg.F.Zero = false
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.Carry = (oldValue&carryMask)+(delta&carryMask) > carryMask
-	cpu.Reg.F.HalfCarry = isHalfCarry8(uint8(oldValue), value)
+	cpu.Reg.F.HalfCarry = isHalfCarry8(uint8(oldValue), value, 0)
 
 	return newValue
 }
@@ -1068,7 +1068,7 @@ func (cpu *CPU) inc8(reg RWByte) uint8 {
 
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = false
-	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, 1)
+	cpu.Reg.F.HalfCarry = isHalfCarry8(oldValue, 1, 0)
 
 	return newValue
 }
@@ -1087,8 +1087,8 @@ func (cpu *CPU) sub8(reg RWByte, value uint8, with_carry bool) uint8 {
 
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = true
-	cpu.Reg.F.Carry = newValue > oldValue
-	cpu.Reg.F.HalfCarry = isHalfCarry8(newValue, value-carry)
+	cpu.Reg.F.Carry = isCarry8(newValue, value, carry)
+	cpu.Reg.F.HalfCarry = isHalfCarry8(newValue, value, carry)
 
 	return newValue
 }
@@ -1100,7 +1100,7 @@ func (cpu *CPU) dec8(reg RWByte) uint8 {
 
 	cpu.Reg.F.Zero = newValue == 0
 	cpu.Reg.F.Subtract = true
-	cpu.Reg.F.HalfCarry = isHalfCarry8(newValue, 1)
+	cpu.Reg.F.HalfCarry = isHalfCarry8(newValue, 1, 0)
 
 	return newValue
 }
@@ -1313,15 +1313,23 @@ func (cpu *CPU) srl(value byte) byte {
 }
 
 // Did the aVal carry over from the lower 4 bits to the upper 4 bits?
-func isHalfCarry8(aVal uint8, bVal uint8) bool {
-	fourBitMask := uint8(0xF)
-	bitFourMask := uint8(1 << 4)
-	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFourMask) == bitFourMask
+func isHalfCarry8(aVal uint8, bVal uint8, carry uint8) bool {
+	fourBitMask := uint(0xF)
+	return ((uint(aVal) & fourBitMask) + (uint(bVal) & fourBitMask) + uint(carry)) > fourBitMask
+}
+
+func isCarry8(aVal uint8, bVal uint8, carry uint8) bool {
+	byteMask := uint(0xFF)
+	return ((uint(aVal) & byteMask) + (uint(bVal) & byteMask) + uint(carry)) > byteMask
 }
 
 // Did the aVal carry over from the lower 4 bits of the top byte in the word to the upper 4 bits?
 func isHalfCarry16(aVal uint16, bVal uint16) bool {
-	twelveBitMask := uint16(0xFFF)
-	bitTwelveMask := uint16(1 << 12)
-	return (((aVal & twelveBitMask) + (bVal & twelveBitMask)) & bitTwelveMask) == bitTwelveMask
+	twelveBitMask := uint(0xFFF)
+	return ((uint(aVal) & twelveBitMask) + (uint(bVal) & twelveBitMask)) > twelveBitMask
+}
+
+func isCarry16(aVal uint16, bVal uint16) bool {
+	wordMask := uint(0xFFFF)
+	return ((uint(aVal) & wordMask) + (uint(bVal) & wordMask)) > wordMask
 }
