@@ -8,7 +8,7 @@ import (
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
-const DMGRamSize = 0xFFFF + 1
+const DMG_RAM_SIZE = 0xFFFF + 1
 
 type DMG struct {
 	cpu       *cpu.CPU
@@ -34,7 +34,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 	ic := devices.NewInterruptController()
 	lcd := devices.NewLCD()
 
-	ram := make([]byte, DMGRamSize)
+	ram := make([]byte, DMG_RAM_SIZE)
 	mmu := mem.NewMMU(ram)
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
@@ -46,8 +46,6 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
-
-	cpu.ResetToBootROM() // TODO: Load an actual boot ROOM
 
 	return &DMG{
 		cpu:       cpu,

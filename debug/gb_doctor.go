@@ -15,6 +15,7 @@ func NewGBDoctorDebugger() *GBDoctorDebugger {
 }
 
 func (gbd *GBDoctorDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU) {
+	cpu.ResetToBootROM()
 	gbd.printState(cpu, mmu)
 }
 
