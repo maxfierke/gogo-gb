@@ -889,6 +889,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0xDC:
 			// CALL C, a16
 			return cpu.call(mmu, opcode, cpu.Reg.F.Carry)
+		case 0xDE:
+			// SBC A, n8
+			cpu.sub8(cpu.Reg.A, cpu.readNext8(mmu), true)
 		case 0xDF:
 			// RST 18H
 			return cpu.rst(mmu, opcode, 0x18)
