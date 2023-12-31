@@ -336,6 +336,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x26:
 			// LD H, n8
 			cpu.load8(cpu.Reg.H, cpu.readNext8(mmu))
+		case 0x27:
+			// DAA
+			cpu.daa()
 		case 0x28:
 			// JR Z, e8
 			return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Zero)
@@ -1133,6 +1136,41 @@ func (cpu *CPU) cpl() {
 	cpu.Reg.F.HalfCarry = true
 }
 
+// Based on https://github.com/rylev/DMG-01/blob/70fcfac0cfaf8214d03c972ef4509d4c66a44089/lib-dmg-01/src/cpu/mod.rs#L1337
+// because I frankly could not find info on how this instruction works
+func (cpu *CPU) daa() {
+	carry := false
+	value := cpu.Reg.A.Read()
+	newValue := value
+
+	if !cpu.Reg.F.Subtract {
+		if cpu.Reg.F.Carry || value > 0x99 {
+			carry = true
+			newValue += 0x60
+		}
+
+		if cpu.Reg.F.HalfCarry || ((value & 0xF) > 0x9) {
+			newValue += 0x06
+		}
+	} else if cpu.Reg.F.Carry {
+		carry = true
+
+		if cpu.Reg.F.HalfCarry {
+			newValue += 0x9A
+		} else {
+			newValue += 0xA0
+		}
+	} else if cpu.Reg.F.HalfCarry {
+		newValue += 0xFA
+	}
+
+	cpu.Reg.A.Write(newValue)
+
+	cpu.Reg.F.Zero = newValue == 0
+	cpu.Reg.F.HalfCarry = false
+	cpu.Reg.F.Carry = carry
+}
+
 func (cpu *CPU) or(value byte) byte {
 	orValue := cpu.Reg.A.Read() | value
 	cpu.Reg.A.Write(orValue)
@@ -1277,13 +1315,13 @@ func (cpu *CPU) srl(value byte) byte {
 // Did the aVal carry over from the lower 4 bits to the upper 4 bits?
 func isHalfCarry8(aVal uint8, bVal uint8) bool {
 	fourBitMask := uint8(0xF)
-	bitFiveMask := uint8(1 << 4)
-	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFiveMask) == bitFiveMask
+	bitFourMask := uint8(1 << 4)
+	return (((aVal & fourBitMask) + (bVal & fourBitMask)) & bitFourMask) == bitFourMask
 }
 
 // Did the aVal carry over from the lower 4 bits of the top byte in the word to the upper 4 bits?
 func isHalfCarry16(aVal uint16, bVal uint16) bool {
 	twelveBitMask := uint16(0xFFF)
-	bitThirteenMask := uint16(1 << 12)
-	return (((aVal & twelveBitMask) + (bVal & twelveBitMask)) & bitThirteenMask) == bitThirteenMask
+	bitTwelveMask := uint16(1 << 12)
+	return (((aVal & twelveBitMask) + (bVal & twelveBitMask)) & bitTwelveMask) == bitTwelveMask
 }
