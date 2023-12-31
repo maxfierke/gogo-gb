@@ -180,6 +180,56 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x1F:
 			// RR A
 			cpu.Reg.A.Write(cpu.rotr(cpu.Reg.A.Read(), true, true))
+		case 0x20:
+			// SLA B
+			cpu.Reg.B.Write(cpu.sla(cpu.Reg.B.Read()))
+		case 0x21:
+			// SLA C
+			cpu.Reg.C.Write(cpu.sla(cpu.Reg.C.Read()))
+		case 0x22:
+			// SLA D
+			cpu.Reg.D.Write(cpu.sla(cpu.Reg.D.Read()))
+		case 0x23:
+			// SLA E
+			cpu.Reg.E.Write(cpu.sla(cpu.Reg.E.Read()))
+		case 0x24:
+			// SLA H
+			cpu.Reg.H.Write(cpu.sla(cpu.Reg.H.Read()))
+		case 0x25:
+			// SLA L
+			cpu.Reg.L.Write(cpu.sla(cpu.Reg.L.Read()))
+		case 0x26:
+			// SLA (HL)
+			addr := cpu.Reg.HL.Read()
+			mmu.Write8(addr, cpu.sla(mmu.Read8(addr)))
+		case 0x27:
+			// SLA A
+			cpu.Reg.A.Write(cpu.sla(cpu.Reg.A.Read()))
+		case 0x28:
+			// SRA B
+			cpu.Reg.B.Write(cpu.sra(cpu.Reg.B.Read()))
+		case 0x29:
+			// SRA C
+			cpu.Reg.C.Write(cpu.sra(cpu.Reg.C.Read()))
+		case 0x2A:
+			// SRA D
+			cpu.Reg.D.Write(cpu.sra(cpu.Reg.D.Read()))
+		case 0x2B:
+			// SRA E
+			cpu.Reg.E.Write(cpu.sra(cpu.Reg.E.Read()))
+		case 0x2C:
+			// SRA H
+			cpu.Reg.H.Write(cpu.sra(cpu.Reg.H.Read()))
+		case 0x2D:
+			// SRA L
+			cpu.Reg.L.Write(cpu.sra(cpu.Reg.L.Read()))
+		case 0x2E:
+			// SRA (HL)
+			addr := cpu.Reg.HL.Read()
+			mmu.Write8(addr, cpu.sra(mmu.Read8(addr)))
+		case 0x2F:
+			// SRA A
+			cpu.Reg.A.Write(cpu.sra(cpu.Reg.A.Read()))
 		case 0x38:
 			// SRL B
 			cpu.Reg.B.Write(cpu.srl(cpu.Reg.B.Read()))
@@ -1308,6 +1358,25 @@ func (cpu *CPU) rotr(value byte, zero bool, through_carry bool) byte {
 func (cpu *CPU) rst(mmu *mem.MMU, opcode *isa.Opcode, value byte) (uint16, uint8) {
 	cpu.push(mmu, cpu.PC.Read()+1)
 	return uint16(value), uint8(opcode.Cycles[0])
+}
+
+func (cpu *CPU) sla(value byte) byte {
+	newValue := value << 1
+	cpu.Reg.F.Zero = newValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.HalfCarry = false
+	cpu.Reg.F.Carry = (value & 0x80) == 0x80
+	return newValue
+}
+
+func (cpu *CPU) sra(value byte) byte {
+	msb := value & 0x80
+	newValue := msb | (value >> 1)
+	cpu.Reg.F.Zero = newValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.HalfCarry = false
+	cpu.Reg.F.Carry = (value & 0x1) == 0x1
+	return newValue
 }
 
 func (cpu *CPU) srl(value byte) byte {

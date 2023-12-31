@@ -1599,6 +1599,30 @@ func TestExecuteScf(t *testing.T) {
 	assertFlags(t, cpu, true, false, false, true)
 }
 
+func TestExecuteSLA(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x27, true)
+
+	cpu.Reg.A.Write(0b1011_0101)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0b0110_1010)
+	assertFlags(t, cpu, false, false, false, true)
+}
+
+func TestExecuteSRA(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x2F, true)
+
+	cpu.Reg.A.Write(0b1011_0101)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0b1101_1010)
+	assertFlags(t, cpu, false, false, false, true)
+}
+
 func TestExecuteSRL(t *testing.T) {
 	cpu, _ := NewCPU()
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x3F, true)
