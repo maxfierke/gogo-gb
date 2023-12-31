@@ -40,7 +40,6 @@ bin/gogo-gb:
 .PHONY: cpu_instrs
 cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms/cpu_instrs/individual/*.gb
 #  These are pending
-#    09-op r,r.gb
 #    10-bit ops.gb
 #    11-op a,(hl).gb
 #  These are broken upstream
@@ -53,6 +52,7 @@ cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms
     "06-ld r,r.gb" \
     "07-jr,jp,call,ret,rst.gb" \
     "08-misc instrs.gb" \
+    "09-op r,r.gb" \
   ); \
   for file in "$${CPU_TESTS[@]}"; do \
     test_name=$${file%*.gb}; \

@@ -230,6 +230,33 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x2F:
 			// SRA A
 			cpu.Reg.A.Write(cpu.sra(cpu.Reg.A.Read()))
+		case 0x30:
+			// SWAP B
+			cpu.swap(cpu.Reg.B)
+		case 0x31:
+			// SWAP C
+			cpu.swap(cpu.Reg.C)
+		case 0x32:
+			// SWAP D
+			cpu.swap(cpu.Reg.D)
+		case 0x33:
+			// SWAP E
+			cpu.swap(cpu.Reg.E)
+		case 0x34:
+			// SWAP H
+			cpu.swap(cpu.Reg.H)
+		case 0x35:
+			// SWAP L
+			cpu.swap(cpu.Reg.L)
+		case 0x36:
+			// SWAP (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.swap(&cell)
+			mmu.Write8(addr, cell.Read())
+		case 0x37:
+			// SWAP A
+			cpu.swap(cpu.Reg.A)
 		case 0x38:
 			// SRL B
 			cpu.Reg.B.Write(cpu.srl(cpu.Reg.B.Read()))
@@ -1386,6 +1413,19 @@ func (cpu *CPU) srl(value byte) byte {
 	cpu.Reg.F.HalfCarry = false
 	cpu.Reg.F.Carry = (value & 0x1) == 0x1
 	return newValue
+}
+
+func (cpu *CPU) swap(reg RWByte) {
+	value := reg.Read()
+	high := value & 0xF0
+	low := value & 0xF
+	newValue := (low << 4) | (high >> 4)
+	reg.Write(newValue)
+
+	cpu.Reg.F.Zero = newValue == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.HalfCarry = false
+	cpu.Reg.F.Carry = false
 }
 
 // Did the aVal carry over from the lower 4 bits to the upper 4 bits?

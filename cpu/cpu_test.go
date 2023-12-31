@@ -1635,6 +1635,18 @@ func TestExecuteSRL(t *testing.T) {
 	assertFlags(t, cpu, false, false, false, true)
 }
 
+func TestExecuteSwap(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x37, true)
+
+	cpu.Reg.A.Write(0b1011_0101)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0b0101_1011)
+	assertFlags(t, cpu, false, false, false, false)
+}
+
 func TestCPUReset(t *testing.T) {
 	cpu, _ := NewCPU()
 
