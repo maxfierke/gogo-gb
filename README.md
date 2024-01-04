@@ -1,6 +1,18 @@
 # gogo-gb
 a gameboy emulator for funsies
 
+## TODO
+
+- [X] Pass all of Blargg's `cpu_instrs` ROMs via `gameboy-doctor` (expect `02-interrupts.gb`, which isn't verifyable via `gameboy-doctor`)
+- [ ] Implement GB serial port (w/ option to log to console)
+- [ ] Pass Blargg's `cpu_instrs`/`02-interrupts.gb` ROM (manually verified)
+- [ ] Pass Blargg's `instr_timing.gb` ROM (manually verified)
+- [ ] Pass Blargg's `mem_timing.gb` ROM (manually verified)
+- [ ] Implement LCD & Rendering
+- [ ] Pass all of Blargg's `mem_timing-2` ROMs (manually verified)
+- [ ] Implement Joypad
+- [ ] Implement Sound
+
 ## Inspiration Material
 
 * [DMG-01](https://rylev.github.io/DMG-01/public/book/introduction.html)
