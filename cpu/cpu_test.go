@@ -1633,7 +1633,7 @@ func TestExecuteSet(t *testing.T) {
 
 	cpu.Execute(NULL_MMU, inst)
 
-	assertRegEquals(t, cpu.Reg.A.Read(), 0b0110_1011)
+	assertRegEquals(t, cpu.Reg.A.Read(), 0b1011_0101)
 }
 
 func TestExecuteSLA(t *testing.T) {
