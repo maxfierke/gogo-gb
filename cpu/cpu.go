@@ -285,6 +285,646 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0x3F:
 			// SRL A
 			cpu.Reg.A.Write(cpu.srl(cpu.Reg.A.Read()))
+		case 0x40:
+			// BIT 0, B
+			cpu.testBit(0, cpu.Reg.B)
+		case 0x41:
+			// BIT 0, C
+			cpu.testBit(0, cpu.Reg.C)
+		case 0x42:
+			// BIT 0, D
+			cpu.testBit(0, cpu.Reg.D)
+		case 0x43:
+			// BIT 0, E
+			cpu.testBit(0, cpu.Reg.E)
+		case 0x44:
+			// BIT 0, H
+			cpu.testBit(0, cpu.Reg.H)
+		case 0x45:
+			// BIT 0, L
+			cpu.testBit(0, cpu.Reg.L)
+		case 0x46:
+			// BIT 0, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.testBit(0, &cell)
+		case 0x47:
+			// BIT 0, A
+			cpu.testBit(0, cpu.Reg.A)
+		case 0x48:
+			// BIT 1, B
+			cpu.testBit(1, cpu.Reg.B)
+		case 0x49:
+			// BIT 1, C
+			cpu.testBit(1, cpu.Reg.C)
+		case 0x4A:
+			// BIT 1, D
+			cpu.testBit(1, cpu.Reg.D)
+		case 0x4B:
+			// BIT 1, E
+			cpu.testBit(1, cpu.Reg.E)
+		case 0x4C:
+			// BIT 1, H
+			cpu.testBit(1, cpu.Reg.H)
+		case 0x4D:
+			// BIT 1, L
+			cpu.testBit(1, cpu.Reg.L)
+		case 0x4E:
+			// BIT 1, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.testBit(1, &cell)
+		case 0x4F:
+			// BIT 1, A
+			cpu.testBit(1, cpu.Reg.A)
+		case 0x50:
+			// BIT 2, B
+			cpu.testBit(2, cpu.Reg.B)
+		case 0x51:
+			// BIT 2, C
+			cpu.testBit(2, cpu.Reg.C)
+		case 0x52:
+			// BIT 2, D
+			cpu.testBit(2, cpu.Reg.D)
+		case 0x53:
+			// BIT 2, E
+			cpu.testBit(2, cpu.Reg.E)
+		case 0x54:
+			// BIT 2, H
+			cpu.testBit(2, cpu.Reg.H)
+		case 0x55:
+			// BIT 2, L
+			cpu.testBit(2, cpu.Reg.L)
+		case 0x56:
+			// BIT 2, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.testBit(2, &cell)
+		case 0x57:
+			// BIT 2, A
+			cpu.testBit(2, cpu.Reg.A)
+		case 0x58:
+			// BIT 3, B
+			cpu.testBit(3, cpu.Reg.B)
+		case 0x59:
+			// BIT 3, C
+			cpu.testBit(3, cpu.Reg.C)
+		case 0x5A:
+			// BIT 3, D
+			cpu.testBit(3, cpu.Reg.D)
+		case 0x5B:
+			// BIT 3, E
+			cpu.testBit(3, cpu.Reg.E)
+		case 0x5C:
+			// BIT 3, H
+			cpu.testBit(3, cpu.Reg.H)
+		case 0x5D:
+			// BIT 3, L
+			cpu.testBit(3, cpu.Reg.L)
+		case 0x5E:
+			// BIT 3, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.testBit(3, &cell)
+		case 0x5F:
+			// BIT 3, A
+			cpu.testBit(3, cpu.Reg.A)
+		case 0x60:
+			// BIT 4, B
+			cpu.testBit(4, cpu.Reg.B)
+		case 0x61:
+			// BIT 4, C
+			cpu.testBit(4, cpu.Reg.C)
+		case 0x62:
+			// BIT 4, D
+			cpu.testBit(4, cpu.Reg.D)
+		case 0x63:
+			// BIT 4, E
+			cpu.testBit(4, cpu.Reg.E)
+		case 0x64:
+			// BIT 4, H
+			cpu.testBit(4, cpu.Reg.H)
+		case 0x65:
+			// BIT 4, L
+			cpu.testBit(4, cpu.Reg.L)
+		case 0x66:
+			// BIT 4, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.testBit(4, &cell)
+		case 0x67:
+			// BIT 4, A
+			cpu.testBit(4, cpu.Reg.A)
+		case 0x68:
+			// BIT 5, B
+			cpu.testBit(5, cpu.Reg.B)
+		case 0x69:
+			// BIT 5, C
+			cpu.testBit(5, cpu.Reg.C)
+		case 0x6A:
+			// BIT 5, D
+			cpu.testBit(5, cpu.Reg.D)
+		case 0x6B:
+			// BIT 5, E
+			cpu.testBit(5, cpu.Reg.E)
+		case 0x6C:
+			// BIT 5, H
+			cpu.testBit(5, cpu.Reg.H)
+		case 0x6D:
+			// BIT 5, L
+			cpu.testBit(5, cpu.Reg.L)
+		case 0x6E:
+			// BIT 5, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.testBit(5, &cell)
+		case 0x6F:
+			// BIT 5, A
+			cpu.testBit(5, cpu.Reg.A)
+		case 0x70:
+			// BIT 6, B
+			cpu.testBit(6, cpu.Reg.B)
+		case 0x71:
+			// BIT 6, C
+			cpu.testBit(6, cpu.Reg.C)
+		case 0x72:
+			// BIT 6, D
+			cpu.testBit(6, cpu.Reg.D)
+		case 0x73:
+			// BIT 6, E
+			cpu.testBit(6, cpu.Reg.E)
+		case 0x74:
+			// BIT 6, H
+			cpu.testBit(6, cpu.Reg.H)
+		case 0x75:
+			// BIT 6, L
+			cpu.testBit(6, cpu.Reg.L)
+		case 0x76:
+			// BIT 6, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.testBit(6, &cell)
+		case 0x77:
+			// BIT 6, A
+			cpu.testBit(6, cpu.Reg.A)
+		case 0x78:
+			// BIT 7, B
+			cpu.testBit(7, cpu.Reg.B)
+		case 0x79:
+			// BIT 7, C
+			cpu.testBit(7, cpu.Reg.C)
+		case 0x7A:
+			// BIT 7, D
+			cpu.testBit(7, cpu.Reg.D)
+		case 0x7B:
+			// BIT 7, E
+			cpu.testBit(7, cpu.Reg.E)
+		case 0x7C:
+			// BIT 7, H
+			cpu.testBit(7, cpu.Reg.H)
+		case 0x7D:
+			// BIT 7, L
+			cpu.testBit(7, cpu.Reg.L)
+		case 0x7E:
+			// BIT 7, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.testBit(7, &cell)
+		case 0x7F:
+			// BIT 7, A
+			cpu.testBit(7, cpu.Reg.A)
+		case 0x80:
+			// RES 0, B
+			cpu.resetBit(0, cpu.Reg.B)
+		case 0x81:
+			// RES 0, C
+			cpu.resetBit(0, cpu.Reg.C)
+		case 0x82:
+			// RES 0, D
+			cpu.resetBit(0, cpu.Reg.D)
+		case 0x83:
+			// RES 0, E
+			cpu.resetBit(0, cpu.Reg.E)
+		case 0x84:
+			// RES 0, H
+			cpu.resetBit(0, cpu.Reg.H)
+		case 0x85:
+			// RES 0, L
+			cpu.resetBit(0, cpu.Reg.L)
+		case 0x86:
+			// RES 0, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.resetBit(0, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0x87:
+			// RES 0, A
+			cpu.resetBit(0, cpu.Reg.A)
+		case 0x88:
+			// RES 1, B
+			cpu.resetBit(1, cpu.Reg.B)
+		case 0x89:
+			// RES 1, C
+			cpu.resetBit(1, cpu.Reg.C)
+		case 0x8A:
+			// RES 1, D
+			cpu.resetBit(1, cpu.Reg.D)
+		case 0x8B:
+			// RES 1, E
+			cpu.resetBit(1, cpu.Reg.E)
+		case 0x8C:
+			// RES 1, H
+			cpu.resetBit(1, cpu.Reg.H)
+		case 0x8D:
+			// RES 1, L
+			cpu.resetBit(1, cpu.Reg.L)
+		case 0x8E:
+			// RES 1, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.resetBit(1, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0x8F:
+			// RES 1, A
+			cpu.resetBit(1, cpu.Reg.A)
+		case 0x90:
+			// RES 2, B
+			cpu.resetBit(2, cpu.Reg.B)
+		case 0x91:
+			// RES 2, C
+			cpu.resetBit(2, cpu.Reg.C)
+		case 0x92:
+			// RES 2, D
+			cpu.resetBit(2, cpu.Reg.D)
+		case 0x93:
+			// RES 2, E
+			cpu.resetBit(2, cpu.Reg.E)
+		case 0x94:
+			// RES 2, H
+			cpu.resetBit(2, cpu.Reg.H)
+		case 0x95:
+			// RES 2, L
+			cpu.resetBit(2, cpu.Reg.L)
+		case 0x96:
+			// RES 2, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.resetBit(2, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0x97:
+			// RES 2, A
+			cpu.resetBit(2, cpu.Reg.A)
+		case 0x98:
+			// RES 3, B
+			cpu.resetBit(3, cpu.Reg.B)
+		case 0x99:
+			// RES 3, C
+			cpu.resetBit(3, cpu.Reg.C)
+		case 0x9A:
+			// RES 3, D
+			cpu.resetBit(3, cpu.Reg.D)
+		case 0x9B:
+			// RES 3, E
+			cpu.resetBit(3, cpu.Reg.E)
+		case 0x9C:
+			// RES 3, H
+			cpu.resetBit(3, cpu.Reg.H)
+		case 0x9D:
+			// RES 3, L
+			cpu.resetBit(3, cpu.Reg.L)
+		case 0x9E:
+			// RES 3, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.resetBit(3, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0x9F:
+			// RES 3, A
+			cpu.resetBit(3, cpu.Reg.A)
+		case 0xA0:
+			// RES 4, B
+			cpu.resetBit(4, cpu.Reg.B)
+		case 0xA1:
+			// RES 4, C
+			cpu.resetBit(4, cpu.Reg.C)
+		case 0xA2:
+			// RES 4, D
+			cpu.resetBit(4, cpu.Reg.D)
+		case 0xA3:
+			// RES 4, E
+			cpu.resetBit(4, cpu.Reg.E)
+		case 0xA4:
+			// RES 4, H
+			cpu.resetBit(4, cpu.Reg.H)
+		case 0xA5:
+			// RES 4, L
+			cpu.resetBit(4, cpu.Reg.L)
+		case 0xA6:
+			// RES 4, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.resetBit(4, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xA7:
+			// RES 4, A
+			cpu.resetBit(4, cpu.Reg.A)
+		case 0xA8:
+			// RES 5, B
+			cpu.resetBit(5, cpu.Reg.B)
+		case 0xA9:
+			// RES 5, C
+			cpu.resetBit(5, cpu.Reg.C)
+		case 0xAA:
+			// RES 5, D
+			cpu.resetBit(5, cpu.Reg.D)
+		case 0xAB:
+			// RES 5, E
+			cpu.resetBit(5, cpu.Reg.E)
+		case 0xAC:
+			// RES 5, H
+			cpu.resetBit(5, cpu.Reg.H)
+		case 0xAD:
+			// RES 5, L
+			cpu.resetBit(5, cpu.Reg.L)
+		case 0xAE:
+			// RES 5, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.resetBit(5, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xAF:
+			// RES 5, A
+			cpu.resetBit(5, cpu.Reg.A)
+		case 0xB0:
+			// RES 6, B
+			cpu.resetBit(6, cpu.Reg.B)
+		case 0xB1:
+			// RES 6, C
+			cpu.resetBit(6, cpu.Reg.C)
+		case 0xB2:
+			// RES 6, D
+			cpu.resetBit(6, cpu.Reg.D)
+		case 0xB3:
+			// RES 6, E
+			cpu.resetBit(6, cpu.Reg.E)
+		case 0xB4:
+			// RES 6, H
+			cpu.resetBit(6, cpu.Reg.H)
+		case 0xB5:
+			// RES 6, L
+			cpu.resetBit(6, cpu.Reg.L)
+		case 0xB6:
+			// RES 6, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.resetBit(6, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xB7:
+			// RES 6, A
+			cpu.resetBit(6, cpu.Reg.A)
+		case 0xB8:
+			// RES 7, B
+			cpu.resetBit(7, cpu.Reg.B)
+		case 0xB9:
+			// RES 7, C
+			cpu.resetBit(7, cpu.Reg.C)
+		case 0xBA:
+			// RES 7, D
+			cpu.resetBit(7, cpu.Reg.D)
+		case 0xBB:
+			// RES 7, E
+			cpu.resetBit(7, cpu.Reg.E)
+		case 0xBC:
+			// RES 7, H
+			cpu.resetBit(7, cpu.Reg.H)
+		case 0xBD:
+			// RES 7, L
+			cpu.resetBit(7, cpu.Reg.L)
+		case 0xBE:
+			// RES 7, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.resetBit(7, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xBF:
+			// RES 7, A
+			cpu.resetBit(7, cpu.Reg.A)
+		case 0xC0:
+			// SET 0, B
+			cpu.setBit(0, cpu.Reg.B)
+		case 0xC1:
+			// SET 0, C
+			cpu.setBit(0, cpu.Reg.C)
+		case 0xC2:
+			// SET 0, D
+			cpu.setBit(0, cpu.Reg.D)
+		case 0xC3:
+			// SET 0, E
+			cpu.setBit(0, cpu.Reg.E)
+		case 0xC4:
+			// SET 0, H
+			cpu.setBit(0, cpu.Reg.H)
+		case 0xC5:
+			// SET 0, L
+			cpu.setBit(0, cpu.Reg.L)
+		case 0xC6:
+			// SET 0, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.setBit(0, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xC7:
+			// SET 0, A
+			cpu.setBit(0, cpu.Reg.A)
+		case 0xC8:
+			// SET 1, B
+			cpu.setBit(1, cpu.Reg.B)
+		case 0xC9:
+			// SET 1, C
+			cpu.setBit(1, cpu.Reg.C)
+		case 0xCA:
+			// SET 1, D
+			cpu.setBit(1, cpu.Reg.D)
+		case 0xCB:
+			// SET 1, E
+			cpu.setBit(1, cpu.Reg.E)
+		case 0xCC:
+			// SET 1, H
+			cpu.setBit(1, cpu.Reg.H)
+		case 0xCD:
+			// SET 1, L
+			cpu.setBit(1, cpu.Reg.L)
+		case 0xCE:
+			// SET 1, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.setBit(1, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xCF:
+			// SET 1, A
+			cpu.setBit(1, cpu.Reg.A)
+		case 0xD0:
+			// SET 2, B
+			cpu.setBit(2, cpu.Reg.B)
+		case 0xD1:
+			// SET 2, C
+			cpu.setBit(2, cpu.Reg.C)
+		case 0xD2:
+			// SET 2, D
+			cpu.setBit(2, cpu.Reg.D)
+		case 0xD3:
+			// SET 2, E
+			cpu.setBit(2, cpu.Reg.E)
+		case 0xD4:
+			// SET 2, H
+			cpu.setBit(2, cpu.Reg.H)
+		case 0xD5:
+			// SET 2, L
+			cpu.setBit(2, cpu.Reg.L)
+		case 0xD6:
+			// SET 2, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.setBit(2, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xD7:
+			// SET 2, A
+			cpu.setBit(2, cpu.Reg.A)
+		case 0xD8:
+			// SET 3, B
+			cpu.setBit(3, cpu.Reg.B)
+		case 0xD9:
+			// SET 3, C
+			cpu.setBit(3, cpu.Reg.C)
+		case 0xDA:
+			// SET 3, D
+			cpu.setBit(3, cpu.Reg.D)
+		case 0xDB:
+			// SET 3, E
+			cpu.setBit(3, cpu.Reg.E)
+		case 0xDC:
+			// SET 3, H
+			cpu.setBit(3, cpu.Reg.H)
+		case 0xDD:
+			// SET 3, L
+			cpu.setBit(3, cpu.Reg.L)
+		case 0xDE:
+			// SET 3, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.setBit(3, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xDF:
+			// SET 3, A
+			cpu.setBit(3, cpu.Reg.A)
+		case 0xE0:
+			// SET 4, B
+			cpu.setBit(4, cpu.Reg.B)
+		case 0xE1:
+			// SET 4, C
+			cpu.setBit(4, cpu.Reg.C)
+		case 0xE2:
+			// SET 4, D
+			cpu.setBit(4, cpu.Reg.D)
+		case 0xE3:
+			// SET 4, E
+			cpu.setBit(4, cpu.Reg.E)
+		case 0xE4:
+			// SET 4, H
+			cpu.setBit(4, cpu.Reg.H)
+		case 0xE5:
+			// SET 4, L
+			cpu.setBit(4, cpu.Reg.L)
+		case 0xE6:
+			// SET 4, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.setBit(4, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xE7:
+			// SET 4, A
+			cpu.setBit(4, cpu.Reg.A)
+		case 0xE8:
+			// SET 5, B
+			cpu.setBit(5, cpu.Reg.B)
+		case 0xE9:
+			// SET 5, C
+			cpu.setBit(5, cpu.Reg.C)
+		case 0xEA:
+			// SET 5, D
+			cpu.setBit(5, cpu.Reg.D)
+		case 0xEB:
+			// SET 5, E
+			cpu.setBit(5, cpu.Reg.E)
+		case 0xEC:
+			// SET 5, H
+			cpu.setBit(5, cpu.Reg.H)
+		case 0xED:
+			// SET 5, L
+			cpu.setBit(5, cpu.Reg.L)
+		case 0xEE:
+			// SET 5, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.setBit(5, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xEF:
+			// SET 5, A
+			cpu.setBit(5, cpu.Reg.A)
+		case 0xF0:
+			// SET 6, B
+			cpu.setBit(6, cpu.Reg.B)
+		case 0xF1:
+			// SET 6, C
+			cpu.setBit(6, cpu.Reg.C)
+		case 0xF2:
+			// SET 6, D
+			cpu.setBit(6, cpu.Reg.D)
+		case 0xF3:
+			// SET 6, E
+			cpu.setBit(6, cpu.Reg.E)
+		case 0xF4:
+			// SET 6, H
+			cpu.setBit(6, cpu.Reg.H)
+		case 0xF5:
+			// SET 6, L
+			cpu.setBit(6, cpu.Reg.L)
+		case 0xF6:
+			// SET 6, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.setBit(6, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xF7:
+			// SET 6, A
+			cpu.setBit(6, cpu.Reg.A)
+		case 0xF8:
+			// SET 7, B
+			cpu.setBit(7, cpu.Reg.B)
+		case 0xF9:
+			// SET 7, C
+			cpu.setBit(7, cpu.Reg.C)
+		case 0xFA:
+			// SET 7, D
+			cpu.setBit(7, cpu.Reg.D)
+		case 0xFB:
+			// SET 7, E
+			cpu.setBit(7, cpu.Reg.E)
+		case 0xFC:
+			// SET 7, H
+			cpu.setBit(7, cpu.Reg.H)
+		case 0xFD:
+			// SET 7, L
+			cpu.setBit(7, cpu.Reg.L)
+		case 0xFE:
+			// SET 7, (HL)
+			addr := cpu.Reg.HL.Read()
+			cell := ByteCell{value: mmu.Read8(addr)}
+			cpu.setBit(7, &cell)
+			mmu.Write8(addr, cell.Read())
+		case 0xFF:
+			// SET 7, A
+			cpu.setBit(7, cpu.Reg.A)
 		default:
 			return 0, 0, fmt.Errorf("unimplemented instruction @ %s", inst)
 		}
@@ -1429,6 +2069,29 @@ func (cpu *CPU) swap(reg RWByte) {
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.HalfCarry = false
 	cpu.Reg.F.Carry = false
+}
+
+func (cpu *CPU) testBit(bit uint8, reg RWByte) {
+	mask := uint8(1 << bit)
+	value := reg.Read()
+
+	cpu.Reg.F.Zero = (value & mask) == 0
+	cpu.Reg.F.Subtract = false
+	cpu.Reg.F.HalfCarry = true
+}
+
+func (cpu *CPU) setBit(bit uint8, reg RWByte) {
+	mask := uint8(1 << bit)
+	value := reg.Read()
+
+	reg.Write(value | mask)
+}
+
+func (cpu *CPU) resetBit(bit uint8, reg RWByte) {
+	mask := ^uint8(1 << bit)
+	value := reg.Read()
+
+	reg.Write(value & mask)
 }
 
 // Did the aVal carry over from the lower 4 bits to the upper 4 bits?

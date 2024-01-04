@@ -505,6 +505,21 @@ func TestExecuteAndA(t *testing.T) {
 	assertFlags(t, cpu, false, false, true, false)
 }
 
+func TestExecuteBit(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x40, true)
+
+	cpu.Reg.B.Write(0b1011_0101)
+
+	cpu.Execute(NULL_MMU, inst)
+	assertFlags(t, cpu, false, false, true, false)
+
+	cpu.Reg.B.Write(0b1011_0100)
+
+	cpu.Execute(NULL_MMU, inst)
+	assertFlags(t, cpu, true, false, true, false)
+}
+
 func TestExecuteCcf(t *testing.T) {
 	cpu, _ := NewCPU()
 
@@ -1443,6 +1458,17 @@ func TestExecuteHalt(t *testing.T) {
 	}
 }
 
+func TestExecuteReset(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x87, true)
+
+	cpu.Reg.A.Write(0b1011_0101)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0b1011_0100)
+}
+
 func TestExecuteRetI(t *testing.T) {
 	cpu, _ := NewCPU()
 	cpu.ime = false
@@ -1597,6 +1623,17 @@ func TestExecuteScf(t *testing.T) {
 	cpu.Execute(NULL_MMU, inst)
 
 	assertFlags(t, cpu, true, false, false, true)
+}
+
+func TestExecuteSet(t *testing.T) {
+	cpu, _ := NewCPU()
+	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC7, true)
+
+	cpu.Reg.A.Write(0b1011_0100)
+
+	cpu.Execute(NULL_MMU, inst)
+
+	assertRegEquals(t, cpu.Reg.A.Read(), 0b0110_1011)
 }
 
 func TestExecuteSLA(t *testing.T) {
