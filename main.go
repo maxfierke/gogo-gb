@@ -26,8 +26,10 @@ func main() {
 
 	parseOptions(&options)
 
-	if options.logPath == "" {
+	if options.logPath == "" || options.logPath == "stdout" {
 		options.logger = log.New(os.Stdout, LOG_PREFIX, log.LstdFlags)
+	} else if options.logPath == "stderr" {
+		options.logger = log.New(os.Stderr, LOG_PREFIX, log.LstdFlags)
 	} else {
 		logFile, err := os.Create(options.logPath)
 		if err != nil {
@@ -105,6 +107,9 @@ func initDMG(options *CLIOptions) *hardware.DMG {
 	if err != nil {
 		logger.Fatalf("Unable to initialize DMG: %v\n", err)
 	}
+
+	dmg.SetLogger(logger)
+
 	return dmg
 }
 

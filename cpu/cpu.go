@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"log"
+	"fmt"
 	"math/bits"
 
 	"github.com/maxfierke/gogo-gb/cpu/isa"
@@ -36,21 +36,24 @@ func NewCPU() (*CPU, error) {
 	return cpu, nil
 }
 
-func (cpu *CPU) Step(mmu *mem.MMU) uint8 {
+func (cpu *CPU) Step(mmu *mem.MMU) (uint8, error) {
 	if cpu.halted {
 		// HALT is 4 cycles
-		return 4
+		return 4, nil
 	}
 
-	inst := cpu.fetchAndDecode(mmu)
-	nextPc, cycles := cpu.Execute(mmu, inst)
+	inst, err := cpu.fetchAndDecode(mmu)
+	if err != nil {
+		return 0, err
+	}
 
+	nextPc, cycles, err := cpu.Execute(mmu, inst)
 	cpu.PC.Write(nextPc)
 
-	return cycles
+	return cycles, err
 }
 
-func (cpu *CPU) fetchAndDecode(mmu *mem.MMU) *isa.Instruction {
+func (cpu *CPU) fetchAndDecode(mmu *mem.MMU) (*isa.Instruction, error) {
 	// Fetch :)
 	addr := cpu.PC.Read()
 	opcodeByte := mmu.Read8(addr)
@@ -66,16 +69,16 @@ func (cpu *CPU) fetchAndDecode(mmu *mem.MMU) *isa.Instruction {
 
 	if !exist {
 		if prefixed {
-			log.Fatalf("Unimplemented instruction found @ 0x%04X: 0xCB%02X", addr, opcodeByte)
+			return nil, fmt.Errorf("unimplemented instruction found @ 0x%04X: 0xCB%02X", addr, opcodeByte)
 		} else {
-			log.Fatalf("Unimplemented instruction found @ 0x%04X: 0x%02X", addr, opcodeByte)
+			return nil, fmt.Errorf("unimplemented instruction found @ 0x%04X: 0x%02X", addr, opcodeByte)
 		}
 	}
 
-	return inst
+	return inst, nil
 }
 
-func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cycles uint8) {
+func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cycles uint8, err error) {
 	opcode := inst.Opcode
 
 	if opcode.CbPrefixed {
@@ -283,7 +286,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			// SRL A
 			cpu.Reg.A.Write(cpu.srl(cpu.Reg.A.Read()))
 		default:
-			log.Fatalf("Unimplemented instruction @ %s", inst)
+			return 0, 0, fmt.Errorf("unimplemented instruction @ %s", inst)
 		}
 	} else {
 		switch opcode.Addr {
@@ -997,7 +1000,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.add8Signed(cpu.SP, cpu.readNext8(mmu))
 		case 0xE9:
 			// JP HL
-			return cpu.Reg.HL.Read(), uint8(opcode.Cycles[0])
+			return cpu.Reg.HL.Read(), uint8(opcode.Cycles[0]), nil
 		case 0xEA:
 			// LD (a16), A
 			cpu.load8Indirect(mmu, cpu.readNext16(mmu), cpu.Reg.A)
@@ -1053,11 +1056,11 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			// RST 38H
 			return cpu.rst(mmu, opcode, 0x38)
 		default:
-			log.Fatalf("Unimplemented instruction @ %s", inst)
+			return 0, 0, fmt.Errorf("unimplemented instruction @ %s", inst)
 		}
 	}
 
-	return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[0])
+	return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[0]), nil
 }
 
 func (cpu *CPU) Reset() {
@@ -1275,15 +1278,15 @@ func (cpu *CPU) xor(value byte) byte {
 	return xorValue
 }
 
-func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8, err error) {
 	nextPC = cpu.PC.Read() + uint16(opcode.Bytes)
 
 	if should_jump {
 		cpu.push(mmu, nextPC)
-		return mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0])
+		return mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0]), nil
 	}
 
-	return nextPC, uint8(opcode.Cycles[0])
+	return nextPC, uint8(opcode.Cycles[0]), nil
 }
 
 func (cpu *CPU) load8(reg RWByte, value byte) {
@@ -1302,22 +1305,22 @@ func (cpu *CPU) load16Indirect(mmu *mem.MMU, addr uint16, reg RWTwoByte) {
 	mmu.Write16(addr, reg.Read())
 }
 
-func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8, err error) {
 	if should_jump {
-		return cpu.readNext16(mmu), uint8(opcode.Cycles[0])
+		return cpu.readNext16(mmu), uint8(opcode.Cycles[0]), nil
 	} else {
-		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
+		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1]), nil
 	}
 }
 
-func (cpu *CPU) jump_rel(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+func (cpu *CPU) jump_rel(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8, err error) {
 	nextPC = cpu.PC.Read() + uint16(opcode.Bytes)
 
 	if should_jump {
 		nextPcDiff := int8(cpu.readNext8(mmu))
-		return nextPC + uint16(nextPcDiff), uint8(opcode.Cycles[0])
+		return nextPC + uint16(nextPcDiff), uint8(opcode.Cycles[0]), nil
 	} else {
-		return nextPC, uint8(opcode.Cycles[1])
+		return nextPC, uint8(opcode.Cycles[1]), nil
 	}
 }
 
@@ -1340,11 +1343,11 @@ func (cpu *CPU) readNext16(mmu *mem.MMU) uint16 {
 	return mmu.Read16(cpu.PC.Read() + 1)
 }
 
-func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8) {
+func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8, err error) {
 	if should_jump {
-		return cpu.pop(mmu), uint8(opcode.Cycles[0])
+		return cpu.pop(mmu), uint8(opcode.Cycles[0]), nil
 	} else {
-		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1])
+		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1]), nil
 	}
 }
 
@@ -1382,9 +1385,9 @@ func (cpu *CPU) rotr(value byte, zero bool, through_carry bool) byte {
 	return newValue
 }
 
-func (cpu *CPU) rst(mmu *mem.MMU, opcode *isa.Opcode, value byte) (uint16, uint8) {
+func (cpu *CPU) rst(mmu *mem.MMU, opcode *isa.Opcode, value byte) (nextPC uint16, cycles uint8, err error) {
 	cpu.push(mmu, cpu.PC.Read()+1)
-	return uint16(value), uint8(opcode.Cycles[0])
+	return uint16(value), uint8(opcode.Cycles[0]), nil
 }
 
 func (cpu *CPU) sla(value byte) byte {

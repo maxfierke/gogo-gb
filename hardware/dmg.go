@@ -1,6 +1,8 @@
 package hardware
 
 import (
+	"log"
+
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
 	"github.com/maxfierke/gogo-gb/debug"
@@ -11,12 +13,16 @@ import (
 const DMG_RAM_SIZE = 0xFFFF + 1
 
 type DMG struct {
+	// Components
 	cpu       *cpu.CPU
 	mmu       *mem.MMU
 	cartridge *cart.Cartridge
-	debugger  debug.Debugger
 	ic        *devices.InterruptController
 	lcd       *devices.LCD
+
+	// Non-components
+	debugger debug.Debugger
+	logger   *log.Logger
 }
 
 func NewDMG() (*DMG, error) {
@@ -68,7 +74,11 @@ func (dmg *DMG) DebugPrint() {
 func (dmg *DMG) Step() bool {
 	dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
 
-	dmg.cpu.Step(dmg.mmu)
+	_, err := dmg.cpu.Step(dmg.mmu)
+	if err != nil {
+		dmg.logger.Printf("Unexpected error while executing instruction: %v\n", err)
+		return false
+	}
 
 	return true
 }
@@ -79,4 +89,8 @@ func (dmg *DMG) Run() {
 	for dmg.Step() {
 		dmg.debugger.OnExecute(dmg.cpu, dmg.mmu)
 	}
+}
+
+func (dmg *DMG) SetLogger(logger *log.Logger) {
+	dmg.logger = logger
 }

@@ -699,7 +699,7 @@ func TestExecuteCall(t *testing.T) {
 	mmu.Write8(0x101, 0x89)
 
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xCD, false)
-	nextPc, _ := cpu.Execute(mmu, inst)
+	nextPc, _, _ := cpu.Execute(mmu, inst)
 
 	assertRegEquals(t, mmu.Read8(0xF), 0x01)
 	assertRegEquals(t, mmu.Read8(0xE), 0x03)
@@ -720,12 +720,12 @@ func TestExecuteCallNotZero(t *testing.T) {
 	mmu.Write8(0x101, 0x89)
 
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC4, false)
-	nextPc, _ := cpu.Execute(mmu, inst)
+	nextPc, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPc, 0x103)
 
 	cpu.Reg.F.Zero = false
-	nextPc, _ = cpu.Execute(mmu, inst)
+	nextPc, _, _ = cpu.Execute(mmu, inst)
 
 	assertRegEquals(t, mmu.Read8(0xF), 0x01)
 	assertRegEquals(t, mmu.Read8(0xE), 0x03)
@@ -746,12 +746,12 @@ func TestExecuteCallZero(t *testing.T) {
 	mmu.Write8(0x101, 0x89)
 
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xCC, false)
-	nextPc, _ := cpu.Execute(mmu, inst)
+	nextPc, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPc, 0x103)
 
 	cpu.Reg.F.Zero = true
-	nextPc, _ = cpu.Execute(mmu, inst)
+	nextPc, _, _ = cpu.Execute(mmu, inst)
 
 	assertRegEquals(t, mmu.Read8(0xF), 0x01)
 	assertRegEquals(t, mmu.Read8(0xE), 0x03)
@@ -772,12 +772,12 @@ func TestExecuteCallNotCarry(t *testing.T) {
 	mmu.Write8(0x101, 0x89)
 
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD4, false)
-	nextPc, _ := cpu.Execute(mmu, inst)
+	nextPc, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPc, 0x103)
 
 	cpu.Reg.F.Carry = false
-	nextPc, _ = cpu.Execute(mmu, inst)
+	nextPc, _, _ = cpu.Execute(mmu, inst)
 
 	assertRegEquals(t, mmu.Read8(0xF), 0x01)
 	assertRegEquals(t, mmu.Read8(0xE), 0x03)
@@ -798,12 +798,12 @@ func TestExecuteCallCarry(t *testing.T) {
 	mmu.Write8(0x101, 0x89)
 
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xDC, false)
-	nextPc, _ := cpu.Execute(mmu, inst)
+	nextPc, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPc, 0x103)
 
 	cpu.Reg.F.Carry = true
-	nextPc, _ = cpu.Execute(mmu, inst)
+	nextPc, _, _ = cpu.Execute(mmu, inst)
 
 	assertRegEquals(t, mmu.Read8(0xF), 0x01)
 	assertRegEquals(t, mmu.Read8(0xE), 0x03)
@@ -823,7 +823,7 @@ func TestExecuteJump(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC3, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -841,7 +841,7 @@ func TestExecuteJumpZero(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xCA, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -859,7 +859,7 @@ func TestExecuteJumpCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xDA, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -877,7 +877,7 @@ func TestExecuteNoJumpCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD2, false)
 
 	expectedNextPC := uint16(0xFB)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -894,7 +894,7 @@ func TestExecuteNoJumpNoCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xDA, false)
 
 	expectedNextPC := uint16(0xFB)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -911,7 +911,7 @@ func TestExecuteJumpNoZero(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC2, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -928,7 +928,7 @@ func TestExecuteJumpNoCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD2, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -943,7 +943,7 @@ func TestExecuteJumpHL(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xE9, false)
 
 	expectedNextPC := uint16(0x02FC)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -958,7 +958,7 @@ func TestExecuteJumpRel(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x18, false)
 
 	expectedNextPC := uint16(0xFE)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 
@@ -966,7 +966,7 @@ func TestExecuteJumpRel(t *testing.T) {
 	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x18, false)
 
 	expectedNextPC = uint16(0xF6)
-	nextPC, _ = cpu.Execute(mmu, inst)
+	nextPC, _, _ = cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -982,7 +982,7 @@ func TestExecuteJumpRelZero(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x28, false)
 
 	expectedNextPC := uint16(0xFE)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -998,7 +998,7 @@ func TestExecuteJumpRelCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x38, false)
 
 	expectedNextPC := uint16(0xFE)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -1014,7 +1014,7 @@ func TestExecuteNoJumpRelCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x38, false)
 
 	expectedNextPC := uint16(0xFE)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -1030,7 +1030,7 @@ func TestExecuteNoJumpRelNoCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x30, false)
 
 	expectedNextPC := uint16(0xFE)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -1046,7 +1046,7 @@ func TestExecuteJumpRelNoZero(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x20, false)
 
 	expectedNextPC := uint16(0xFE)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -1062,7 +1062,7 @@ func TestExecuteJumpRelNoCarry(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0x30, false)
 
 	expectedNextPC := uint16(0xFE)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPC, expectedNextPC)
 }
@@ -1357,7 +1357,7 @@ func TestExecuteRet(t *testing.T) {
 	assertRegEquals(t, cpu.SP.Read(), 0xE)
 
 	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xC9, false)
-	nextPc, _ := cpu.Execute(mmu, inst)
+	nextPc, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPc, 0x0489)
 }
@@ -1381,7 +1381,7 @@ func TestExecuteRetFail(t *testing.T) {
 	cpu.Reg.F.Carry = true
 
 	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD0, false)
-	nextPc, _ := cpu.Execute(mmu, inst)
+	nextPc, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPc, 0x101)
 }
@@ -1397,7 +1397,7 @@ func TestExecuteRst(t *testing.T) {
 	inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xFF, false)
 
 	expectedNextPC := uint16(0x38)
-	nextPC, _ := cpu.Execute(mmu, inst)
+	nextPC, _, _ := cpu.Execute(mmu, inst)
 
 	assertRegEquals(t, mmu.Read16(0x0E), 0x101)
 	assertRegEquals(t, cpu.SP.Read(), 0x0E)
@@ -1461,7 +1461,7 @@ func TestExecuteRetI(t *testing.T) {
 	assertRegEquals(t, cpu.SP.Read(), 0xE)
 
 	inst, _ = cpu.opcodes.InstructionFromByte(cpu.PC.Read(), 0xD9, false)
-	nextPc, _ := cpu.Execute(mmu, inst)
+	nextPc, _, _ := cpu.Execute(mmu, inst)
 
 	assertNextPC(t, nextPc, 0x0489)
 
