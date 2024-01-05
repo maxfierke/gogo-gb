@@ -97,6 +97,19 @@ func (ic *InterruptController) Reset() {
 	ic.requested.Write(0x00)
 }
 
+func (ic *InterruptController) RequestSerial() {
+	ic.requested.serial = true
+}
+
+func (ic *InterruptController) ConsumeSerial() byte {
+	if ic.enabled.serial && ic.requested.serial {
+		ic.requested.serial = false
+		return INT_SERIAL
+	}
+
+	return 0
+}
+
 func (ic *InterruptController) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if addr == REG_IE {
 		return mem.ReadReplace(ic.enabled.Read())

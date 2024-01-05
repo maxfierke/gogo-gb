@@ -39,6 +39,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 	cartridge := cart.NewCartridge()
 	ic := devices.NewInterruptController()
 	lcd := devices.NewLCD()
+	serial := devices.NewSerialPort()
 
 	ram := make([]byte, DMG_RAM_SIZE)
 	mmu := mem.NewMMU(ram)
@@ -52,6 +53,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, serial)
 
 	return &DMG{
 		cpu:       cpu,
