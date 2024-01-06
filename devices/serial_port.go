@@ -1,8 +1,9 @@
 package devices
 
 import (
+	"bytes"
 	"fmt"
-	"os"
+	"io"
 
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -74,14 +75,27 @@ func (sc *SerialCtrl) SetClockInternal(enabled bool) {
 }
 
 type SerialPort struct {
-	clk  uint
-	ctrl SerialCtrl
-	recv byte
-	buf  byte
+	clk    uint
+	ctrl   SerialCtrl
+	recv   byte
+	buf    byte
+	reader io.Reader
+	writer io.Writer
 }
 
 func NewSerialPort() *SerialPort {
-	return &SerialPort{}
+	return &SerialPort{
+		reader: bytes.NewReader([]byte{}),
+		writer: io.Discard,
+	}
+}
+
+func (sp *SerialPort) SetReader(reader io.Reader) {
+	sp.reader = reader
+}
+
+func (sp *SerialPort) SetWriter(writer io.Writer) {
+	sp.writer = writer
 }
 
 func (sp *SerialPort) Step(cycles uint, ic *InterruptController) {
@@ -97,9 +111,9 @@ func (sp *SerialPort) Step(cycles uint, ic *InterruptController) {
 		} else {
 			sp.clk -= cycles
 		}
-	} else {
-		// TODO: Implement external clock
 	}
+
+	// TODO: Implement external clock
 }
 
 func (sp *SerialPort) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
@@ -120,14 +134,17 @@ func (sp *SerialPort) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrit
 		sp.ctrl.Write(value)
 
 		if sp.ctrl.IsTransferEnabled() && sp.ctrl.IsClockInternal() {
-			// TODO: derive this somehow and factor in GBC speeds when relevant
+			// TODO(GBC): derive this somehow and factor in GBC speeds when relevant
 			sp.clk = 8192
 
-			// TODO: Write this to some IO writer
-			os.Stderr.Write([]byte{sp.buf})
+			sp.writer.Write([]byte{sp.buf})
 
-			// TODO: Read this from somewhere
-			sp.recv = 0xFF
+			readBuf := make([]byte, 1)
+			if bytesRead, err := sp.reader.Read(readBuf); err != nil || bytesRead == 0 {
+				sp.recv = 0xFF
+			} else {
+				sp.recv = readBuf[0]
+			}
 		}
 
 		return mem.WriteBlock()

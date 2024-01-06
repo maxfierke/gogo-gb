@@ -1,6 +1,7 @@
 package hardware
 
 import (
+	"io"
 	"log"
 
 	"github.com/maxfierke/gogo-gb/cart"
@@ -19,6 +20,7 @@ type DMG struct {
 	cartridge *cart.Cartridge
 	ic        *devices.InterruptController
 	lcd       *devices.LCD
+	serial    *devices.SerialPort
 
 	// Non-components
 	debugger debug.Debugger
@@ -62,6 +64,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 		debugger:  debugger,
 		ic:        ic,
 		lcd:       lcd,
+		serial:    serial,
 	}, nil
 }
 
@@ -95,4 +98,12 @@ func (dmg *DMG) Run() {
 
 func (dmg *DMG) SetLogger(logger *log.Logger) {
 	dmg.logger = logger
+}
+
+func (dmg *DMG) SetSerialReader(serial io.Reader) {
+	dmg.serial.SetReader(serial)
+}
+
+func (dmg *DMG) SetSerialWriter(serial io.Writer) {
+	dmg.serial.SetWriter(serial)
 }
