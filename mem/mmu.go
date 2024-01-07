@@ -78,6 +78,35 @@ type MemBus interface {
 	Write16(addr uint16, value uint16)
 }
 
+type EchoRegion struct{}
+
+func NewEchoRegion() *EchoRegion {
+	return &EchoRegion{}
+}
+
+func (umr *EchoRegion) OnRead(mmu *MMU, addr uint16) MemRead {
+	// Echo mirrors 0xC000
+	return ReadReplace(mmu.ram[addr-0x2000])
+}
+
+func (umr *EchoRegion) OnWrite(mmu *MMU, addr uint16, value byte) MemWrite {
+	return WriteBlock()
+}
+
+type UnmappedRegion struct{}
+
+func NewUnmappedRegion() *UnmappedRegion {
+	return &UnmappedRegion{}
+}
+
+func (umr *UnmappedRegion) OnRead(mmu *MMU, addr uint16) MemRead {
+	return ReadReplace(0x00)
+}
+
+func (umr *UnmappedRegion) OnWrite(mmu *MMU, addr uint16, value byte) MemWrite {
+	return WriteBlock()
+}
+
 func NewMMU(ram []byte) *MMU {
 	return &MMU{
 		ram:           ram,

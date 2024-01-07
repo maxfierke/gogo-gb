@@ -45,17 +45,22 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 
 	ram := make([]byte, DMG_RAM_SIZE)
 	mmu := mem.NewMMU(ram)
+	echo := mem.NewEchoRegion()
+	unmapped := mem.NewUnmappedRegion()
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, cartridge) // MBCs ROM Banks
 	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, cartridge) // MBCs RAM Banks
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd) // LCD control registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xE000, End: 0xFDFF}, echo)     // Echo RAM (mirrors WRAM)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFEA0, End: 0xFEFF}, unmapped) // Nop writes, zero reads
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, serial) // Serial Port (Control & Data)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd)    // LCD control registers
+
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, serial)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
 
 	return &DMG{
 		cpu:       cpu,
