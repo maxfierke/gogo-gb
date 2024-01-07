@@ -85,16 +85,18 @@ func debugPrintCartHeader(options *CLIOptions) {
 		logger.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly or trying blowing on it: %v\n", err)
 	}
 
-	cartReader.Header.DebugPrint()
+	cartReader.Header.DebugPrint(logger)
 }
 
 func debugPrintOpcodes(options *CLIOptions) {
+	logger := options.logger
+
 	opcodes, err := isa.LoadOpcodes()
 	if err != nil {
-		options.logger.Fatalf("Unable to load opcodes: %v\n", err)
+		logger.Fatalf("Unable to load opcodes: %v\n", err)
 	}
 
-	opcodes.DebugPrint()
+	opcodes.DebugPrint(logger)
 }
 
 func initDMG(options *CLIOptions) *hardware.DMG {

@@ -2,7 +2,7 @@ package cart
 
 import (
 	"encoding/binary"
-	"fmt"
+	"log"
 )
 
 var be = binary.BigEndian
@@ -222,20 +222,20 @@ func (hdr *Header) RamSizeBytes() uint {
 	}
 }
 
-func (hdr *Header) DebugPrint() {
-	fmt.Printf("== Cartridge Info ==\n\n")
+func (hdr *Header) DebugPrint(logger *log.Logger) {
+	logger.Printf("== Cartridge Info ==\n\n")
 
-	fmt.Printf("Title:			%s\n", hdr.Title)
-	fmt.Printf("Licensee:		%s\n", hdr.Licensee())
-	fmt.Printf("Color:			%s (0x%x)\n", hdr.Cgb(), hdr.cgb)
-	fmt.Printf("TV-Ready:		%s (0x%x)\n", hdr.SgbMode(), hdr.sgb)
-	fmt.Printf("Cart Type:		%s (0x%x)\n", hdr.CartTypeName(), hdr.CartType)
-	fmt.Printf("ROM Size:		%d KiB\n", hdr.RomSizeBytes()/1024)
-	fmt.Printf("RAM Size:		%d KiB\n", hdr.RamSizeBytes()/1024)
-	fmt.Printf("Destination:		%s (0x%x)\n", hdr.Destination(), hdr.destinationCode)
-	fmt.Printf("Mask ROM Version:	0x%x\n", hdr.maskROMVersion)
-	fmt.Printf("Header Checksum:	0x%x\n", hdr.HeaderChecksum)
-	fmt.Printf("Global Checksum:	0x%x\n", hdr.GlobalChecksum)
+	logger.Printf("Title:			%s\n", hdr.Title)
+	logger.Printf("Licensee:		%s\n", hdr.Licensee())
+	logger.Printf("Color:			%s (0x%x)\n", hdr.Cgb(), hdr.cgb)
+	logger.Printf("TV-Ready:		%s (0x%x)\n", hdr.SgbMode(), hdr.sgb)
+	logger.Printf("Cart Type:		%s (0x%x)\n", hdr.CartTypeName(), hdr.CartType)
+	logger.Printf("ROM Size:		%d KiB\n", hdr.RomSizeBytes()/1024)
+	logger.Printf("RAM Size:		%d KiB\n", hdr.RamSizeBytes()/1024)
+	logger.Printf("Destination:		%s (0x%x)\n", hdr.Destination(), hdr.destinationCode)
+	logger.Printf("Mask ROM Version:	0x%x\n", hdr.maskROMVersion)
+	logger.Printf("Header Checksum:	0x%x\n", hdr.HeaderChecksum)
+	logger.Printf("Global Checksum:	0x%x\n", hdr.GlobalChecksum)
 }
 
 func (hdr *Header) Licensee() string {

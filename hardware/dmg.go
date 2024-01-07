@@ -72,8 +72,8 @@ func (dmg *DMG) LoadCartridge(r *cart.Reader) error {
 	return dmg.cartridge.LoadCartridge(r)
 }
 
-func (dmg *DMG) DebugPrint() {
-	dmg.cartridge.DebugPrint()
+func (dmg *DMG) DebugPrint(logger *log.Logger) {
+	dmg.cartridge.DebugPrint(logger)
 }
 
 func (dmg *DMG) Step() bool {
