@@ -5,6 +5,7 @@ import (
 	"math/bits"
 
 	"github.com/maxfierke/gogo-gb/cpu/isa"
+	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
@@ -1701,6 +1702,38 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	}
 
 	return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[0]), nil
+}
+
+func (cpu *CPU) PollInterrupts(mmu *mem.MMU, ic *devices.InterruptController) uint8 {
+	if cpu.ime {
+		interrupt := ic.ConsumeRequest()
+		if interrupt == devices.INT_NONE {
+			return 0
+		}
+
+		// Disable interrupts while we process this one
+		cpu.ime = false
+
+		// Jump to interrupt handler
+		cpu.push(mmu, cpu.PC.Read())
+		cpu.PC.Write(uint16(interrupt))
+
+		// If we were halted, we're not now!
+		cpu.halted = false
+
+		// Consuming an IRQ is 16 cycles
+		return 16
+	} else if cpu.halted {
+		if interrupt := ic.NextRequest(); interrupt != 0 {
+			// Wakey-wakey
+			cpu.halted = false
+		}
+
+		return 0
+	} else {
+		// Ignore
+		return 0
+	}
 }
 
 func (cpu *CPU) Reset() {

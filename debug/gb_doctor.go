@@ -25,6 +25,8 @@ func (gbd *GBDoctorDebugger) OnExecute(cpu *cpu.CPU, mmu *mem.MMU) {
 	gbd.printState(cpu, mmu)
 }
 
+func (gbd *GBDoctorDebugger) OnInterrupt(cpu *cpu.CPU, mmu *mem.MMU) {}
+
 func (gbd *GBDoctorDebugger) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if addr == devices.REG_LCD_LY {
 		return mem.ReadReplace(0x90) // gameboy-doctor needs a stubbed out LCD

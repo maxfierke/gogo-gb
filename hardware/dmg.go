@@ -79,11 +79,15 @@ func (dmg *DMG) DebugPrint() {
 func (dmg *DMG) Step() bool {
 	dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
 
-	_, err := dmg.cpu.Step(dmg.mmu)
+	cycles, err := dmg.cpu.Step(dmg.mmu)
 	if err != nil {
 		dmg.logger.Printf("Unexpected error while executing instruction: %v\n", err)
 		return false
 	}
+
+	cycles += dmg.cpu.PollInterrupts(dmg.mmu, dmg.ic)
+
+	dmg.serial.Step(uint(cycles), dmg.ic)
 
 	return true
 }

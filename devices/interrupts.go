@@ -9,6 +9,7 @@ import (
 const (
 	REG_IE     = 0xFFFF
 	REG_IF     = 0xFF0F
+	INT_NONE   = 0x00
 	INT_VBLANK = 0x40
 	INT_STAT   = 0x48
 	INT_TIMER  = 0x50
@@ -92,6 +93,56 @@ func NewInterruptController() *InterruptController {
 	}
 }
 
+func (ic *InterruptController) ConsumeRequest() byte {
+	nextReq := ic.NextRequest()
+
+	if nextReq == INT_VBLANK {
+		ic.requested.vblank = false
+	}
+
+	if nextReq == INT_STAT {
+		ic.requested.lcd = false
+	}
+
+	if nextReq == INT_JOYPAD {
+		ic.requested.joypad = false
+	}
+
+	if nextReq == INT_SERIAL {
+		ic.requested.serial = false
+	}
+
+	if nextReq == INT_TIMER {
+		ic.requested.timer = false
+	}
+
+	return nextReq
+}
+
+func (ic *InterruptController) NextRequest() byte {
+	if ic.enabled.vblank && ic.requested.vblank {
+		return INT_VBLANK
+	}
+
+	if ic.enabled.lcd && ic.requested.lcd {
+		return INT_STAT
+	}
+
+	if ic.enabled.timer && ic.requested.timer {
+		return INT_TIMER
+	}
+
+	if ic.enabled.serial && ic.requested.serial {
+		return INT_SERIAL
+	}
+
+	if ic.enabled.joypad && ic.requested.joypad {
+		return INT_JOYPAD
+	}
+
+	return INT_NONE
+}
+
 func (ic *InterruptController) Reset() {
 	ic.enabled.Write(0x00)
 	ic.requested.Write(0x00)
@@ -99,15 +150,6 @@ func (ic *InterruptController) Reset() {
 
 func (ic *InterruptController) RequestSerial() {
 	ic.requested.serial = true
-}
-
-func (ic *InterruptController) ConsumeSerial() byte {
-	if ic.enabled.serial && ic.requested.serial {
-		ic.requested.serial = false
-		return INT_SERIAL
-	}
-
-	return 0
 }
 
 func (ic *InterruptController) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
