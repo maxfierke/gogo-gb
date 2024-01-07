@@ -60,6 +60,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd)    // LCD control registers
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF4D, End: 0xFF77}, unmapped) // CGB regs
 	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
 
 	return &DMG{
