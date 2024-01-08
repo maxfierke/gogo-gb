@@ -93,7 +93,7 @@ func (dmg *DMG) Step() bool {
 
 	cycles += dmg.cpu.PollInterrupts(dmg.mmu, dmg.ic)
 
-	dmg.serial.Step(uint(cycles), dmg.ic)
+	dmg.serial.Step(cycles, dmg.ic)
 
 	return true
 }

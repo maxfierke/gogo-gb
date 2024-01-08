@@ -98,18 +98,18 @@ func (sp *SerialPort) SetWriter(writer io.Writer) {
 	sp.writer = writer
 }
 
-func (sp *SerialPort) Step(cycles uint, ic *InterruptController) {
+func (sp *SerialPort) Step(cycles uint8, ic *InterruptController) {
 	if !sp.ctrl.IsTransferEnabled() {
 		return
 	}
 
 	if sp.ctrl.IsClockInternal() {
-		if sp.clk < cycles {
+		if sp.clk < uint(cycles) {
 			sp.buf = sp.recv
 			sp.ctrl.SetTransferEnabled(false)
 			ic.RequestSerial()
 		} else {
-			sp.clk -= cycles
+			sp.clk -= uint(cycles)
 		}
 	}
 
