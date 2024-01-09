@@ -21,6 +21,7 @@ type DMG struct {
 	ic        *devices.InterruptController
 	lcd       *devices.LCD
 	serial    *devices.SerialPort
+	timer     *devices.Timer
 
 	// Non-components
 	debugger debug.Debugger
@@ -42,6 +43,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 	ic := devices.NewInterruptController()
 	lcd := devices.NewLCD()
 	serial := devices.NewSerialPort()
+	timer := devices.NewTimer()
 
 	ram := make([]byte, DMG_RAM_SIZE)
 	mmu := mem.NewMMU(ram)
@@ -57,6 +59,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0xFEA0, End: 0xFEFF}, unmapped) // Nop writes, zero reads
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, serial) // Serial Port (Control & Data)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, timer)  // Timer (not RTC)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd)    // LCD control registers
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
@@ -71,6 +74,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 		ic:        ic,
 		lcd:       lcd,
 		serial:    serial,
+		timer:     timer,
 	}, nil
 }
 
@@ -94,6 +98,7 @@ func (dmg *DMG) Step() bool {
 	cycles += dmg.cpu.PollInterrupts(dmg.mmu, dmg.ic)
 
 	dmg.serial.Step(cycles, dmg.ic)
+	dmg.timer.Step(cycles, dmg.ic)
 
 	return true
 }

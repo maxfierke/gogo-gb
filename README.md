@@ -4,14 +4,27 @@ a gameboy emulator for funsies
 ## TODO
 
 - [X] Pass all of Blargg's `cpu_instrs` ROMs via `gameboy-doctor` (expect `02-interrupts.gb`, which isn't verifyable via `gameboy-doctor`)
-- [ ] Implement GB serial port (w/ option to log to console)
-- [ ] Pass Blargg's `cpu_instrs`/`02-interrupts.gb` ROM (manually verified)
+- [X] Implement serial port (w/ option to log to console)
+- [X] Implement timer
+- [X] Pass Blargg's `cpu_instrs`/`02-interrupts.gb` ROM (manually verified)
 - [ ] Pass Blargg's `instr_timing.gb` ROM (manually verified)
 - [ ] Pass Blargg's `mem_timing.gb` ROM (manually verified)
-- [ ] Implement LCD & Rendering
+- [ ] Implement LCD
+= [ ] Implement PPU, VRAM, OAM, etc.
 - [ ] Pass all of Blargg's `mem_timing-2` ROMs (manually verified)
 - [ ] Implement Joypad
-- [ ] Implement Sound
+
+## Maybe Never?
+
+Just being realistic about my likelihood of getting to these:
+
+- [ ] Implement Sound/APU
+- [ ] Implement emulation for every known DMG bug
+- [ ] Implement SGB mode
+- [ ] Implement MBC6
+- [ ] Implement MBC7
+- [ ] Implement any multicarts or Hudson carts
+- [ ] Implement (any) accessories
 
 ## Inspiration Material
 

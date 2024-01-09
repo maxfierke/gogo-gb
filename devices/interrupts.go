@@ -152,6 +152,10 @@ func (ic *InterruptController) RequestSerial() {
 	ic.requested.serial = true
 }
 
+func (ic *InterruptController) RequestTimer() {
+	ic.requested.timer = true
+}
+
 func (ic *InterruptController) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if addr == REG_IE {
 		return mem.ReadReplace(ic.enabled.Read())
