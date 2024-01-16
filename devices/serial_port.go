@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -137,7 +138,11 @@ func (sp *SerialPort) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrit
 			// TODO(GBC): derive this somehow and factor in GBC speeds when relevant
 			sp.clk = 8192
 
-			sp.writer.Write([]byte{sp.buf})
+			_, err := sp.writer.Write([]byte{sp.buf})
+			if err != nil {
+				// TODO: Use logger from DMG here
+				log.Printf("Unable to write 0x%02X @ 0x%04X due to an error: %v\n", value, addr, err)
+			}
 
 			readBuf := make([]byte, 1)
 			if bytesRead, err := sp.reader.Read(readBuf); err != nil || bytesRead == 0 {
