@@ -10,7 +10,7 @@ a gameboy emulator for funsies
 - [ ] Pass Blargg's `instr_timing.gb` ROM (manually verified)
 - [ ] Pass Blargg's `mem_timing.gb` ROM (manually verified)
 - [ ] Implement LCD
-= [ ] Implement PPU, VRAM, OAM, etc.
+- [ ] Implement PPU, VRAM, OAM, etc.
 - [ ] Pass all of Blargg's `mem_timing-2` ROMs (manually verified)
 - [ ] Implement Joypad
 
