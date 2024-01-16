@@ -933,6 +933,9 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		switch opcode.Addr {
 		case 0x00:
 			// NOP
+		case 0xDB, 0xEC, 0xED:
+			// ILLEGAL instructions
+			// These don't do anything, but aren't really the same as a NOP
 		case 0x01:
 			// LD BC, n16
 			cpu.load16(cpu.Reg.BC, cpu.readNext16(mmu))
