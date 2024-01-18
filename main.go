@@ -35,7 +35,7 @@ func main() {
 	} else {
 		logFile, err := os.Create(options.logPath)
 		if err != nil {
-			log.Fatalf("Unable to open log file '%s' for writing: %v\n", options.logPath, err)
+			log.Fatalf("ERROR: Unable to open log file '%s' for writing: %v\n", options.logPath, err)
 		}
 		defer logFile.Close()
 
@@ -66,7 +66,7 @@ func debugPrint(options *CLIOptions) {
 	case "opcodes":
 		debugPrintOpcodes(options)
 	default:
-		options.logger.Fatalf("unrecognized \"debug-print\" option: %v\n", options.debugPrint)
+		options.logger.Fatalf("ERROR: unrecognized \"debug-print\" option: %v\n", options.debugPrint)
 	}
 }
 
@@ -75,15 +75,15 @@ func debugPrintCartHeader(options *CLIOptions) {
 
 	cartFile, err := os.Open(options.cartPath)
 	if options.cartPath == "" || err != nil {
-		logger.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (exists): %v\n", err)
+		logger.Fatalf("ERROR: Unable to load cartridge. Please ensure it's inserted correctly (exists): %v\n", err)
 	}
 	defer cartFile.Close()
 
 	cartReader, err := cart.NewReader(cartFile)
 	if err == cart.ErrHeader {
-		logger.Printf("Warning: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
+		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
-		logger.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly or trying blowing on it: %v\n", err)
+		logger.Fatalf("ERROR: Unable to load cartridge. Please ensure it's inserted correctly or trying blowing on it: %v\n", err)
 	}
 
 	cartReader.Header.DebugPrint(logger)
@@ -94,7 +94,7 @@ func debugPrintOpcodes(options *CLIOptions) {
 
 	opcodes, err := isa.LoadOpcodes()
 	if err != nil {
-		logger.Fatalf("Unable to load opcodes: %v\n", err)
+		logger.Fatalf("ERROR: Unable to load opcodes: %v\n", err)
 	}
 
 	opcodes.DebugPrint(logger)
@@ -116,24 +116,24 @@ func initDMG(options *CLIOptions) *hardware.DMG {
 		} else {
 			serialPort, err := os.Create(options.serialPort)
 			if err != nil {
-				logger.Fatalf("Unable to open file '%s' as serial port: %v\n", options.serialPort, err)
+				logger.Fatalf("ERROR: Unable to open file '%s' as serial port: %v\n", options.serialPort, err)
 			}
 
 			serialCable.SetReader(serialPort)
 			serialCable.SetWriter(serialPort)
 		}
 
-		host.SetSerialCable(serialCable)
+		host.AttachSerialCable(serialCable)
 	}
 
 	debugger, err := debug.NewDebugger(options.debugger)
 	if err != nil {
-		logger.Fatalf("Unable to initialize Debugger: %v\n", err)
+		logger.Fatalf("ERROR: Unable to initialize Debugger: %v\n", err)
 	}
 
 	dmg, err := hardware.NewDMGDebug(host, debugger)
 	if err != nil {
-		logger.Fatalf("Unable to initialize DMG: %v\n", err)
+		logger.Fatalf("ERROR: Unable to initialize DMG: %v\n", err)
 	}
 
 	return dmg
@@ -148,22 +148,22 @@ func loadCart(dmg *hardware.DMG, options *CLIOptions) {
 
 	cartFile, err := os.Open(options.cartPath)
 	if options.cartPath == "" || err != nil {
-		logger.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %v\n", err)
+		logger.Fatalf("ERROR: Unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %v\n", err)
 	}
 	defer cartFile.Close()
 
 	cartReader, err := cart.NewReader(cartFile)
 	if err == cart.ErrHeader {
-		logger.Printf("Warning: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
+		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
-		logger.Fatalf("Unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %v\n", err)
+		logger.Fatalf("ERROR: Unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %v\n", err)
 	}
 
 	err = dmg.LoadCartridge(cartReader)
 	if err == cart.ErrHeader {
-		logger.Printf("Warning: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
+		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
-		logger.Fatalf("Unable to load cartridge: %v\n", err)
+		logger.Fatalf("ERROR: Unable to load cartridge: %v\n", err)
 	}
 }
 

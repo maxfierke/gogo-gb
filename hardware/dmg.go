@@ -91,7 +91,7 @@ func (dmg *DMG) Step() bool {
 
 	cycles, err := dmg.cpu.Step(dmg.mmu)
 	if err != nil {
-		dmg.host.Logger().Printf("Unexpected error while executing instruction: %v\n", err)
+		dmg.host.LogErr("Unexpected error while executing instruction", err)
 		return false
 	}
 
