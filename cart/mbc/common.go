@@ -7,14 +7,14 @@ const (
 	ROM_BANK_SIZE = 0x4000
 )
 
-func readBankAddr(memory []byte, banks_region mem.MemRegion, bank_size uint16, current_bank uint16, addr uint16) byte {
-	bank_base_addr := current_bank * bank_size
-	bank_slot_addr := addr - banks_region.Start
-	return memory[bank_base_addr+bank_slot_addr]
+func readBankAddr(memory []byte, banksRegion mem.MemRegion, bankSize uint16, currentBank uint16, addr uint16) byte {
+	bankBaseAddr := currentBank * bankSize
+	bankSlotAddr := addr - banksRegion.Start
+	return memory[bankBaseAddr+bankSlotAddr]
 }
 
-func writeBankAddr(memory []byte, banks_region mem.MemRegion, bank_size uint16, current_bank uint16, addr uint16, value byte) {
-	bank_base_addr := current_bank * bank_size
-	bank_slot_addr := addr - banks_region.Start
-	memory[bank_base_addr+bank_slot_addr] = value
+func writeBankAddr(memory []byte, banksRegion mem.MemRegion, bankSize uint16, currentBank uint16, addr uint16, value byte) {
+	bankBaseAddr := currentBank * bankSize
+	bankSlotAddr := addr - banksRegion.Start
+	memory[bankBaseAddr+bankSlotAddr] = value
 }

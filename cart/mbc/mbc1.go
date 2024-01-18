@@ -7,69 +7,69 @@ import (
 )
 
 var (
-	mbc1_rom_bank_x0 = mem.MemRegion{Start: 0x0000, End: 0x3FFF}
-	mbc1_rom_banks   = mem.MemRegion{Start: 0x4000, End: 0x7FFF}
-	mbc1_ram_banks   = mem.MemRegion{Start: 0xA000, End: 0xBFFF}
+	MBC1_ROM_BANK_X0 = mem.MemRegion{Start: 0x0000, End: 0x3FFF}
+	MBC1_ROM_BANKS   = mem.MemRegion{Start: 0x4000, End: 0x7FFF}
+	MBC1_RAM_BANKS   = mem.MemRegion{Start: 0xA000, End: 0xBFFF}
 
-	mbc1_reg_ram_enable      = mem.MemRegion{Start: 0x0000, End: 0x1FFF}
-	mbc1_reg_ram_enable_mask = byte(0xF)
-	mbc1_reg_ram_enabled     = byte(0xA)
+	MBC1_REG_RAM_ENABLE      = mem.MemRegion{Start: 0x0000, End: 0x1FFF}
+	MBC1_REG_RAM_ENABLE_MASK = byte(0xF)
+	MBC1_REG_RAM_ENABLED     = byte(0xA)
 
-	mbc1_reg_rom_bank          = mem.MemRegion{Start: 0x2000, End: 0x3FFF}
-	mbc1_reg_rom_bank_sel_mask = uint16(0x1F)
+	MBC1_REG_ROM_BANK          = mem.MemRegion{Start: 0x2000, End: 0x3FFF}
+	MBC1_REG_ROM_BANK_SEL_MASK = uint16(0x1F)
 
-	mbc1_reg_ram_bank_or_msb_rom_bank = mem.MemRegion{Start: 0x4000, End: 0x5FFF}
-	mbc1_reg_msb_rom_bank_sel_mask    = ^uint16(0x60)
+	MBC1_REG_RAM_BANK_OR_MSB_ROM_BANK = mem.MemRegion{Start: 0x4000, End: 0x5FFF}
+	MBC1_REG_MSB_ROM_BANK_SEL_MASK    = ^uint16(0x60)
 
-	mbc1_reg_bank_mode_sel = mem.MemRegion{Start: 0x6000, End: 0x7FFF}
+	MBC1_REG_BANK_MODE_SEL = mem.MemRegion{Start: 0x6000, End: 0x7FFF}
 )
 
 // Struct for MBC1 support (minus MBC1M, currently)
 type MBC1 struct {
-	cur_ram_bank uint8
-	cur_rom_bank uint16
-	ram          []byte
-	ram_enabled  bool
-	ram_selected bool
-	rom          []byte
+	curRamBank  uint8
+	curRomBank  uint16
+	ram         []byte
+	ramEnabled  bool
+	ramSelected bool
+	rom         []byte
 }
 
 func NewMBC1(rom []byte, ram []byte) *MBC1 {
 	return &MBC1{
-		cur_ram_bank: 0,
-		cur_rom_bank: 0,
-		ram:          ram,
-		ram_enabled:  false,
-		ram_selected: false,
-		rom:          rom,
+		curRamBank:  0,
+		curRomBank:  0,
+		ram:         ram,
+		ramEnabled:  false,
+		ramSelected: false,
+		rom:         rom,
 	}
 }
 
 func (m *MBC1) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	if mbc1_rom_bank_x0.Contains(addr, false) {
+	if MBC1_ROM_BANK_X0.Contains(addr, false) {
 		return mem.ReadReplace(m.rom[addr])
-	} else if mbc1_rom_banks.Contains(addr, false) {
+	} else if MBC1_ROM_BANKS.Contains(addr, false) {
 		// see https://gbdev.io/pandocs/MBC1.html#00003fff--rom-bank-x0-read-only
-		romBank := max(m.cur_rom_bank, 1)
+		romBank := max(m.curRomBank, 1)
 		if romBank == 0x20 || romBank == 0x40 || romBank == 0x60 {
 			romBank += 1
 		}
 
 		bankByte := readBankAddr(
 			m.rom,
-			mbc1_rom_banks,
+			MBC1_ROM_BANKS,
 			ROM_BANK_SIZE,
 			romBank,
 			addr,
 		)
 		return mem.ReadReplace(bankByte)
-	} else if mbc1_ram_banks.Contains(addr, false) {
-		if m.ram_enabled {
+	} else if MBC1_RAM_BANKS.Contains(addr, false) {
+		if m.ramEnabled {
 			bankByte := readBankAddr(
 				m.ram,
-				mbc1_ram_banks,
+				MBC1_RAM_BANKS,
 				RAM_BANK_SIZE,
-				uint16(m.cur_ram_bank),
+				uint16(m.curRamBank),
 				addr,
 			)
 			return mem.ReadReplace(bankByte)
@@ -83,43 +83,43 @@ func (m *MBC1) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 }
 
 func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
-	if mbc1_reg_ram_enable.Contains(addr, false) {
-		if value&mbc1_reg_ram_enable_mask == mbc1_reg_ram_enabled {
-			m.ram_enabled = true
+	if MBC1_REG_RAM_ENABLE.Contains(addr, false) {
+		if value&MBC1_REG_RAM_ENABLE_MASK == MBC1_REG_RAM_ENABLED {
+			m.ramEnabled = true
 		} else {
-			m.ram_enabled = false
+			m.ramEnabled = false
 		}
 
 		return mem.WriteBlock()
-	} else if mbc1_reg_rom_bank.Contains(addr, false) {
-		m.cur_rom_bank =
-			(m.cur_rom_bank & ^mbc1_reg_rom_bank_sel_mask) |
-				(uint16(value) & mbc1_reg_rom_bank_sel_mask)
+	} else if MBC1_REG_ROM_BANK.Contains(addr, false) {
+		m.curRomBank =
+			(m.curRomBank & ^MBC1_REG_ROM_BANK_SEL_MASK) |
+				(uint16(value) & MBC1_REG_ROM_BANK_SEL_MASK)
 		return mem.WriteBlock()
-	} else if mbc1_reg_ram_bank_or_msb_rom_bank.Contains(addr, false) {
-		if m.ram_selected {
-			m.cur_ram_bank = value & 0x3
+	} else if MBC1_REG_RAM_BANK_OR_MSB_ROM_BANK.Contains(addr, false) {
+		if m.ramSelected {
+			m.curRamBank = value & 0x3
 		} else {
 			msb := uint16(value) & 0x3 << 5
-			m.cur_rom_bank = (m.cur_rom_bank & mbc1_reg_msb_rom_bank_sel_mask) | msb
+			m.curRomBank = (m.curRomBank & MBC1_REG_MSB_ROM_BANK_SEL_MASK) | msb
 		}
 		return mem.WriteBlock()
-	} else if mbc1_reg_bank_mode_sel.Contains(addr, false) {
+	} else if MBC1_REG_BANK_MODE_SEL.Contains(addr, false) {
 		if value == 0x00 {
-			m.ram_selected = false
+			m.ramSelected = false
 		} else if value == 0x01 {
-			m.ram_selected = true
+			m.ramSelected = true
 		}
 
 		// TODO: Log something / panic if unexpected value?
 
 		return mem.WriteBlock()
-	} else if mbc1_ram_banks.Contains(addr, false) {
+	} else if MBC1_RAM_BANKS.Contains(addr, false) {
 		writeBankAddr(
 			m.ram,
-			mbc1_ram_banks,
+			MBC1_RAM_BANKS,
 			RAM_BANK_SIZE,
-			uint16(m.cur_ram_bank),
+			uint16(m.curRamBank),
 			addr,
 			value,
 		)

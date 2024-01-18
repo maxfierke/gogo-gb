@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	mbc0_rom_bank = mem.MemRegion{Start: 0x0000, End: 0x7FFF}
-	mbc0_ram_bank = mem.MemRegion{Start: 0xA000, End: 0xBFFF}
+	MBC0_ROM_BANK = mem.MemRegion{Start: 0x0000, End: 0x7FFF}
+	MBC0_RAM_BANK = mem.MemRegion{Start: 0xA000, End: 0xBFFF}
 )
 
 type MBC0 struct {
@@ -20,7 +20,7 @@ func NewMBC0(rom []byte) *MBC0 {
 }
 
 func (m *MBC0) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	if addr <= mbc0_rom_bank.End {
+	if addr <= MBC0_ROM_BANK.End {
 		return mem.ReadReplace(m.rom[addr])
 	}
 
@@ -28,12 +28,12 @@ func (m *MBC0) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 }
 
 func (m *MBC0) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
-	if addr <= mbc0_rom_bank.End {
+	if addr <= MBC0_ROM_BANK.End {
 		// Put the Read-Only in ROM
 		return mem.WriteBlock()
 	}
 
-	if mbc0_ram_bank.Contains(addr, false) {
+	if MBC0_RAM_BANK.Contains(addr, false) {
 		// RAM is RAM and this is a fake cartridge, so...
 		return mem.WritePassthrough()
 	}

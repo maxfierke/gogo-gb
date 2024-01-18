@@ -1016,7 +1016,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.Reg.A.Write(cpu.rotl(cpu.Reg.A.Read(), false, true))
 		case 0x18:
 			// JR e8
-			return cpu.jump_rel(mmu, opcode, true)
+			return cpu.jumpRel(mmu, opcode, true)
 		case 0x19:
 			// ADD HL, DE
 			cpu.add16(cpu.Reg.HL, cpu.Reg.DE.Read())
@@ -1040,7 +1040,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.Reg.A.Write(cpu.rotr(cpu.Reg.A.Read(), false, true))
 		case 0x20:
 			// JR NZ, e8
-			return cpu.jump_rel(mmu, opcode, !cpu.Reg.F.Zero)
+			return cpu.jumpRel(mmu, opcode, !cpu.Reg.F.Zero)
 		case 0x21:
 			// LD HL, n16
 			cpu.load16(cpu.Reg.HL, cpu.readNext16(mmu))
@@ -1065,7 +1065,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.daa()
 		case 0x28:
 			// JR Z, e8
-			return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Zero)
+			return cpu.jumpRel(mmu, opcode, cpu.Reg.F.Zero)
 		case 0x29:
 			// ADD HL, HL
 			cpu.add16(cpu.Reg.HL, cpu.Reg.HL.Read())
@@ -1090,7 +1090,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.cpl()
 		case 0x30:
 			// JR NC, e8
-			return cpu.jump_rel(mmu, opcode, !cpu.Reg.F.Carry)
+			return cpu.jumpRel(mmu, opcode, !cpu.Reg.F.Carry)
 		case 0x31:
 			// LD SP, n16
 			cpu.load16(cpu.SP, cpu.readNext16(mmu))
@@ -1125,7 +1125,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.Reg.F.Carry = true
 		case 0x38:
 			// JR C, e8
-			return cpu.jump_rel(mmu, opcode, cpu.Reg.F.Carry)
+			return cpu.jumpRel(mmu, opcode, cpu.Reg.F.Carry)
 		case 0x39:
 			// ADD HL, SP
 			cpu.add16(cpu.Reg.HL, cpu.SP.Read())
@@ -1764,12 +1764,12 @@ func (cpu *CPU) ResetToBootROM() {
 	cpu.halted = false
 }
 
-func (cpu *CPU) add8(reg RWByte, value uint8, with_carry bool) uint8 {
+func (cpu *CPU) add8(reg RWByte, value uint8, withCarry bool) uint8 {
 	oldValue := reg.Read()
 	newValue := oldValue + value
 
 	carry := uint8(0)
-	if with_carry && cpu.Reg.F.Carry {
+	if withCarry && cpu.Reg.F.Carry {
 		carry = 1
 		newValue += carry
 	}
@@ -1832,12 +1832,12 @@ func (cpu *CPU) inc8(reg RWByte) uint8 {
 	return newValue
 }
 
-func (cpu *CPU) sub8(reg RWByte, value uint8, with_carry bool) uint8 {
+func (cpu *CPU) sub8(reg RWByte, value uint8, withCarry bool) uint8 {
 	oldValue := reg.Read()
 	newValue := oldValue - value
 
 	carry := uint8(0)
-	if with_carry && cpu.Reg.F.Carry {
+	if withCarry && cpu.Reg.F.Carry {
 		carry = 1
 		newValue -= carry
 	}
@@ -1954,10 +1954,10 @@ func (cpu *CPU) xor(value byte) byte {
 	return xorValue
 }
 
-func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8, err error) {
+func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, shouldJump bool) (nextPC uint16, cycles uint8, err error) {
 	nextPC = cpu.PC.Read() + uint16(opcode.Bytes)
 
-	if should_jump {
+	if shouldJump {
 		cpu.push(mmu, nextPC)
 		return mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0]), nil
 	}
@@ -1981,18 +1981,18 @@ func (cpu *CPU) load16Indirect(mmu *mem.MMU, addr uint16, reg RWTwoByte) {
 	mmu.Write16(addr, reg.Read())
 }
 
-func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8, err error) {
-	if should_jump {
+func (cpu *CPU) jump(mmu *mem.MMU, opcode *isa.Opcode, shouldJump bool) (nextPC uint16, cycles uint8, err error) {
+	if shouldJump {
 		return cpu.readNext16(mmu), uint8(opcode.Cycles[0]), nil
 	} else {
 		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1]), nil
 	}
 }
 
-func (cpu *CPU) jump_rel(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8, err error) {
+func (cpu *CPU) jumpRel(mmu *mem.MMU, opcode *isa.Opcode, shouldJump bool) (nextPC uint16, cycles uint8, err error) {
 	nextPC = cpu.PC.Read() + uint16(opcode.Bytes)
 
-	if should_jump {
+	if shouldJump {
 		nextPcDiff := int8(cpu.readNext8(mmu))
 		return nextPC + uint16(nextPcDiff), uint8(opcode.Cycles[0]), nil
 	} else {
@@ -2019,20 +2019,20 @@ func (cpu *CPU) readNext16(mmu *mem.MMU) uint16 {
 	return mmu.Read16(cpu.PC.Read() + 1)
 }
 
-func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, should_jump bool) (nextPC uint16, cycles uint8, err error) {
-	if should_jump {
+func (cpu *CPU) ret(mmu *mem.MMU, opcode *isa.Opcode, shouldJump bool) (nextPC uint16, cycles uint8, err error) {
+	if shouldJump {
 		return cpu.pop(mmu), uint8(opcode.Cycles[0]), nil
 	} else {
 		return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[1]), nil
 	}
 }
 
-func (cpu *CPU) rotl(value byte, zero bool, through_carry bool) byte {
+func (cpu *CPU) rotl(value byte, zero bool, throughCarry bool) byte {
 	carryBit := byte(0x0)
 
-	if through_carry && cpu.Reg.F.Carry {
+	if throughCarry && cpu.Reg.F.Carry {
 		carryBit = 1
-	} else if !through_carry {
+	} else if !throughCarry {
 		carryBit = (value >> 7)
 	}
 
@@ -2044,12 +2044,12 @@ func (cpu *CPU) rotl(value byte, zero bool, through_carry bool) byte {
 	return newValue
 }
 
-func (cpu *CPU) rotr(value byte, zero bool, through_carry bool) byte {
+func (cpu *CPU) rotr(value byte, zero bool, throughCarry bool) byte {
 	carryBit := byte(0x0)
 
-	if through_carry && cpu.Reg.F.Carry {
+	if throughCarry && cpu.Reg.F.Carry {
 		carryBit = 1 << 7
-	} else if !through_carry {
+	} else if !throughCarry {
 		carryBit = (value << 7)
 	}
 
