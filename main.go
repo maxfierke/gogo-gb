@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"os"
@@ -13,15 +14,24 @@ import (
 )
 
 type CLIOptions struct {
-	cartPath   string
-	debugger   string
-	debugPrint string
-	logPath    string
-	logger     *log.Logger
-	serialPort string
+	bootRomPath string
+	cartPath    string
+	debugger    string
+	debugPrint  string
+	logPath     string
+	logger      *log.Logger
+	noBootRom   bool
+	serialPort  string
 }
 
 const LOG_PREFIX = ""
+
+var DEFAULT_BOOT_ROM_PATHS = []string{
+	"gb_bios.bin",
+	"dmg_bios.bin",
+	"mgb_bios.bin",
+	"dmg0_bios.bin",
+}
 
 func main() {
 	options := CLIOptions{}
@@ -51,6 +61,8 @@ func main() {
 }
 
 func parseOptions(options *CLIOptions) {
+	flag.BoolVar(&options.noBootRom, "no-bootrom", false, "Skip loading a boot ROM")
+	flag.StringVar(&options.bootRomPath, "bootrom", "", "Path to boot ROM file (dmg_bios.bin, mgb_bios.bin, etc.). Defaults to a lookup on common boot ROM filenames in current directory")
 	flag.StringVar(&options.cartPath, "cart", "", "Path to cartridge file (.gb, .gbc)")
 	flag.StringVar(&options.serialPort, "serial-port", "", "Path to serial port IO (could be a file, UNIX socket, etc.)")
 	flag.StringVar(&options.debugger, "debugger", "none", "Specify debugger to use (\"none\", \"gameboy-doctor\")")
@@ -139,6 +151,47 @@ func initDMG(options *CLIOptions) *hardware.DMG {
 	return dmg
 }
 
+func loadBootROM(dmg *hardware.DMG, options *CLIOptions) {
+	if options.noBootRom {
+		// If we said no boot ROM, we mean it!
+		return
+	}
+
+	logger := options.logger
+	bootRomPath := options.bootRomPath
+
+	var bootRomFile *os.File
+	var err error
+
+	if bootRomPath == "" {
+		for _, romPath := range DEFAULT_BOOT_ROM_PATHS {
+			if bootRomFile, err := os.Open(romPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+				logger.Fatalf("ERROR: Unable to open boot ROM file: %v\n", err)
+			} else if bootRomFile != nil {
+				// yay! we found one!
+				break
+			}
+		}
+	} else if bootRomFile, err = os.Open(bootRomPath); err != nil {
+		logger.Fatalf("ERROR: Unable to open boot ROM file: %v\n", err)
+	}
+
+	if bootRomFile == nil {
+		// Bail out if no boot ROM loaded
+		logger.Printf("WARN: No boot ROM provided. Some emulation functionality may be incorrect.")
+		return
+	}
+
+	defer bootRomFile.Close()
+
+	err = dmg.LoadBootROM(bootRomFile)
+	if err != nil {
+		logger.Fatalf("ERROR: Unable to load boot ROM: %v\n", err)
+	}
+
+	logger.Printf("Loaded boot ROM: %s\n", bootRomFile.Name())
+}
+
 func loadCart(dmg *hardware.DMG, options *CLIOptions) {
 	if options.cartPath == "" {
 		return
@@ -169,6 +222,7 @@ func loadCart(dmg *hardware.DMG, options *CLIOptions) {
 
 func runCart(options *CLIOptions) {
 	dmg := initDMG(options)
+	loadBootROM(dmg, options)
 	loadCart(dmg, options)
 	dmg.Run()
 }

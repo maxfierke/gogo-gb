@@ -1,6 +1,7 @@
 package hardware
 
 import (
+	"io"
 	"log"
 
 	"github.com/maxfierke/gogo-gb/cart"
@@ -10,10 +11,12 @@ import (
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
-const DMG_RAM_SIZE = 0xFFFF + 1
+const DMG_RAM_SIZE = 0x10000
+const DMG_BOOTROM_SIZE = 0x100
 
 type DMG struct {
 	// Components
+	bootROM   *devices.BootROM
 	cpu       *cpu.CPU
 	mmu       *mem.MMU
 	cartridge *cart.Cartridge
@@ -38,6 +41,7 @@ func NewDMGDebug(host devices.HostContext, debugger debug.Debugger) (*DMG, error
 		return nil, err
 	}
 
+	bootROM := devices.NewBootROM()
 	cartridge := cart.NewCartridge()
 	ic := devices.NewInterruptController()
 	lcd := devices.NewLCD()
@@ -50,6 +54,8 @@ func NewDMGDebug(host devices.HostContext, debugger debug.Debugger) (*DMG, error
 	unmapped := mem.NewUnmappedRegion()
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
+
+	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x00FF}, bootROM)
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, cartridge) // MBCs ROM Banks
 	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, cartridge) // MBCs RAM Banks
@@ -66,6 +72,7 @@ func NewDMGDebug(host devices.HostContext, debugger debug.Debugger) (*DMG, error
 	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
 
 	return &DMG{
+		bootROM:   bootROM,
 		cpu:       cpu,
 		mmu:       mmu,
 		cartridge: cartridge,
@@ -76,6 +83,17 @@ func NewDMGDebug(host devices.HostContext, debugger debug.Debugger) (*DMG, error
 		serial:    serial,
 		timer:     timer,
 	}, nil
+}
+
+func (dmg *DMG) LoadBootROM(r io.Reader) error {
+	rom := make([]byte, DMG_BOOTROM_SIZE)
+	if _, err := r.Read(rom); err != nil {
+		return err
+	}
+
+	dmg.bootROM.LoadROM(rom)
+
+	return nil
 }
 
 func (dmg *DMG) LoadCartridge(r *cart.Reader) error {
