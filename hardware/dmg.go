@@ -1,7 +1,6 @@
 package hardware
 
 import (
-	"io"
 	"log"
 
 	"github.com/maxfierke/gogo-gb/cart"
@@ -25,15 +24,15 @@ type DMG struct {
 
 	// Non-components
 	debugger debug.Debugger
-	logger   *log.Logger
+	host     devices.HostContext
 }
 
-func NewDMG() (*DMG, error) {
+func NewDMG(host devices.HostContext) (*DMG, error) {
 	debugger := debug.NewNullDebugger()
-	return NewDMGDebug(debugger)
+	return NewDMGDebug(host, debugger)
 }
 
-func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
+func NewDMGDebug(host devices.HostContext, debugger debug.Debugger) (*DMG, error) {
 	cpu, err := cpu.NewCPU()
 	if err != nil {
 		return nil, err
@@ -42,7 +41,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 	cartridge := cart.NewCartridge()
 	ic := devices.NewInterruptController()
 	lcd := devices.NewLCD()
-	serial := devices.NewSerialPort()
+	serial := devices.NewSerialPort(host)
 	timer := devices.NewTimer()
 
 	ram := make([]byte, DMG_RAM_SIZE)
@@ -72,6 +71,7 @@ func NewDMGDebug(debugger debug.Debugger) (*DMG, error) {
 		cartridge: cartridge,
 		debugger:  debugger,
 		ic:        ic,
+		host:      host,
 		lcd:       lcd,
 		serial:    serial,
 		timer:     timer,
@@ -91,7 +91,7 @@ func (dmg *DMG) Step() bool {
 
 	cycles, err := dmg.cpu.Step(dmg.mmu)
 	if err != nil {
-		dmg.logger.Printf("Unexpected error while executing instruction: %v\n", err)
+		dmg.host.Logger().Printf("Unexpected error while executing instruction: %v\n", err)
 		return false
 	}
 
@@ -109,16 +109,4 @@ func (dmg *DMG) Run() {
 	for dmg.Step() {
 		dmg.debugger.OnExecute(dmg.cpu, dmg.mmu)
 	}
-}
-
-func (dmg *DMG) SetLogger(logger *log.Logger) {
-	dmg.logger = logger
-}
-
-func (dmg *DMG) SetSerialReader(serial io.Reader) {
-	dmg.serial.SetReader(serial)
-}
-
-func (dmg *DMG) SetSerialWriter(serial io.Writer) {
-	dmg.serial.SetWriter(serial)
 }

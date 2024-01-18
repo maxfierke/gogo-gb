@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/maxfierke/gogo-gb/cpu"
-	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
@@ -28,7 +27,7 @@ func (gbd *GBDoctorDebugger) OnExecute(cpu *cpu.CPU, mmu *mem.MMU) {
 func (gbd *GBDoctorDebugger) OnInterrupt(cpu *cpu.CPU, mmu *mem.MMU) {}
 
 func (gbd *GBDoctorDebugger) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	if addr == devices.REG_LCD_LY {
+	if addr == 0xFF44 {
 		return mem.ReadReplace(0x90) // gameboy-doctor needs a stubbed out LCD
 	}
 

@@ -1,10 +1,7 @@
 package devices
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"log"
 
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -76,27 +73,17 @@ func (sc *SerialCtrl) SetClockInternal(enabled bool) {
 }
 
 type SerialPort struct {
-	clk    uint
-	ctrl   SerialCtrl
-	recv   byte
-	buf    byte
-	reader io.Reader
-	writer io.Writer
+	clk  uint
+	ctrl SerialCtrl
+	recv byte
+	buf  byte
+	host HostContext
 }
 
-func NewSerialPort() *SerialPort {
+func NewSerialPort(host HostContext) *SerialPort {
 	return &SerialPort{
-		reader: bytes.NewReader([]byte{}),
-		writer: io.Discard,
+		host: host,
 	}
-}
-
-func (sp *SerialPort) SetReader(reader io.Reader) {
-	sp.reader = reader
-}
-
-func (sp *SerialPort) SetWriter(writer io.Writer) {
-	sp.writer = writer
 }
 
 func (sp *SerialPort) Step(cycles uint8, ic *InterruptController) {
@@ -135,20 +122,22 @@ func (sp *SerialPort) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrit
 		sp.ctrl.Write(value)
 
 		if sp.ctrl.IsTransferEnabled() && sp.ctrl.IsClockInternal() {
+			cable := sp.host.SerialCable()
+			logger := sp.host.Logger()
+
 			// TODO(GBC): derive this somehow and factor in GBC speeds when relevant
 			sp.clk = 8192
 
-			_, err := sp.writer.Write([]byte{sp.buf})
+			err := cable.WriteByte(sp.buf)
 			if err != nil {
-				// TODO: Use logger from DMG here
-				log.Printf("Unable to write 0x%02X @ 0x%04X due to an error: %v\n", value, addr, err)
+				logger.Printf("Unable to write 0x%02X to serial cable: %v\n", value, err)
 			}
 
-			readBuf := make([]byte, 1)
-			if bytesRead, err := sp.reader.Read(readBuf); err != nil || bytesRead == 0 {
+			recvVal, err := cable.ReadByte()
+			if err != nil {
 				sp.recv = 0xFF
 			} else {
-				sp.recv = readBuf[0]
+				sp.recv = recvVal
 			}
 		}
 

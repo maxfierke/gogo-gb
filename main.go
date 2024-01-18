@@ -8,6 +8,7 @@ import (
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu/isa"
 	"github.com/maxfierke/gogo-gb/debug"
+	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/hardware"
 )
 
@@ -102,32 +103,37 @@ func debugPrintOpcodes(options *CLIOptions) {
 func initDMG(options *CLIOptions) *hardware.DMG {
 	logger := options.logger
 
-	debugger, err := debug.NewDebugger(options.debugger)
-	if err != nil {
-		logger.Fatalf("Unable to initialize Debugger: %v\n", err)
-	}
-
-	dmg, err := hardware.NewDMGDebug(debugger)
-	if err != nil {
-		logger.Fatalf("Unable to initialize DMG: %v\n", err)
-	}
-
-	dmg.SetLogger(logger)
+	host := devices.NewHost()
+	host.SetLogger(logger)
 
 	if options.serialPort != "" {
+		serialCable := devices.NewHostSerialCable()
+
 		if options.serialPort == "stdout" || options.serialPort == "/dev/stdout" {
-			dmg.SetSerialWriter(os.Stdout)
+			serialCable.SetWriter(os.Stdout)
 		} else if options.serialPort == "stderr" || options.serialPort == "/dev/stderr" {
-			dmg.SetSerialWriter(os.Stderr)
+			serialCable.SetWriter(os.Stderr)
 		} else {
 			serialPort, err := os.Create(options.serialPort)
 			if err != nil {
 				logger.Fatalf("Unable to open file '%s' as serial port: %v\n", options.serialPort, err)
 			}
 
-			dmg.SetSerialReader(serialPort)
-			dmg.SetSerialWriter(serialPort)
+			serialCable.SetReader(serialPort)
+			serialCable.SetWriter(serialPort)
 		}
+
+		host.SetSerialCable(serialCable)
+	}
+
+	debugger, err := debug.NewDebugger(options.debugger)
+	if err != nil {
+		logger.Fatalf("Unable to initialize Debugger: %v\n", err)
+	}
+
+	dmg, err := hardware.NewDMGDebug(host, debugger)
+	if err != nil {
+		logger.Fatalf("Unable to initialize DMG: %v\n", err)
 	}
 
 	return dmg
