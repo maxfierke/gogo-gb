@@ -1724,8 +1724,9 @@ func (cpu *CPU) PollInterrupts(mmu *mem.MMU, ic *devices.InterruptController) ui
 		// If we were halted, we're not now!
 		cpu.halted = false
 
-		// Consuming an IRQ is 16 cycles
-		return 16
+		// Consuming an IRQ is 20 cycles (Or 5 M-cycles)
+		// ref: https://gbdev.io/pandocs/Interrupts.html#interrupt-handling
+		return 20
 	} else if cpu.halted {
 		if interrupt := ic.NextRequest(); interrupt != 0 {
 			// Wakey-wakey
