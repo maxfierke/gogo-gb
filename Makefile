@@ -69,6 +69,8 @@ cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms
 
 vendor/gameboy-doctor/gameboy-doctor:
 	git submodule init
+	git submodule update
 
 vendor/gb-test-roms/cpu_instrs/individual/*.gb:
 	git submodule init
+	git submodule update
