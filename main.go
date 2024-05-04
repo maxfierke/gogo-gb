@@ -10,6 +10,7 @@ import (
 	"github.com/maxfierke/gogo-gb/debug"
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/hardware"
+	"github.com/maxfierke/gogo-gb/host"
 )
 
 type CLIOptions struct {
@@ -103,7 +104,7 @@ func debugPrintOpcodes(options *CLIOptions) {
 func initDMG(options *CLIOptions) *hardware.DMG {
 	logger := options.logger
 
-	host := devices.NewHost()
+	host := host.NewCLIHost()
 	host.SetLogger(logger)
 
 	if options.serialPort != "" {

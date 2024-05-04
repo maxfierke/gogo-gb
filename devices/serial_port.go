@@ -77,10 +77,10 @@ type SerialPort struct {
 	ctrl SerialCtrl
 	recv byte
 	buf  byte
-	host HostContext
+	host HostInterface
 }
 
-func NewSerialPort(host HostContext) *SerialPort {
+func NewSerialPort(host HostInterface) *SerialPort {
 	return &SerialPort{
 		host: host,
 	}
@@ -123,14 +123,13 @@ func (sp *SerialPort) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrit
 
 		if sp.ctrl.IsTransferEnabled() && sp.ctrl.IsClockInternal() {
 			cable := sp.host.SerialCable()
-			logger := sp.host.Logger()
 
 			// TODO(GBC): derive this somehow and factor in GBC speeds when relevant
 			sp.clk = 8192
 
 			err := cable.WriteByte(sp.buf)
 			if err != nil {
-				logger.Printf("Unable to write 0x%02X to serial cable: %v\n", value, err)
+				sp.host.Log("Unable to write 0x%02X to serial cable: %v", value, err)
 			}
 
 			recvVal, err := cable.ReadByte()

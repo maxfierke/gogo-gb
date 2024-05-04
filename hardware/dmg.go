@@ -1,6 +1,7 @@
 package hardware
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/maxfierke/gogo-gb/cart"
@@ -24,15 +25,15 @@ type DMG struct {
 
 	// Non-components
 	debugger debug.Debugger
-	host     devices.HostContext
+	host     devices.HostInterface
 }
 
-func NewDMG(host devices.HostContext) (*DMG, error) {
+func NewDMG(host devices.HostInterface) (*DMG, error) {
 	debugger := debug.NewNullDebugger()
 	return NewDMGDebug(host, debugger)
 }
 
-func NewDMGDebug(host devices.HostContext, debugger debug.Debugger) (*DMG, error) {
+func NewDMGDebug(host devices.HostInterface, debugger debug.Debugger) (*DMG, error) {
 	cpu, err := cpu.NewCPU()
 	if err != nil {
 		return nil, err
@@ -86,27 +87,30 @@ func (dmg *DMG) DebugPrint(logger *log.Logger) {
 	dmg.cartridge.DebugPrint(logger)
 }
 
-func (dmg *DMG) Step() bool {
+func (dmg *DMG) Step() error {
 	dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
 
 	cycles, err := dmg.cpu.Step(dmg.mmu)
 	if err != nil {
-		dmg.host.LogErr("Unexpected error while executing instruction", err)
-		return false
+		return fmt.Errorf("Unexpected error while executing instruction: %w", err)
 	}
 
 	cycles += dmg.cpu.PollInterrupts(dmg.mmu, dmg.ic)
 
-	dmg.serial.Step(cycles, dmg.ic)
 	dmg.timer.Step(cycles, dmg.ic)
+	dmg.serial.Step(cycles, dmg.ic)
 
-	return true
+	dmg.debugger.OnExecute(dmg.cpu, dmg.mmu)
+
+	return nil
 }
 
-func (dmg *DMG) Run() {
+func (dmg *DMG) Run() error {
 	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
 
-	for dmg.Step() {
-		dmg.debugger.OnExecute(dmg.cpu, dmg.mmu)
+	for {
+		if err := dmg.Step(); err != nil {
+			return err
+		}
 	}
 }
