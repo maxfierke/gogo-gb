@@ -13,6 +13,14 @@ import (
 
 const DMG_RAM_SIZE = 0xFFFF + 1
 
+type DMGOption func(dmg *DMG)
+
+func WithDebugger(debugger debug.Debugger) DMGOption {
+	return func(dmg *DMG) {
+		dmg.debugger = debugger
+	}
+}
+
 type DMG struct {
 	// Components
 	cpu       *cpu.CPU
@@ -25,58 +33,51 @@ type DMG struct {
 
 	// Non-components
 	debugger debug.Debugger
-	host     devices.HostInterface
 }
 
-func NewDMG(host devices.HostInterface) (*DMG, error) {
-	debugger := debug.NewNullDebugger()
-	return NewDMGDebug(host, debugger)
-}
-
-func NewDMGDebug(host devices.HostInterface, debugger debug.Debugger) (*DMG, error) {
+func NewDMG(host devices.HostInterface, opts ...DMGOption) (*DMG, error) {
 	cpu, err := cpu.NewCPU()
 	if err != nil {
 		return nil, err
 	}
-
-	cartridge := cart.NewCartridge()
-	ic := devices.NewInterruptController()
-	lcd := devices.NewLCD()
-	serial := devices.NewSerialPort(host)
-	timer := devices.NewTimer()
 
 	ram := make([]byte, DMG_RAM_SIZE)
 	mmu := mem.NewMMU(ram)
 	echo := mem.NewEchoRegion()
 	unmapped := mem.NewUnmappedRegion()
 
-	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
+	dmg := &DMG{
+		cpu:       cpu,
+		mmu:       mmu,
+		cartridge: cart.NewCartridge(),
+		debugger:  debug.NewNullDebugger(),
+		ic:        devices.NewInterruptController(),
+		lcd:       devices.NewLCD(),
+		serial:    devices.NewSerialPort(host),
+		timer:     devices.NewTimer(),
+	}
 
-	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, cartridge) // MBCs ROM Banks
-	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, cartridge) // MBCs RAM Banks
+	for _, opt := range opts {
+		opt(dmg)
+	}
+
+	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, dmg.debugger)
+
+	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, dmg.cartridge) // MBCs ROM Banks
+	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, dmg.cartridge) // MBCs RAM Banks
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xE000, End: 0xFDFF}, echo)     // Echo RAM (mirrors WRAM)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFEA0, End: 0xFEFF}, unmapped) // Nop writes, zero reads
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, serial) // Serial Port (Control & Data)
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, timer)  // Timer (not RTC)
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd)    // LCD control registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, dmg.serial) // Serial Port (Control & Data)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, dmg.timer)  // Timer (not RTC)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, dmg.lcd)    // LCD control registers
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, dmg.ic)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF4D, End: 0xFF77}, unmapped) // CGB regs
-	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, dmg.ic)
 
-	return &DMG{
-		cpu:       cpu,
-		mmu:       mmu,
-		cartridge: cartridge,
-		debugger:  debugger,
-		ic:        ic,
-		host:      host,
-		lcd:       lcd,
-		serial:    serial,
-		timer:     timer,
-	}, nil
+	return dmg, nil
 }
 
 func (dmg *DMG) LoadCartridge(r *cart.Reader) error {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"os"
 
@@ -46,8 +47,10 @@ func main() {
 	if options.debugPrint != "" {
 		debugPrint(&options)
 	} else {
-		options.logger.Println("welcome to gogo-gb, the go-getting gameboy emulator")
-		runCart(&options)
+		options.logger.Println("welcome to gogo-gb, the go-getting GB emulator")
+		if err := runCart(&options); err != nil {
+			options.logger.Fatalf("ERROR: %v\n", err)
+		}
 	}
 }
 
@@ -101,11 +104,9 @@ func debugPrintOpcodes(options *CLIOptions) {
 	opcodes.DebugPrint(logger)
 }
 
-func initDMG(options *CLIOptions) *hardware.DMG {
-	logger := options.logger
-
-	host := host.NewCLIHost()
-	host.SetLogger(logger)
+func initHost(options *CLIOptions) (host.Host, error) {
+	hostDevice := host.NewCLIHost()
+	hostDevice.SetLogger(options.logger)
 
 	if options.serialPort != "" {
 		serialCable := devices.NewHostSerialCable()
@@ -117,39 +118,46 @@ func initDMG(options *CLIOptions) *hardware.DMG {
 		} else {
 			serialPort, err := os.Create(options.serialPort)
 			if err != nil {
-				logger.Fatalf("ERROR: Unable to open file '%s' as serial port: %v\n", options.serialPort, err)
+				return nil, fmt.Errorf("unable to open file '%s' as serial port: %w", options.serialPort, err)
 			}
 
 			serialCable.SetReader(serialPort)
 			serialCable.SetWriter(serialPort)
 		}
 
-		host.AttachSerialCable(serialCable)
+		hostDevice.AttachSerialCable(serialCable)
 	}
 
-	debugger, err := debug.NewDebugger(options.debugger)
-	if err != nil {
-		logger.Fatalf("ERROR: Unable to initialize Debugger: %v\n", err)
-	}
-
-	dmg, err := hardware.NewDMGDebug(host, debugger)
-	if err != nil {
-		logger.Fatalf("ERROR: Unable to initialize DMG: %v\n", err)
-	}
-
-	return dmg
+	return hostDevice, nil
 }
 
-func loadCart(dmg *hardware.DMG, options *CLIOptions) {
+func initDMG(hostDevice host.Host, options *CLIOptions) (*hardware.DMG, error) {
+	debugger, err := debug.NewDebugger(options.debugger)
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize Debugger: %w", err)
+	}
+
+	dmg, err := hardware.NewDMG(
+		hostDevice,
+		hardware.WithDebugger(debugger),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to initialize DMG: %w", err)
+	}
+
+	return dmg, nil
+}
+
+func loadCart(dmg *hardware.DMG, options *CLIOptions) error {
 	if options.cartPath == "" {
-		return
+		return nil
 	}
 
 	logger := options.logger
 
 	cartFile, err := os.Open(options.cartPath)
 	if options.cartPath == "" || err != nil {
-		logger.Fatalf("ERROR: Unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %v\n", err)
+		return fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
 	}
 	defer cartFile.Close()
 
@@ -157,19 +165,37 @@ func loadCart(dmg *hardware.DMG, options *CLIOptions) {
 	if err == cart.ErrHeader {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
-		logger.Fatalf("ERROR: Unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %v\n", err)
+		return fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
 	}
 
 	err = dmg.LoadCartridge(cartReader)
 	if err == cart.ErrHeader {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
-		logger.Fatalf("ERROR: Unable to load cartridge: %v\n", err)
+		return fmt.Errorf("unable to load cartridge: %w", err)
 	}
+
+	return nil
 }
 
-func runCart(options *CLIOptions) {
-	dmg := initDMG(options)
-	loadCart(dmg, options)
-	dmg.Run()
+func runCart(options *CLIOptions) error {
+	hostDevice, err := initHost(options)
+	if err != nil {
+		return fmt.Errorf("unable to initialize host device: %w", err)
+	}
+
+	dmg, err := initDMG(hostDevice, options)
+	if err != nil {
+		return err
+	}
+
+	if err := loadCart(dmg, options); err != nil {
+		return err
+	}
+
+	if err := dmg.Run(); err != nil {
+		return err
+	}
+
+	return nil
 }
