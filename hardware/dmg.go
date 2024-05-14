@@ -84,7 +84,6 @@ func (dmg *DMG) AttachDebugger(debugger debug.Debugger) {
 
 	dmg.debuggerHandler = dmg.mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
 	dmg.debugger = debugger
-	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
 }
 
 func (dmg *DMG) DetachDebugger() {
@@ -120,6 +119,8 @@ func (dmg *DMG) Step() error {
 }
 
 func (dmg *DMG) Run() error {
+	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
+
 	for {
 		if err := dmg.Step(); err != nil {
 			return err
