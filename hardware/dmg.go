@@ -17,7 +17,7 @@ type DMGOption func(dmg *DMG)
 
 func WithDebugger(debugger debug.Debugger) DMGOption {
 	return func(dmg *DMG) {
-		dmg.debugger = debugger
+		dmg.AttachDebugger(debugger)
 	}
 }
 
@@ -32,7 +32,8 @@ type DMG struct {
 	timer     *devices.Timer
 
 	// Non-components
-	debugger debug.Debugger
+	debugger        debug.Debugger
+	debuggerHandler mem.MemHandlerHandle
 }
 
 func NewDMG(host devices.HostInterface, opts ...DMGOption) (*DMG, error) {
@@ -61,8 +62,6 @@ func NewDMG(host devices.HostInterface, opts ...DMGOption) (*DMG, error) {
 		opt(dmg)
 	}
 
-	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, dmg.debugger)
-
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, dmg.cartridge) // MBCs ROM Banks
 	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, dmg.cartridge) // MBCs RAM Banks
 
@@ -78,6 +77,20 @@ func NewDMG(host devices.HostInterface, opts ...DMGOption) (*DMG, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, dmg.ic)
 
 	return dmg, nil
+}
+
+func (dmg *DMG) AttachDebugger(debugger debug.Debugger) {
+	dmg.DetachDebugger()
+
+	dmg.debuggerHandler = dmg.mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
+	dmg.debugger = debugger
+	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
+}
+
+func (dmg *DMG) DetachDebugger() {
+	// Remove any existing handlers
+	dmg.mmu.RemoveHandler(dmg.debuggerHandler)
+	dmg.debugger = debug.NewNullDebugger()
 }
 
 func (dmg *DMG) LoadCartridge(r *cart.Reader) error {
@@ -107,8 +120,6 @@ func (dmg *DMG) Step() error {
 }
 
 func (dmg *DMG) Run() error {
-	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
-
 	for {
 		if err := dmg.Step(); err != nil {
 			return err
