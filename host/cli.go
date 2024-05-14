@@ -4,12 +4,16 @@ import (
 	"log"
 
 	"github.com/maxfierke/gogo-gb/devices"
+	"github.com/maxfierke/gogo-gb/hardware"
 )
 
 type CLIHost struct {
+	console     hardware.Console
 	logger      *log.Logger
 	serialCable devices.SerialCable
 }
+
+var _ Host = (*CLIHost)(nil)
 
 func NewCLIHost() *CLIHost {
 	return &CLIHost{
@@ -30,6 +34,10 @@ func (h *CLIHost) LogWarn(msg string, args ...any) {
 	h.Log("WARN: "+msg, args...)
 }
 
+func (h *CLIHost) SetConsole(console hardware.Console) {
+	h.console = console
+}
+
 func (h *CLIHost) SetLogger(logger *log.Logger) {
 	h.logger = logger
 }
@@ -40,4 +48,8 @@ func (h *CLIHost) SerialCable() devices.SerialCable {
 
 func (h *CLIHost) AttachSerialCable(serialCable devices.SerialCable) {
 	h.serialCable = serialCable
+}
+
+func (h *CLIHost) Run() error {
+	return h.console.Run()
 }

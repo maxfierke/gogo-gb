@@ -21,6 +21,7 @@ type CLIOptions struct {
 	logPath    string
 	logger     *log.Logger
 	serialPort string
+	ui         bool
 }
 
 const LOG_PREFIX = ""
@@ -60,6 +61,7 @@ func parseOptions(options *CLIOptions) {
 	flag.StringVar(&options.debugger, "debugger", "none", "Specify debugger to use (\"none\", \"gameboy-doctor\")")
 	flag.StringVar(&options.debugPrint, "debug-print", "", "Print out something for debugging purposes (\"cart-header\", \"opcodes\")")
 	flag.StringVar(&options.logPath, "log", "", "Path to log file. Default/empty implies stdout")
+	flag.BoolVar(&options.ui, "ui", false, "Launch with UI")
 	flag.Parse()
 }
 
@@ -105,7 +107,14 @@ func debugPrintOpcodes(options *CLIOptions) {
 }
 
 func initHost(options *CLIOptions) (host.Host, error) {
-	hostDevice := host.NewCLIHost()
+	var hostDevice host.Host
+
+	if options.ui {
+		hostDevice = host.NewUIHost()
+	} else {
+		hostDevice = host.NewCLIHost()
+	}
+
 	hostDevice.SetLogger(options.logger)
 
 	if options.serialPort != "" {
@@ -193,7 +202,10 @@ func runCart(options *CLIOptions) error {
 		return err
 	}
 
-	if err := dmg.Run(); err != nil {
+	hostDevice.SetConsole(dmg)
+
+	err = hostDevice.Run()
+	if err != nil {
 		return err
 	}
 

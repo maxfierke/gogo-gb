@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/maxfierke/gogo-gb/devices"
+	"github.com/maxfierke/gogo-gb/hardware"
 )
 
 type Host interface {
@@ -11,4 +12,6 @@ type Host interface {
 
 	AttachSerialCable(serialCable devices.SerialCable)
 	SetLogger(logger *log.Logger)
+	SetConsole(console hardware.Console)
+	Run() error
 }
