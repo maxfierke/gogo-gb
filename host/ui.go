@@ -13,7 +13,6 @@ import (
 
 type UI struct {
 	fbChan      chan image.Image
-	inputChan   chan devices.HostInputEvent
 	logger      *log.Logger
 	exitedChan  chan bool
 	serialCable devices.SerialCable
@@ -32,10 +31,6 @@ func NewUIHost() *UI {
 
 func (ui *UI) Framebuffer() chan<- image.Image {
 	return ui.fbChan
-}
-
-func (ui *UI) InputEvent() <-chan devices.HostInputEvent {
-	return ui.inputChan
 }
 
 func (ui *UI) Log(msg string, args ...any) {
