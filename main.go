@@ -202,9 +202,7 @@ func runCart(options *CLIOptions) error {
 		return err
 	}
 
-	hostDevice.SetConsole(dmg)
-
-	err = hostDevice.Run()
+	err = hostDevice.Run(dmg)
 	if err != nil {
 		return err
 	}

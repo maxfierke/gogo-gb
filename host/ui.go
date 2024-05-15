@@ -1,19 +1,21 @@
 package host
 
 import (
-	"image/color"
+	"errors"
+	"image"
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/hardware"
 )
 
 type UI struct {
-	console     hardware.Console
+	fbChan      chan image.Image
+	inputChan   chan devices.HostInputEvent
 	logger      *log.Logger
+	runningChan chan bool
 	serialCable devices.SerialCable
 }
 
@@ -21,9 +23,19 @@ var _ Host = (*UI)(nil)
 
 func NewUIHost() *UI {
 	return &UI{
+		fbChan:      make(chan image.Image, 3),
+		runningChan: make(chan bool, 3),
 		logger:      log.Default(),
 		serialCable: &devices.NullSerialCable{},
 	}
+}
+
+func (ui *UI) Framebuffer() chan<- image.Image {
+	return ui.fbChan
+}
+
+func (ui *UI) InputEvent() <-chan devices.HostInputEvent {
+	return ui.inputChan
 }
 
 func (ui *UI) Log(msg string, args ...any) {
@@ -38,6 +50,10 @@ func (ui *UI) LogWarn(msg string, args ...any) {
 	ui.Log("WARN: "+msg, args...)
 }
 
+func (ui *UI) Running() <-chan bool {
+	return ui.runningChan
+}
+
 func (ui *UI) SetLogger(logger *log.Logger) {
 	ui.logger = logger
 }
@@ -50,20 +66,19 @@ func (ui *UI) AttachSerialCable(serialCable devices.SerialCable) {
 	ui.serialCable = serialCable
 }
 
-func (ui *UI) SetConsole(console hardware.Console) {
-	ui.console = console
-}
-
 func (ui *UI) Update() error {
-	if ui.console != nil {
-		return ui.console.Step()
-	}
-
-	return ebiten.Termination
+	ui.runningChan <- true
+	return nil
 }
 
 func (ui *UI) Draw(screen *ebiten.Image) {
-	vector.DrawFilledRect(screen, 0, 0, 160, 144, color.RGBA{R: 127, G: 127, B: 127}, false)
+	select {
+	case fbImage := <-ui.fbChan:
+		image := ebiten.NewImageFromImage(fbImage)
+		screen.DrawImage(image, &ebiten.DrawImageOptions{})
+	default:
+		// do nothing
+	}
 	ebitenutil.DebugPrint(screen, "gogo-gb!!!")
 }
 
@@ -71,8 +86,22 @@ func (ui *UI) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight
 	return 160, 144
 }
 
-func (ui *UI) Run() error {
+func (ui *UI) Run(console hardware.Console) error {
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("gogo-gb, the go-getting GB emulator")
+
+	if console == nil {
+		return errors.New("console cannot be nil")
+	}
+
+	go func() {
+		ui.Log("Starting console main loop")
+		if err := console.Run(ui); err != nil {
+			ui.LogErr("unexpected error occurred during runtime: %w", err)
+			return
+		}
+	}()
+
+	ui.Log("Handing over to ebiten")
 	return ebiten.RunGame(ui)
 }

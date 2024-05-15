@@ -118,12 +118,23 @@ func (dmg *DMG) Step() error {
 	return nil
 }
 
-func (dmg *DMG) Run() error {
+func (dmg *DMG) Run(host devices.HostInterface) error {
 	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
 
 	for {
+		select {
+		case running := <-host.Running():
+			if !running {
+				return nil
+			}
+		default:
+			// Do nothing
+		}
+
 		if err := dmg.Step(); err != nil {
 			return err
 		}
+
+		host.Framebuffer() <- dmg.lcd.Draw()
 	}
 }

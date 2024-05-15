@@ -12,6 +12,5 @@ type Host interface {
 
 	AttachSerialCable(serialCable devices.SerialCable)
 	SetLogger(logger *log.Logger)
-	SetConsole(console hardware.Console)
-	Run() error
+	Run(console hardware.Console) error
 }
