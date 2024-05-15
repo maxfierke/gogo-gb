@@ -36,7 +36,7 @@ type DMG struct {
 	debuggerHandler mem.MemHandlerHandle
 }
 
-func NewDMG(host devices.HostInterface, opts ...DMGOption) (*DMG, error) {
+func NewDMG(opts ...DMGOption) (*DMG, error) {
 	cpu, err := cpu.NewCPU()
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func NewDMG(host devices.HostInterface, opts ...DMGOption) (*DMG, error) {
 		debugger:  debug.NewNullDebugger(),
 		ic:        devices.NewInterruptController(),
 		lcd:       devices.NewLCD(),
-		serial:    devices.NewSerialPort(host),
+		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 	}
 
@@ -122,6 +122,7 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 	framebuffer := host.Framebuffer()
 	defer close(framebuffer)
 
+	dmg.serial.AttachCable(host.SerialCable())
 	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
 
 	hostExit := host.Exited()

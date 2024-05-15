@@ -140,14 +140,13 @@ func initHost(options *CLIOptions) (host.Host, error) {
 	return hostDevice, nil
 }
 
-func initDMG(hostDevice host.Host, options *CLIOptions) (*hardware.DMG, error) {
+func initDMG(options *CLIOptions) (*hardware.DMG, error) {
 	debugger, err := debug.NewDebugger(options.debugger)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize Debugger: %w", err)
 	}
 
 	dmg, err := hardware.NewDMG(
-		hostDevice,
 		hardware.WithDebugger(debugger),
 	)
 	if err != nil {
@@ -193,7 +192,7 @@ func runCart(options *CLIOptions) error {
 		return fmt.Errorf("unable to initialize host device: %w", err)
 	}
 
-	dmg, err := initDMG(hostDevice, options)
+	dmg, err := initDMG(options)
 	if err != nil {
 		return err
 	}
