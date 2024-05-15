@@ -7,6 +7,6 @@ type HostInterface interface {
 	Log(msg string, args ...any)
 	LogErr(msg string, args ...any)
 	LogWarn(msg string, args ...any)
-	Running() <-chan bool
+	Exited() <-chan bool
 	SerialCable() SerialCable
 }

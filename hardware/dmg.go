@@ -119,14 +119,17 @@ func (dmg *DMG) Step() error {
 }
 
 func (dmg *DMG) Run(host devices.HostInterface) error {
+	framebuffer := host.Framebuffer()
+	defer close(framebuffer)
+
 	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
+
+	hostExit := host.Exited()
 
 	for {
 		select {
-		case running := <-host.Running():
-			if !running {
-				return nil
-			}
+		case <-hostExit:
+			return nil
 		default:
 			// Do nothing
 		}
@@ -135,6 +138,6 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 			return err
 		}
 
-		host.Framebuffer() <- dmg.lcd.Draw()
+		framebuffer <- dmg.lcd.Draw()
 	}
 }

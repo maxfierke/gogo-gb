@@ -15,7 +15,7 @@ type UI struct {
 	fbChan      chan image.Image
 	inputChan   chan devices.HostInputEvent
 	logger      *log.Logger
-	runningChan chan bool
+	exitedChan  chan bool
 	serialCable devices.SerialCable
 }
 
@@ -24,7 +24,7 @@ var _ Host = (*UI)(nil)
 func NewUIHost() *UI {
 	return &UI{
 		fbChan:      make(chan image.Image, 3),
-		runningChan: make(chan bool, 3),
+		exitedChan:  make(chan bool),
 		logger:      log.Default(),
 		serialCable: &devices.NullSerialCable{},
 	}
@@ -50,8 +50,8 @@ func (ui *UI) LogWarn(msg string, args ...any) {
 	ui.Log("WARN: "+msg, args...)
 }
 
-func (ui *UI) Running() <-chan bool {
-	return ui.runningChan
+func (ui *UI) Exited() <-chan bool {
+	return ui.exitedChan
 }
 
 func (ui *UI) SetLogger(logger *log.Logger) {
@@ -67,7 +67,6 @@ func (ui *UI) AttachSerialCable(serialCable devices.SerialCable) {
 }
 
 func (ui *UI) Update() error {
-	ui.runningChan <- true
 	return nil
 }
 
@@ -101,6 +100,8 @@ func (ui *UI) Run(console hardware.Console) error {
 			return
 		}
 	}()
+
+	defer close(ui.exitedChan)
 
 	ui.Log("Handing over to ebiten")
 	return ebiten.RunGame(ui)
