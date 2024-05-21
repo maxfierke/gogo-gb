@@ -3,6 +3,7 @@ package hardware
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
@@ -127,10 +128,14 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 
 	hostExit := host.Exited()
 
+	fakeVBlank := time.NewTicker(time.Second / 60)
+
 	for {
 		select {
 		case <-hostExit:
 			return nil
+		case <-fakeVBlank.C:
+			framebuffer <- dmg.lcd.Draw()
 		default:
 			// Do nothing
 		}
@@ -138,7 +143,5 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 		if err := dmg.Step(); err != nil {
 			return err
 		}
-
-		framebuffer <- dmg.lcd.Draw()
 	}
 }
