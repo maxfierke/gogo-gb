@@ -16,7 +16,7 @@ help:
 
 .PHONY: tidy
 tidy:
-	go fmt ./...
+	go fmt -mod=mod ./...
 	go mod tidy -v
 
 .PHONY: build
@@ -29,15 +29,15 @@ clean:
 
 .PHONY: run
 run:
-	$(GO) run .
+	$(GO) run -mod=mod .
 
 .PHONY: test
 test:
-	$(GO) test -v ./...
+	$(GO) test -mod=mod -v ./...
 
 .PHONY: bin/gogo-gb # This does exist, but we're not tracking its dependencies. Go is
 bin/gogo-gb:
-	$(GO) build -o bin/gogo-gb .
+	$(GO) build -mod=mod -o bin/gogo-gb .
 
 .PHONY: cpu_instrs
 cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms/cpu_instrs/individual/*.gb

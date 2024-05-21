@@ -1,7 +1,9 @@
 package hardware
 
 import (
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
@@ -11,6 +13,14 @@ import (
 )
 
 const DMG_RAM_SIZE = 0xFFFF + 1
+
+type DMGOption func(dmg *DMG)
+
+func WithDebugger(debugger debug.Debugger) DMGOption {
+	return func(dmg *DMG) {
+		dmg.AttachDebugger(debugger)
+	}
+}
 
 type DMG struct {
 	// Components
@@ -23,59 +33,64 @@ type DMG struct {
 	timer     *devices.Timer
 
 	// Non-components
-	debugger debug.Debugger
-	host     devices.HostContext
+	debugger        debug.Debugger
+	debuggerHandler mem.MemHandlerHandle
 }
 
-func NewDMG(host devices.HostContext) (*DMG, error) {
-	debugger := debug.NewNullDebugger()
-	return NewDMGDebug(host, debugger)
-}
-
-func NewDMGDebug(host devices.HostContext, debugger debug.Debugger) (*DMG, error) {
+func NewDMG(opts ...DMGOption) (*DMG, error) {
 	cpu, err := cpu.NewCPU()
 	if err != nil {
 		return nil, err
 	}
-
-	cartridge := cart.NewCartridge()
-	ic := devices.NewInterruptController()
-	lcd := devices.NewLCD()
-	serial := devices.NewSerialPort(host)
-	timer := devices.NewTimer()
 
 	ram := make([]byte, DMG_RAM_SIZE)
 	mmu := mem.NewMMU(ram)
 	echo := mem.NewEchoRegion()
 	unmapped := mem.NewUnmappedRegion()
 
-	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
+	dmg := &DMG{
+		cpu:       cpu,
+		mmu:       mmu,
+		cartridge: cart.NewCartridge(),
+		debugger:  debug.NewNullDebugger(),
+		ic:        devices.NewInterruptController(),
+		lcd:       devices.NewLCD(),
+		serial:    devices.NewSerialPort(),
+		timer:     devices.NewTimer(),
+	}
 
-	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, cartridge) // MBCs ROM Banks
-	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, cartridge) // MBCs RAM Banks
+	for _, opt := range opts {
+		opt(dmg)
+	}
+
+	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, dmg.cartridge) // MBCs ROM Banks
+	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, dmg.cartridge) // MBCs RAM Banks
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xE000, End: 0xFDFF}, echo)     // Echo RAM (mirrors WRAM)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFEA0, End: 0xFEFF}, unmapped) // Nop writes, zero reads
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, serial) // Serial Port (Control & Data)
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, timer)  // Timer (not RTC)
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, lcd)    // LCD control registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, dmg.serial) // Serial Port (Control & Data)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, dmg.timer)  // Timer (not RTC)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, dmg.lcd)    // LCD control registers
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, dmg.ic)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF4D, End: 0xFF77}, unmapped) // CGB regs
-	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, dmg.ic)
 
-	return &DMG{
-		cpu:       cpu,
-		mmu:       mmu,
-		cartridge: cartridge,
-		debugger:  debugger,
-		ic:        ic,
-		host:      host,
-		lcd:       lcd,
-		serial:    serial,
-		timer:     timer,
-	}, nil
+	return dmg, nil
+}
+
+func (dmg *DMG) AttachDebugger(debugger debug.Debugger) {
+	dmg.DetachDebugger()
+
+	dmg.debuggerHandler = dmg.mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
+	dmg.debugger = debugger
+}
+
+func (dmg *DMG) DetachDebugger() {
+	// Remove any existing handlers
+	dmg.mmu.RemoveHandler(dmg.debuggerHandler)
+	dmg.debugger = debug.NewNullDebugger()
 }
 
 func (dmg *DMG) LoadCartridge(r *cart.Reader) error {
@@ -86,27 +101,47 @@ func (dmg *DMG) DebugPrint(logger *log.Logger) {
 	dmg.cartridge.DebugPrint(logger)
 }
 
-func (dmg *DMG) Step() bool {
+func (dmg *DMG) Step() error {
 	dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
 
 	cycles, err := dmg.cpu.Step(dmg.mmu)
 	if err != nil {
-		dmg.host.LogErr("Unexpected error while executing instruction", err)
-		return false
+		return fmt.Errorf("Unexpected error while executing instruction: %w", err)
 	}
 
 	cycles += dmg.cpu.PollInterrupts(dmg.mmu, dmg.ic)
 
-	dmg.serial.Step(cycles, dmg.ic)
 	dmg.timer.Step(cycles, dmg.ic)
+	dmg.serial.Step(cycles, dmg.ic)
 
-	return true
+	dmg.debugger.OnExecute(dmg.cpu, dmg.mmu)
+
+	return nil
 }
 
-func (dmg *DMG) Run() {
+func (dmg *DMG) Run(host devices.HostInterface) error {
+	framebuffer := host.Framebuffer()
+	defer close(framebuffer)
+
+	dmg.serial.AttachCable(host.SerialCable())
 	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
 
-	for dmg.Step() {
-		dmg.debugger.OnExecute(dmg.cpu, dmg.mmu)
+	hostExit := host.Exited()
+
+	fakeVBlank := time.NewTicker(time.Second / 60)
+
+	for {
+		select {
+		case <-hostExit:
+			return nil
+		case <-fakeVBlank.C:
+			framebuffer <- dmg.lcd.Draw()
+		default:
+			// Do nothing
+		}
+
+		if err := dmg.Step(); err != nil {
+			return err
+		}
 	}
 }

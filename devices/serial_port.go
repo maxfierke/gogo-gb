@@ -73,17 +73,21 @@ func (sc *SerialCtrl) SetClockInternal(enabled bool) {
 }
 
 type SerialPort struct {
-	clk  uint
-	ctrl SerialCtrl
-	recv byte
-	buf  byte
-	host HostContext
+	clk   uint
+	ctrl  SerialCtrl
+	recv  byte
+	buf   byte
+	cable SerialCable
 }
 
-func NewSerialPort(host HostContext) *SerialPort {
+func NewSerialPort() *SerialPort {
 	return &SerialPort{
-		host: host,
+		cable: &NullSerialCable{},
 	}
+}
+
+func (sp *SerialPort) AttachCable(cable SerialCable) {
+	sp.cable = cable
 }
 
 func (sp *SerialPort) Step(cycles uint8, ic *InterruptController) {
@@ -122,18 +126,12 @@ func (sp *SerialPort) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrit
 		sp.ctrl.Write(value)
 
 		if sp.ctrl.IsTransferEnabled() && sp.ctrl.IsClockInternal() {
-			cable := sp.host.SerialCable()
-			logger := sp.host.Logger()
-
 			// TODO(GBC): derive this somehow and factor in GBC speeds when relevant
 			sp.clk = 8192
 
-			err := cable.WriteByte(sp.buf)
-			if err != nil {
-				logger.Printf("Unable to write 0x%02X to serial cable: %v\n", value, err)
-			}
+			_ = sp.cable.WriteByte(sp.buf)
 
-			recvVal, err := cable.ReadByte()
+			recvVal, err := sp.cable.ReadByte()
 			if err != nil {
 				sp.recv = 0xFF
 			} else {
