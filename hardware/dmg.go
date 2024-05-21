@@ -12,7 +12,10 @@ import (
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
-const DMG_RAM_SIZE = 0xFFFF + 1
+const (
+	DMG_CPU_HZ   = 4194304
+	DMG_RAM_SIZE = 0xFFFF + 1
+)
 
 type DMGOption func(dmg *DMG)
 
@@ -128,7 +131,11 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 
 	hostExit := host.Exited()
 
+	clockRate := time.NewTicker(time.Second / DMG_CPU_HZ)
+	defer clockRate.Stop()
+
 	fakeVBlank := time.NewTicker(time.Second / 60)
+	defer fakeVBlank.Stop()
 
 	for {
 		select {
@@ -143,5 +150,6 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 		if err := dmg.Step(); err != nil {
 			return err
 		}
+		<-clockRate.C
 	}
 }
