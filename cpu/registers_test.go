@@ -1,11 +1,13 @@
 package cpu
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func assertRegEquals[T Registerable](t *testing.T, actual T, expected T) {
-	if actual != expected {
-		t.Errorf("Expected 0x%X, but got 0x%x", expected, actual)
-	}
+	assert.Equalf(t, expected, actual, "Expected 0x%X, but got 0x%x", expected, actual)
 }
 
 func TestRegSetReg(t *testing.T) {

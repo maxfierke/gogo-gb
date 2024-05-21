@@ -2,11 +2,13 @@ package mem
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 const (
-	handlerReadReplaceValue  = 0xAB
-	handlerWriteReplaceValue = 0xEA
+	handlerReadReplaceValue  byte = 0xAB
+	handlerWriteReplaceValue byte = 0xEA
 )
 
 type testReplacementHandler struct{}
@@ -39,13 +41,9 @@ func (h *testWriteBlockHandler) OnWrite(mmu *MMU, addr uint16, value byte) MemWr
 	return WriteBlock()
 }
 
-func assertAddrEquals[T uint8 | uint16](t *testing.T, actual T, expected T) {
-	if actual != expected {
-		t.Errorf("Expected 0x%X, but got 0x%x", expected, actual)
-	}
-}
-
 func TestMmuBasicReads(t *testing.T) {
+	assert := assert.New(t)
+
 	ram := make([]byte, 0xFFFF)
 	mmu := NewMMU(ram)
 
@@ -53,23 +51,27 @@ func TestMmuBasicReads(t *testing.T) {
 	ram[0x101] = 0xEE
 	ram[0x102] = 0xFF
 
-	assertAddrEquals(t, mmu.Read8(0x100), 0xC0)
-	assertAddrEquals(t, mmu.Read16(0x101), 0xFFEE)
+	assert.EqualValues(mmu.Read8(0x100), byte(0xC0))
+	assert.EqualValues(mmu.Read16(0x101), 0xFFEE)
 }
 
 func TestMmuBasicWrites(t *testing.T) {
+	assert := assert.New(t)
+
 	ram := make([]byte, 0xFFFF)
 	mmu := NewMMU(ram)
 
 	mmu.Write8(0x100, 0xC0)
 	mmu.Write16(0x101, 0xFFEE)
 
-	assertAddrEquals(t, ram[0x100], 0xC0)
-	assertAddrEquals(t, ram[0x101], 0xEE)
-	assertAddrEquals(t, ram[0x102], 0xFF)
+	assert.Equal(ram[0x100], byte(0xC0))
+	assert.Equal(ram[0x101], byte(0xEE))
+	assert.Equal(ram[0x102], byte(0xFF))
 }
 
 func TestMmuReadHandlerReplacement(t *testing.T) {
+	assert := assert.New(t)
+
 	ram := make([]byte, 0xFFFF)
 	mmu := NewMMU(ram)
 
@@ -78,11 +80,13 @@ func TestMmuReadHandlerReplacement(t *testing.T) {
 	ram[0x103] = 0x11
 	ram[0x201] = 0x22
 
-	assertAddrEquals(t, mmu.Read8(0x103), handlerReadReplaceValue)
-	assertAddrEquals(t, mmu.Read8(0x201), 0x22)
+	assert.Equal(mmu.Read8(0x103), handlerReadReplaceValue)
+	assert.Equal(mmu.Read8(0x201), byte(0x22))
 }
 
 func TestMmuReadHandlerPassthrough(t *testing.T) {
+	assert := assert.New(t)
+
 	ram := make([]byte, 0xFFFF)
 	mmu := NewMMU(ram)
 
@@ -91,11 +95,13 @@ func TestMmuReadHandlerPassthrough(t *testing.T) {
 	ram[0x103] = 0x11
 	ram[0x201] = 0x22
 
-	assertAddrEquals(t, mmu.Read8(0x103), 0x11)
-	assertAddrEquals(t, mmu.Read8(0x201), 0x22)
+	assert.Equal(mmu.Read8(0x103), byte(0x11))
+	assert.Equal(mmu.Read8(0x201), byte(0x22))
 }
 
 func TestMmuWriteHandlerReplacement(t *testing.T) {
+	assert := assert.New(t)
+
 	ram := make([]byte, 0xFFFF)
 	mmu := NewMMU(ram)
 
@@ -104,11 +110,13 @@ func TestMmuWriteHandlerReplacement(t *testing.T) {
 	mmu.Write8(0x103, 0x11)
 	mmu.Write8(0x201, 0x22)
 
-	assertAddrEquals(t, ram[0x103], handlerWriteReplaceValue)
-	assertAddrEquals(t, ram[0x201], 0x22)
+	assert.Equal(ram[0x103], handlerWriteReplaceValue)
+	assert.Equal(ram[0x201], byte(0x22))
 }
 
 func TestMmuWriteHandlerPassthrough(t *testing.T) {
+	assert := assert.New(t)
+
 	ram := make([]byte, 0xFFFF)
 	mmu := NewMMU(ram)
 
@@ -117,11 +125,13 @@ func TestMmuWriteHandlerPassthrough(t *testing.T) {
 	mmu.Write8(0x103, 0x11)
 	mmu.Write8(0x201, 0x22)
 
-	assertAddrEquals(t, ram[0x103], 0x11)
-	assertAddrEquals(t, ram[0x201], 0x22)
+	assert.Equal(ram[0x103], byte(0x11))
+	assert.Equal(ram[0x201], byte(0x22))
 }
 
 func TestMmuWriteHandlerBlock(t *testing.T) {
+	assert := assert.New(t)
+
 	ram := make([]byte, 0xFFFF)
 	mmu := NewMMU(ram)
 
@@ -130,6 +140,6 @@ func TestMmuWriteHandlerBlock(t *testing.T) {
 	mmu.Write8(0x103, 0x11)
 	mmu.Write8(0x201, 0x22)
 
-	assertAddrEquals(t, ram[0x103], 0x00)
-	assertAddrEquals(t, ram[0x201], 0x22)
+	assert.Equal(ram[0x103], byte(0x00))
+	assert.Equal(ram[0x201], byte(0x22))
 }
