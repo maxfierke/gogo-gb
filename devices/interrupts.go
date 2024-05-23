@@ -49,32 +49,22 @@ func (il *InterruptLine) Read() uint8 {
 
 	if il.vblank {
 		vblank = 1 << vblankFlagBit
-	} else {
-		vblank = 0
 	}
 
 	if il.lcd {
 		lcd = 1 << lcdFlagBit
-	} else {
-		lcd = 0
 	}
 
 	if il.timer {
 		timer = 1 << timerFlagBit
-	} else {
-		timer = 0
 	}
 
 	if il.serial {
 		serial = 1 << serialFlagBit
-	} else {
-		serial = 0
 	}
 
 	if il.joypad {
 		joypad = 1 << joypadFlagBit
-	} else {
-		joypad = 0
 	}
 
 	return (vblank | lcd | timer | serial | joypad)
@@ -103,6 +93,7 @@ func NewInterruptController() *InterruptController {
 func (ic *InterruptController) ConsumeRequest() IRQ {
 	nextReq := ic.NextRequest()
 
+	// https://gbdev.io/pandocs/Interrupts.html#interrupt-priorities
 	if nextReq == INT_VBLANK {
 		ic.requested.vblank = false
 	}
