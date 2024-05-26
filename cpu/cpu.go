@@ -933,9 +933,10 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		switch opcode.Addr {
 		case 0x00:
 			// NOP
-		case 0xDB, 0xEC, 0xED:
+		case 0xD3, 0xDB, 0xDD, 0xE3, 0xE4, 0xEB, 0xEC, 0xED, 0xFC, 0xFD:
 			// ILLEGAL instructions
-			// These don't do anything, but aren't really the same as a NOP
+			// These would hang on real hardware, so we'll error out here
+			return 0, 0, fmt.Errorf("illegal opcode used @ %s", inst)
 		case 0x01:
 			// LD BC, n16
 			cpu.load16(cpu.Reg.BC, cpu.readNext16(mmu))

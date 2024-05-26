@@ -1,6 +1,7 @@
 package cpu
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/maxfierke/gogo-gb/mem"
@@ -2011,6 +2012,34 @@ func TestExecuteSwap(t *testing.T) {
 
 	assertRegEquals(t, cpu.Reg.A.Read(), 0b0101_1011)
 	assertFlags(t, cpu, false, false, false, false)
+}
+
+func TestExecuteIllegalOpcodes(t *testing.T) {
+	testCases := map[string]struct {
+		opcode byte
+	}{
+		"ILLEGAL_D3": {opcode: 0xD3},
+		"ILLEGAL_DB": {opcode: 0xDB},
+		"ILLEGAL_DD": {opcode: 0xDD},
+		"ILLEGAL_E3": {opcode: 0xE3},
+		"ILLEGAL_E4": {opcode: 0xE4},
+		"ILLEGAL_EB": {opcode: 0xEB},
+		"ILLEGAL_EC": {opcode: 0xEC},
+		"ILLEGAL_ED": {opcode: 0xED},
+		"ILLEGAL_FC": {opcode: 0xFC},
+		"ILLEGAL_FD": {opcode: 0xFD},
+	}
+	for name, testCase := range testCases {
+		t.Run(name, func(t *testing.T) {
+			assert := assert.New(t)
+
+			cpu, _ := NewCPU()
+			inst, _ := cpu.opcodes.InstructionFromByte(cpu.PC.Read(), testCase.opcode, false)
+
+			_, _, err := cpu.Execute(NULL_MMU, inst)
+			assert.ErrorContains(err, fmt.Sprintf("illegal opcode used @ %s", inst.String()))
+		})
+	}
 }
 
 func TestCPUReset(t *testing.T) {
