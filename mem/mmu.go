@@ -178,8 +178,6 @@ func (mmu *MMU) Read8(addr uint16) byte {
 		}
 	}
 
-	// TODO: Handle Echo RAM ?
-	// 			 What reads from Echo RAM?
 	return mmu.ram[addr]
 }
 
@@ -203,7 +201,6 @@ func (mmu *MMU) Write8(addr uint16, value byte) {
 		}
 	}
 
-	// TODO: Handle Echo RAM
 	mmu.ram[addr] = value
 }
 
