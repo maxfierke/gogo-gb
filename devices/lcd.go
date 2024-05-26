@@ -1,6 +1,7 @@
 package devices
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 
@@ -9,7 +10,19 @@ import (
 
 const (
 	REG_LCD_LCDC = 0xFF40
+	REG_LCD_STAT = 0xFF41
+	REG_LCD_SCY  = 0xFF42
+	REG_LCD_SCX  = 0xFF43
 	REG_LCD_LY   = 0xFF44
+	REG_LCD_LYC  = 0xFF45
+	REG_LCD_DMA  = 0xFF46
+	REG_LCD_BGP  = 0xFF47
+	REG_LCD_OBP0 = 0xFF48
+	REG_LCD_OBP1 = 0xFF49
+	REG_LCD_WY   = 0xFF4A
+	REG_LCD_WX   = 0xFF4B
+
+	VBLANK_PERIOD_BEGIN = 144
 )
 
 type objectSize uint8
@@ -110,27 +123,205 @@ func (lcdc *lcdCtrl) Write(value uint8) {
 	lcdc.bgWindowEnabled = readBit(value, LCDC_BIT_BG_WINDOW_ENABLE) == 1
 }
 
-type LCD struct {
-	Ctrl lcdCtrl
+const (
+	LCD_STAT_BIT_PPU_MODE = iota
+	LCD_STAT_BIT_LYC_EQ_LY
+	LCD_STAT_BIT_MODE_0_INT_SEL
+	LCD_STAT_BIT_MODE_1_INT_SEL
+	LCD_STAT_BIT_MODE_2_INT_SEL
+	LCD_STAT_BIT_LYC_INT_SEL
+)
+
+type lcdStatus struct {
+	mode0IntSel bool
+	mode1IntSel bool
+	mode2IntSel bool
+	lycIntSel   bool
+
+	shouldInterrupt bool
 }
 
-func NewLCD() *LCD {
-	return &LCD{}
+func (stat *lcdStatus) Read(lcd *LCD) uint8 {
+	var (
+		lycEqLy     uint8
+		mode0IntSel uint8
+		mode1IntSel uint8
+		mode2IntSel uint8
+		lycIntSel   uint8
+	)
+
+	if stat.mode0IntSel {
+		lycIntSel = 1 << LCD_STAT_BIT_MODE_0_INT_SEL
+	}
+
+	if stat.mode1IntSel {
+		lycIntSel = 1 << LCD_STAT_BIT_MODE_1_INT_SEL
+	}
+
+	if stat.mode2IntSel {
+		lycIntSel = 1 << LCD_STAT_BIT_MODE_2_INT_SEL
+	}
+
+	if stat.lycIntSel {
+		lycIntSel = 1 << LCD_STAT_BIT_LYC_INT_SEL
+	}
+
+	if lcd.cmpScanLine == lcd.curScanLine {
+		lycEqLy = 1 << LCD_STAT_BIT_LYC_EQ_LY
+	}
+
+	return (lycIntSel | mode2IntSel | mode1IntSel | mode0IntSel | lycEqLy | lcd.mode)
+}
+
+func (stat *lcdStatus) ShouldInterrupt() bool {
+	return stat.shouldInterrupt
+}
+
+func (stat *lcdStatus) statIntLine() bool {
+	return stat.mode0IntSel || stat.mode1IntSel || stat.mode2IntSel || stat.lycIntSel
+}
+
+func (stat *lcdStatus) Write(value uint8) {
+	prevStatIntLine := stat.statIntLine()
+
+	stat.mode0IntSel = readBit(value, LCD_STAT_BIT_MODE_0_INT_SEL) == 1
+	stat.mode1IntSel = readBit(value, LCD_STAT_BIT_MODE_1_INT_SEL) == 1
+	stat.mode2IntSel = readBit(value, LCD_STAT_BIT_MODE_2_INT_SEL) == 1
+	stat.lycIntSel = readBit(value, LCD_STAT_BIT_LYC_INT_SEL) == 1
+
+	nextStatIntLine := stat.statIntLine()
+	stat.shouldInterrupt = !prevStatIntLine && nextStatIntLine
+}
+
+var grayShades = color.Palette{
+	color.White,
+	color.Gray{Y: 128},
+	color.Gray{Y: 48},
+	color.Black,
+}
+
+type ShadeID uint8
+
+const (
+	COLOR_WHITE ShadeID = iota
+	COLOR_LIGHT_GRAY
+	COLOR_DARK_GRAY
+	COLOR_BLACK
+)
+
+type BGPalette [4]ShadeID
+
+func (pal *BGPalette) Read() uint8 {
+	return (uint8(pal[3])<<6 |
+		uint8(pal[2])<<4 |
+		uint8(pal[1])<<2 |
+		uint8(pal[0]))
+}
+
+func (pal *BGPalette) Write(value uint8) {
+	pal[0] = ShadeID(value & 0b0000_0011)
+	pal[1] = ShadeID(value & 0b0000_1100)
+	pal[2] = ShadeID(value & 0b0011_0000)
+	pal[3] = ShadeID(value & 0b1100_0000)
+}
+
+type OBJPalette [3]ShadeID
+
+func (pal *OBJPalette) Read() uint8 {
+	return (uint8(pal[2])<<6 |
+		uint8(pal[1])<<4 |
+		uint8(pal[0])<<2)
+}
+
+func (pal *OBJPalette) Write(value uint8) {
+	pal[0] = ShadeID(value & 0b0000_1100)
+	pal[1] = ShadeID(value & 0b0011_0000)
+	pal[2] = ShadeID(value & 0b1100_0000)
+}
+
+type LCD struct {
+	ctrl              lcdCtrl
+	status            lcdStatus
+	mode              uint8 // PPU mode
+	curScanLine       uint8 // LY
+	cmpScanLine       uint8 // LYC
+	scrollBackgroundX uint8 // SCX
+	scrollBackgroundY uint8 // SCY
+	windowX           uint8 // WX
+	windowY           uint8 // WY
+
+	bgPalette   BGPalette
+	objPalette0 OBJPalette
+	objPalette1 OBJPalette
+
+	ic *InterruptController
+}
+
+func NewLCD(ic *InterruptController) *LCD {
+	return &LCD{
+		ic: ic,
+	}
 }
 
 func (lcd *LCD) Draw() image.Image {
 	image := image.NewPaletted(
 		image.Rect(0, 0, 160, 144),
-		color.Palette{color.Black, color.Gray{Y: 96}, color.Gray16{Y: 128}, color.White},
+		grayShades,
 	)
-	image.Set(80, 77, color.Gray{Y: 96})
+	image.Set(80, 77, grayShades[2])
 
 	return image
 }
 
+func (lcd *LCD) Step(cycles uint8) {
+	if lcd.curScanLine == VBLANK_PERIOD_BEGIN {
+		lcd.ic.RequestVBlank()
+	}
+}
+
 func (lcd *LCD) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if addr == REG_LCD_LCDC {
-		return mem.ReadReplace(lcd.Ctrl.Read())
+		return mem.ReadReplace(lcd.ctrl.Read())
+	}
+
+	if addr == REG_LCD_STAT {
+		return mem.ReadReplace(lcd.status.Read(lcd))
+	}
+
+	if addr == REG_LCD_SCX {
+		return mem.ReadReplace(lcd.scrollBackgroundX)
+	}
+
+	if addr == REG_LCD_SCY {
+		return mem.ReadReplace(lcd.scrollBackgroundY)
+	}
+
+	if addr == REG_LCD_LY {
+		return mem.ReadReplace(lcd.curScanLine)
+	}
+
+	if addr == REG_LCD_LYC {
+		return mem.ReadReplace(lcd.cmpScanLine)
+	}
+
+	if addr == REG_LCD_BGP {
+		return mem.ReadReplace(lcd.bgPalette.Read())
+	}
+
+	if addr == REG_LCD_OBP0 {
+		return mem.ReadReplace(lcd.objPalette0.Read())
+	}
+
+	if addr == REG_LCD_OBP1 {
+		return mem.ReadReplace(lcd.objPalette1.Read())
+	}
+
+	if addr == REG_LCD_WY {
+		return mem.ReadReplace(lcd.windowY)
+	}
+
+	if addr == REG_LCD_WX {
+		return mem.ReadReplace(lcd.windowX)
 	}
 
 	return mem.ReadPassthrough()
@@ -138,11 +329,71 @@ func (lcd *LCD) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 
 func (lcd *LCD) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	if addr == REG_LCD_LCDC {
-		lcd.Ctrl.Write(value)
+		lcd.ctrl.Write(value)
 		return mem.WriteBlock()
 	}
 
-	return mem.WriteBlock()
+	if addr == REG_LCD_STAT {
+		lcd.status.Write(value)
+
+		if lcd.status.ShouldInterrupt() {
+			lcd.ic.RequestLCD()
+		}
+
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_SCX {
+		lcd.scrollBackgroundX = value
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_SCY {
+		lcd.scrollBackgroundY = value
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_LY {
+		// Ignore. LY is read-only
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_LYC {
+		lcd.cmpScanLine = value
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_DMA {
+		// TODO: Implement DMA
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_BGP {
+		lcd.bgPalette.Write(value)
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_OBP0 {
+		lcd.objPalette0.Write(value)
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_OBP1 {
+		lcd.objPalette1.Write(value)
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_WY {
+		lcd.windowY = value
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_LCD_WX {
+		lcd.windowX = value
+		return mem.WriteBlock()
+	}
+
+	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for LCD", value, addr))
 }
 
 func readBit(value byte, bit int) uint8 {

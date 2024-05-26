@@ -51,13 +51,15 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 	echo := mem.NewEchoRegion()
 	unmapped := mem.NewUnmappedRegion()
 
+	ic := devices.NewInterruptController()
+
 	dmg := &DMG{
 		cpu:       cpu,
 		mmu:       mmu,
 		cartridge: cart.NewCartridge(),
 		debugger:  debug.NewNullDebugger(),
-		ic:        devices.NewInterruptController(),
-		lcd:       devices.NewLCD(),
+		ic:        ic,
+		lcd:       devices.NewLCD(ic),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 	}
@@ -74,7 +76,7 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, dmg.serial) // Serial Port (Control & Data)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, dmg.timer)  // Timer (not RTC)
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, dmg.lcd)    // LCD control registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, dmg.lcd)    // LCD status, control registers
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, dmg.ic)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF4D, End: 0xFF77}, unmapped) // CGB regs
@@ -114,6 +116,7 @@ func (dmg *DMG) Step() error {
 
 	cycles += dmg.cpu.PollInterrupts(dmg.mmu, dmg.ic)
 
+	dmg.lcd.Step(cycles)
 	dmg.timer.Step(cycles, dmg.ic)
 	dmg.serial.Step(cycles, dmg.ic)
 

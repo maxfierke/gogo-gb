@@ -146,12 +146,20 @@ func (ic *InterruptController) Reset() {
 	ic.requested.Write(0x00)
 }
 
+func (ic *InterruptController) RequestLCD() {
+	ic.requested.lcd = true
+}
+
 func (ic *InterruptController) RequestSerial() {
 	ic.requested.serial = true
 }
 
 func (ic *InterruptController) RequestTimer() {
 	ic.requested.timer = true
+}
+
+func (ic *InterruptController) RequestVBlank() {
+	ic.requested.vblank = true
 }
 
 func (ic *InterruptController) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
