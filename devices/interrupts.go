@@ -7,15 +7,22 @@ import (
 )
 
 const (
-	REG_IE     = 0xFFFF
-	REG_IF     = 0xFF0F
-	INT_NONE   = 0x00
-	INT_VBLANK = 0x40
-	INT_STAT   = 0x48
-	INT_TIMER  = 0x50
-	INT_SERIAL = 0x58
-	INT_JOYPAD = 0x60
+	REG_IE = 0xFFFF
+	REG_IF = 0xFF0F
+)
 
+type IRQ byte
+
+const (
+	INT_NONE   IRQ = 0x00
+	INT_VBLANK IRQ = 0x40
+	INT_STAT   IRQ = 0x48
+	INT_TIMER  IRQ = 0x50
+	INT_SERIAL IRQ = 0x58
+	INT_JOYPAD IRQ = 0x60
+)
+
+const (
 	vblankFlagBit = 0
 	lcdFlagBit    = 1
 	timerFlagBit  = 2
@@ -93,7 +100,7 @@ func NewInterruptController() *InterruptController {
 	}
 }
 
-func (ic *InterruptController) ConsumeRequest() byte {
+func (ic *InterruptController) ConsumeRequest() IRQ {
 	nextReq := ic.NextRequest()
 
 	if nextReq == INT_VBLANK {
@@ -119,7 +126,7 @@ func (ic *InterruptController) ConsumeRequest() byte {
 	return nextReq
 }
 
-func (ic *InterruptController) NextRequest() byte {
+func (ic *InterruptController) NextRequest() IRQ {
 	if ic.enabled.vblank && ic.requested.vblank {
 		return INT_VBLANK
 	}

@@ -16,12 +16,18 @@ const (
 
 	TIMER_CLK_EN_MASK  = 1 << 2
 	TIMER_CLK_SEL_MASK = 0x3
+)
 
-	TIMER_CLK_SEL_CPU_DIV_1024 = 0x00
-	TIMER_CLK_SEL_CPU_DIV_16   = 0x01
-	TIMER_CLK_SEL_CPU_DIV_64   = 0x02
-	TIMER_CLK_SEL_CPU_DIV_256  = 0x03
+type TimerClockSelector byte
 
+const (
+	TIMER_CLK_SEL_CPU_DIV_1024 TimerClockSelector = 0x00
+	TIMER_CLK_SEL_CPU_DIV_16   TimerClockSelector = 0x01
+	TIMER_CLK_SEL_CPU_DIV_64   TimerClockSelector = 0x02
+	TIMER_CLK_SEL_CPU_DIV_256  TimerClockSelector = 0x03
+)
+
+const (
 	TIMER_TIMA_CLK_1024 = 1024
 	TIMER_TIMA_CLK_16   = 16
 	TIMER_TIMA_CLK_64   = 64
@@ -33,9 +39,8 @@ type Timer struct {
 	counter    uint8
 	modulo     uint8
 	incCounter bool
-	freqSel    byte
+	freqSel    TimerClockSelector
 
-	dividerClk uint
 	counterClk uint
 }
 
@@ -59,31 +64,29 @@ func (timer *Timer) FreqDivider() uint {
 }
 
 func (timer *Timer) Step(cycles uint8, ic *InterruptController) {
-	if timer.dividerClk < uint(cycles) {
-		timer.divider += 1
-		remainingCycles := uint(cycles) - timer.dividerClk
-		timer.dividerClk = TIMER_DIV_CLOCK_CYCLES - remainingCycles
-	} else {
-		timer.dividerClk -= uint(cycles)
-	}
+	// TODO(GBC): Need to take into account CGB double-speed mode
+	timer.divider += cycles
 
 	if !timer.incCounter {
 		return
 	}
 
-	if timer.counterClk < uint(cycles) {
-		remainingCycles := uint(cycles) - timer.counterClk
+	timer.counterClk += uint(cycles)
+	requestInt := false
+
+	for timer.counterClk >= timer.FreqDivider() {
+		timer.counterClk -= timer.FreqDivider()
 
 		if timer.counter == 0xFF {
 			timer.counter = timer.modulo
-			ic.RequestTimer()
+			requestInt = true
 		} else {
 			timer.counter += 1
 		}
+	}
 
-		timer.counterClk = timer.FreqDivider() - remainingCycles
-	} else {
-		timer.counterClk -= uint(cycles)
+	if requestInt {
+		ic.RequestTimer()
 	}
 }
 
@@ -95,7 +98,7 @@ func (timer *Timer) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	} else if addr == REG_TIMER_TMA {
 		return mem.ReadReplace(timer.modulo)
 	} else if addr == REG_TIMER_TAC {
-		tac := timer.freqSel
+		tac := byte(timer.freqSel)
 
 		if timer.incCounter {
 			tac |= TIMER_CLK_EN_MASK
@@ -120,7 +123,7 @@ func (timer *Timer) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite 
 
 		if enableCounter && !timer.incCounter {
 			timer.incCounter = true
-			timer.freqSel = (value & TIMER_CLK_SEL_MASK)
+			timer.freqSel = TimerClockSelector(value & TIMER_CLK_SEL_MASK)
 		} else {
 			timer.incCounter = enableCounter
 		}
