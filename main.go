@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -15,16 +16,25 @@ import (
 )
 
 type CLIOptions struct {
-	cartPath   string
-	debugger   string
-	debugPrint string
-	logPath    string
-	logger     *log.Logger
-	serialPort string
-	ui         bool
+	bootRomPath string
+	cartPath    string
+	debugger    string
+	debugPrint  string
+	logPath     string
+	logger      *log.Logger
+	serialPort  string
+	skipBootRom bool
+	ui          bool
 }
 
 const LOG_PREFIX = ""
+
+var DEFAULT_BOOT_ROM_PATHS = []string{
+	"gb_bios.bin",
+	"dmg_bios.bin",
+	"mgb_bios.bin",
+	"dmg0_bios.bin",
+}
 
 func main() {
 	options := CLIOptions{}
@@ -56,11 +66,13 @@ func main() {
 }
 
 func parseOptions(options *CLIOptions) {
+	flag.StringVar(&options.bootRomPath, "bootrom", "", "Path to boot ROM file (dmg_bios.bin, mgb_bios.bin, etc.). Defaults to a lookup on common boot ROM filenames in current directory")
 	flag.StringVar(&options.cartPath, "cart", "", "Path to cartridge file (.gb, .gbc)")
-	flag.StringVar(&options.serialPort, "serial-port", "", "Path to serial port IO (could be a file, UNIX socket, etc.)")
 	flag.StringVar(&options.debugger, "debugger", "none", "Specify debugger to use (\"none\", \"gameboy-doctor\")")
 	flag.StringVar(&options.debugPrint, "debug-print", "", "Print out something for debugging purposes (\"cart-header\", \"opcodes\")")
 	flag.StringVar(&options.logPath, "log", "", "Path to log file. Default/empty implies stdout")
+	flag.StringVar(&options.serialPort, "serial-port", "", "Path to serial port IO (could be a file, UNIX socket, etc.)")
+	flag.BoolVar(&options.skipBootRom, "skip-bootrom", false, "Skip loading a boot ROM")
 	flag.BoolVar(&options.ui, "ui", false, "Launch with UI")
 	flag.Parse()
 }
@@ -146,14 +158,62 @@ func initDMG(options *CLIOptions) (*hardware.DMG, error) {
 		return nil, fmt.Errorf("unable to initialize Debugger: %w", err)
 	}
 
-	dmg, err := hardware.NewDMG(
+	opts := []hardware.DMGOption{
 		hardware.WithDebugger(debugger),
-	)
+	}
+
+	if options.skipBootRom {
+		opts = append(opts, hardware.WithFakeBootROM())
+	} else {
+		bootRomFile, err := loadBootROM(options)
+		if err != nil {
+			return nil, fmt.Errorf("unable to load boot ROM: %w", err)
+		}
+		if bootRomFile == nil {
+			opts = append(opts, hardware.WithFakeBootROM())
+		} else {
+			defer bootRomFile.Close()
+			opts = append(opts, hardware.WithBootROM(bootRomFile))
+		}
+	}
+
+	dmg, err := hardware.NewDMG(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize DMG: %w", err)
 	}
 
 	return dmg, nil
+}
+
+func loadBootROM(options *CLIOptions) (*os.File, error) {
+	logger := options.logger
+	bootRomPath := options.bootRomPath
+
+	var bootRomFile *os.File
+	var err error
+
+	if bootRomPath == "" {
+		for _, romPath := range DEFAULT_BOOT_ROM_PATHS {
+			if bootRomFile, err := os.Open(romPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+				return nil, err
+			} else if bootRomFile != nil {
+				// yay! we found one!
+				break
+			}
+		}
+	} else if bootRomFile, err = os.Open(bootRomPath); err != nil {
+		return nil, err
+	}
+
+	if bootRomFile == nil {
+		// Bail out if no boot ROM loaded
+		logger.Printf("WARN: No boot ROM provided. Some emulation functionality may be incorrect.")
+		return nil, nil
+	}
+
+	logger.Printf("Loaded boot ROM: %s\n", bootRomFile.Name())
+
+	return bootRomFile, nil
 }
 
 func loadCart(dmg *hardware.DMG, options *CLIOptions) error {
