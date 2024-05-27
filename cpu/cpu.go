@@ -1964,7 +1964,7 @@ func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, shouldJump bool) (nextPC 
 		return mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0]), nil
 	}
 
-	return nextPC, uint8(opcode.Cycles[0]), nil
+	return nextPC, uint8(opcode.Cycles[1]), nil
 }
 
 func (cpu *CPU) load8(reg RWByte, value byte) {
