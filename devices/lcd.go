@@ -11,16 +11,6 @@ import (
 const (
 	REG_LCD_LCDC = 0xFF40
 	REG_LCD_STAT = 0xFF41
-	REG_LCD_SCY  = 0xFF42
-	REG_LCD_SCX  = 0xFF43
-	REG_LCD_LY   = 0xFF44
-	REG_LCD_LYC  = 0xFF45
-	REG_LCD_DMA  = 0xFF46
-	REG_LCD_BGP  = 0xFF47
-	REG_LCD_OBP0 = 0xFF48
-	REG_LCD_OBP1 = 0xFF49
-	REG_LCD_WY   = 0xFF4A
-	REG_LCD_WX   = 0xFF4B
 
 	VBLANK_PERIOD_BEGIN = 144
 )
@@ -141,7 +131,7 @@ type lcdStatus struct {
 	shouldInterrupt bool
 }
 
-func (stat *lcdStatus) Read(lcd *LCD) uint8 {
+func (stat *lcdStatus) Read(lcd *LCD, ppu *PPU) uint8 {
 	var (
 		lycEqLy     uint8
 		mode0IntSel uint8
@@ -166,11 +156,16 @@ func (stat *lcdStatus) Read(lcd *LCD) uint8 {
 		lycIntSel = 1 << LCD_STAT_BIT_LYC_INT_SEL
 	}
 
-	if lcd.cmpScanLine == lcd.curScanLine {
+	if ppu.IsCurrentLineEqualToCompare() {
 		lycEqLy = 1 << LCD_STAT_BIT_LYC_EQ_LY
 	}
 
-	return (lycIntSel | mode2IntSel | mode1IntSel | mode0IntSel | lycEqLy | lcd.mode)
+	return (lycIntSel |
+		mode2IntSel |
+		mode1IntSel |
+		mode0IntSel |
+		lycEqLy |
+		uint8(ppu.Mode))
 }
 
 func (stat *lcdStatus) ShouldInterrupt() bool {
@@ -195,71 +190,23 @@ func (stat *lcdStatus) Write(value uint8) {
 
 var grayShades = color.Palette{
 	color.White,
-	color.Gray{Y: 128},
-	color.Gray{Y: 48},
+	color.Gray{Y: 192},
+	color.Gray{Y: 96},
 	color.Black,
 }
 
-type ShadeID uint8
-
-const (
-	COLOR_WHITE ShadeID = iota
-	COLOR_LIGHT_GRAY
-	COLOR_DARK_GRAY
-	COLOR_BLACK
-)
-
-type BGPalette [4]ShadeID
-
-func (pal *BGPalette) Read() uint8 {
-	return (uint8(pal[3])<<6 |
-		uint8(pal[2])<<4 |
-		uint8(pal[1])<<2 |
-		uint8(pal[0]))
-}
-
-func (pal *BGPalette) Write(value uint8) {
-	pal[0] = ShadeID(value & 0b0000_0011)
-	pal[1] = ShadeID(value & 0b0000_1100)
-	pal[2] = ShadeID(value & 0b0011_0000)
-	pal[3] = ShadeID(value & 0b1100_0000)
-}
-
-type OBJPalette [3]ShadeID
-
-func (pal *OBJPalette) Read() uint8 {
-	return (uint8(pal[2])<<6 |
-		uint8(pal[1])<<4 |
-		uint8(pal[0])<<2)
-}
-
-func (pal *OBJPalette) Write(value uint8) {
-	pal[0] = ShadeID(value & 0b0000_1100)
-	pal[1] = ShadeID(value & 0b0011_0000)
-	pal[2] = ShadeID(value & 0b1100_0000)
-}
-
 type LCD struct {
-	ctrl              lcdCtrl
-	status            lcdStatus
-	mode              uint8 // PPU mode
-	curScanLine       uint8 // LY
-	cmpScanLine       uint8 // LYC
-	scrollBackgroundX uint8 // SCX
-	scrollBackgroundY uint8 // SCY
-	windowX           uint8 // WX
-	windowY           uint8 // WY
+	ctrl   lcdCtrl
+	status lcdStatus
 
-	bgPalette   BGPalette
-	objPalette0 OBJPalette
-	objPalette1 OBJPalette
-
-	ic *InterruptController
+	ic  *InterruptController
+	ppu *PPU
 }
 
-func NewLCD(ic *InterruptController) *LCD {
+func NewLCD(ic *InterruptController, ppu *PPU) *LCD {
 	return &LCD{
-		ic: ic,
+		ic:  ic,
+		ppu: ppu,
 	}
 }
 
@@ -274,7 +221,7 @@ func (lcd *LCD) Draw() image.Image {
 }
 
 func (lcd *LCD) Step(cycles uint8) {
-	if lcd.curScanLine == VBLANK_PERIOD_BEGIN {
+	if lcd.ppu.CurrentLine() == VBLANK_PERIOD_BEGIN {
 		lcd.ic.RequestVBlank()
 	}
 }
@@ -285,43 +232,7 @@ func (lcd *LCD) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	}
 
 	if addr == REG_LCD_STAT {
-		return mem.ReadReplace(lcd.status.Read(lcd))
-	}
-
-	if addr == REG_LCD_SCX {
-		return mem.ReadReplace(lcd.scrollBackgroundX)
-	}
-
-	if addr == REG_LCD_SCY {
-		return mem.ReadReplace(lcd.scrollBackgroundY)
-	}
-
-	if addr == REG_LCD_LY {
-		return mem.ReadReplace(lcd.curScanLine)
-	}
-
-	if addr == REG_LCD_LYC {
-		return mem.ReadReplace(lcd.cmpScanLine)
-	}
-
-	if addr == REG_LCD_BGP {
-		return mem.ReadReplace(lcd.bgPalette.Read())
-	}
-
-	if addr == REG_LCD_OBP0 {
-		return mem.ReadReplace(lcd.objPalette0.Read())
-	}
-
-	if addr == REG_LCD_OBP1 {
-		return mem.ReadReplace(lcd.objPalette1.Read())
-	}
-
-	if addr == REG_LCD_WY {
-		return mem.ReadReplace(lcd.windowY)
-	}
-
-	if addr == REG_LCD_WX {
-		return mem.ReadReplace(lcd.windowX)
+		return mem.ReadReplace(lcd.status.Read(lcd, lcd.ppu))
 	}
 
 	return mem.ReadPassthrough()
@@ -340,56 +251,6 @@ func (lcd *LCD) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 			lcd.ic.RequestLCD()
 		}
 
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_SCX {
-		lcd.scrollBackgroundX = value
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_SCY {
-		lcd.scrollBackgroundY = value
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_LY {
-		// Ignore. LY is read-only
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_LYC {
-		lcd.cmpScanLine = value
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_DMA {
-		// TODO: Implement DMA
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_BGP {
-		lcd.bgPalette.Write(value)
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_OBP0 {
-		lcd.objPalette0.Write(value)
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_OBP1 {
-		lcd.objPalette1.Write(value)
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_WY {
-		lcd.windowY = value
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_LCD_WX {
-		lcd.windowX = value
 		return mem.WriteBlock()
 	}
 

@@ -32,6 +32,7 @@ type DMG struct {
 	cartridge *cart.Cartridge
 	ic        *devices.InterruptController
 	lcd       *devices.LCD
+	ppu       *devices.PPU
 	serial    *devices.SerialPort
 	timer     *devices.Timer
 
@@ -52,6 +53,7 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 	unmapped := mem.NewUnmappedRegion()
 
 	ic := devices.NewInterruptController()
+	ppu := devices.NewPPU()
 
 	dmg := &DMG{
 		cpu:       cpu,
@@ -59,7 +61,8 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 		cartridge: cart.NewCartridge(),
 		debugger:  debug.NewNullDebugger(),
 		ic:        ic,
-		lcd:       devices.NewLCD(ic),
+		lcd:       devices.NewLCD(ic, ppu),
+		ppu:       ppu,
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 	}
@@ -76,7 +79,10 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, dmg.serial) // Serial Port (Control & Data)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, dmg.timer)  // Timer (not RTC)
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, dmg.lcd)    // LCD status, control registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF41}, dmg.lcd)    // LCD status, control registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF42, End: 0xFF4B}, dmg.ppu)    // PPU registers
+
+	mmu.AddHandler(mem.MemRegion{Start: 0x8000, End: 0x9FFF}, dmg.ppu) // VRAM tiles
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, dmg.ic)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF4D, End: 0xFF77}, unmapped) // CGB regs
