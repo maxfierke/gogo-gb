@@ -6,7 +6,6 @@ import (
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/hardware"
 )
@@ -16,6 +15,8 @@ type UI struct {
 	logger      *log.Logger
 	exitedChan  chan bool
 	serialCable devices.SerialCable
+
+	framebufferImage *ebiten.Image
 }
 
 var _ Host = (*UI)(nil)
@@ -68,12 +69,14 @@ func (ui *UI) Update() error {
 func (ui *UI) Draw(screen *ebiten.Image) {
 	select {
 	case fbImage := <-ui.fbChan:
-		image := ebiten.NewImageFromImage(fbImage)
-		screen.DrawImage(image, &ebiten.DrawImageOptions{})
+		ui.framebufferImage = ebiten.NewImageFromImage(fbImage)
 	default:
 		// do nothing
 	}
-	ebitenutil.DebugPrint(screen, "gogo-gb!!!")
+
+	if ui.framebufferImage != nil {
+		screen.DrawImage(ui.framebufferImage, &ebiten.DrawImageOptions{})
+	}
 }
 
 func (ui *UI) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {

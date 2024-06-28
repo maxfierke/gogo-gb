@@ -31,7 +31,7 @@ type DMG struct {
 	mmu       *mem.MMU
 	cartridge *cart.Cartridge
 	ic        *devices.InterruptController
-	lcd       *devices.LCD
+	ppu       *devices.PPU
 	serial    *devices.SerialPort
 	timer     *devices.Timer
 
@@ -51,13 +51,15 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 	echo := mem.NewEchoRegion()
 	unmapped := mem.NewUnmappedRegion()
 
+	ic := devices.NewInterruptController()
+
 	dmg := &DMG{
 		cpu:       cpu,
 		mmu:       mmu,
 		cartridge: cart.NewCartridge(),
 		debugger:  debug.NewNullDebugger(),
-		ic:        devices.NewInterruptController(),
-		lcd:       devices.NewLCD(),
+		ic:        ic,
+		ppu:       devices.NewPPU(ic),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 	}
@@ -74,7 +76,11 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, dmg.serial) // Serial Port (Control & Data)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, dmg.timer)  // Timer (not RTC)
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF4B}, dmg.lcd)    // LCD control registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF41}, dmg.ppu)    // LCD status, control registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF42, End: 0xFF4B}, dmg.ppu)    // PPU registers
+
+	mmu.AddHandler(mem.MemRegion{Start: 0x8000, End: 0x9FFF}, dmg.ppu) // VRAM tiles
+	mmu.AddHandler(mem.MemRegion{Start: 0xFE00, End: 0xFE9F}, dmg.ppu) // OAM
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, dmg.ic)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF4D, End: 0xFF77}, unmapped) // CGB regs
@@ -114,6 +120,7 @@ func (dmg *DMG) Step() error {
 
 	cycles += dmg.cpu.PollInterrupts(dmg.mmu, dmg.ic)
 
+	dmg.ppu.Step(cycles)
 	dmg.timer.Step(cycles, dmg.ic)
 	dmg.serial.Step(cycles, dmg.ic)
 
@@ -126,6 +133,9 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 	framebuffer := host.Framebuffer()
 	defer close(framebuffer)
 
+	// TODO(bootrom): remove when bootrom is working
+	dmg.cpu.ResetToBootROM()
+
 	dmg.serial.AttachCable(host.SerialCable())
 	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
 
@@ -134,22 +144,22 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 	clockRate := time.NewTicker(time.Second / DMG_CPU_HZ)
 	defer clockRate.Stop()
 
-	fakeVBlank := time.NewTicker(time.Second / 60)
-	defer fakeVBlank.Stop()
-
 	for {
+		if err := dmg.Step(); err != nil {
+			return err
+		}
+
+		if dmg.ic.NextRequest() == devices.INT_STAT {
+			framebuffer <- dmg.ppu.Draw()
+		}
+
 		select {
 		case <-hostExit:
 			return nil
-		case <-fakeVBlank.C:
-			framebuffer <- dmg.lcd.Draw()
 		default:
 			// Do nothing
 		}
 
-		if err := dmg.Step(); err != nil {
-			return err
-		}
 		<-clockRate.C
 	}
 }
