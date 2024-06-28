@@ -131,9 +131,9 @@ func (attrs *objectAttributes) Write(value uint8) {
 type objPalette [4]uint8
 
 func (pal *objPalette) Read() uint8 {
-	return (uint8(pal[2])<<6 |
-		uint8(pal[1])<<4 |
-		uint8(pal[0])<<2)
+	return (uint8(pal[3])<<6 |
+		uint8(pal[2])<<4 |
+		uint8(pal[1])<<2)
 }
 
 func (pal *objPalette) Write(value uint8) {
