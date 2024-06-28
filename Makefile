@@ -16,7 +16,7 @@ help:
 
 .PHONY: tidy
 tidy:
-	go fmt -mod=mod ./...
+	go fmt -mod=readonly ./...
 	go mod tidy -v
 
 .PHONY: build
@@ -29,15 +29,15 @@ clean:
 
 .PHONY: run
 run:
-	$(GO) run -mod=mod .
+	$(GO) run -mod=readonly .
 
 .PHONY: test
 test:
-	$(GO) test -mod=mod -v ./...
+	$(GO) test -mod=readonly -v ./...
 
 .PHONY: bin/gogo-gb # This does exist, but we're not tracking its dependencies. Go is
 bin/gogo-gb:
-	$(GO) build -mod=mod -o bin/gogo-gb .
+	$(GO) build -mod=readonly -o bin/gogo-gb .
 
 .PHONY: cpu_instrs
 cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms/cpu_instrs/individual/*.gb
@@ -66,6 +66,17 @@ cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms
       { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }; \
     echo "=== Finished cpu_instrs test $$file ===" ; \
   done
+
+.PHONY: dmg_acid2
+dmg_acid2: bin/gogo-gb vendor/dmg-acid2/dmg-acid2.gb
+	bin/gogo-gb --cart "vendor/dmg-acid2/dmg-acid2.gb" \
+              --log=stderr \
+              --serial-port=stdout \
+              --ui
+
+vendor/dmg-acid2/dmg-acid2.gb:
+	mkdir -p vendor/dmg-acid2
+	curl -fSsL https://github.com/mattcurrie/dmg-acid2/releases/download/v1.0/dmg-acid2.gb > vendor/dmg-acid2/dmg-acid2.gb
 
 vendor/gameboy-doctor/gameboy-doctor:
 	git submodule init
