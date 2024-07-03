@@ -384,6 +384,13 @@ func NewPPU(ic *InterruptController) *PPU {
 	}
 }
 
+var grayScales = []color.Color{
+	color.White,
+	color.RGBA{R: 170, G: 170, B: 170},
+	color.RGBA{R: 85, G: 85, B: 85},
+	color.Black,
+}
+
 func (ppu *PPU) Draw() image.Image {
 	fbImage := image.NewGray(
 		image.Rect(0, 0, FB_WIDTH, FB_HEIGHT),
@@ -391,7 +398,8 @@ func (ppu *PPU) Draw() image.Image {
 
 	for y := 0; y < FB_HEIGHT; y++ {
 		for x, scanLine := range ppu.scanLines[y] {
-			fbImage.SetGray(x, y, color.Gray{Y: 255 - scanLine.color})
+			fbImage.Set(x, y, grayScales[scanLine.colorID])
+			//fbImage.SetGray(x, y, color.Gray{Y: 255 - scanLine.color})
 		}
 	}
 
