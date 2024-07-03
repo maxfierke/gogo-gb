@@ -16,7 +16,7 @@ help:
 
 .PHONY: tidy
 tidy:
-	go fmt -mod=mod ./...
+	go fmt ./...
 	go mod tidy -v
 
 .PHONY: build
@@ -29,18 +29,18 @@ clean:
 
 .PHONY: run
 run:
-	$(GO) run -mod=mod .
+	$(GO) run .
 
 .PHONY: test
 test:
-	$(GO) test -mod=mod -v ./...
+	$(GO) test -v ./...
 
 .PHONY: bin/gogo-gb # This does exist, but we're not tracking its dependencies. Go is
 bin/gogo-gb:
-	$(GO) build -mod=mod -o bin/gogo-gb .
+	$(GO) build -o bin/gogo-gb .
 
 .PHONY: cpu_instrs
-cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms/cpu_instrs/individual/*.gb
+cpu_instrs: bin/gogo-gb tests/gameboy-doctor/gameboy-doctor tests/gb-test-roms/cpu_instrs/individual/*.gb
 #  These are broken upstream:
 #    02-interrupts.gb
 	@CPU_TESTS=( \
@@ -59,18 +59,18 @@ cpu_instrs: bin/gogo-gb vendor/gameboy-doctor/gameboy-doctor vendor/gb-test-roms
     test_name=$${file%*.gb}; \
     test_num=$$((10#$${test_name%-*})); \
     echo "=== Starting cpu_instrs test $$file ==="; \
-    bin/gogo-gb --cart "vendor/gb-test-roms/cpu_instrs/individual/$$file" \
+    bin/gogo-gb --cart "tests/gb-test-roms/cpu_instrs/individual/$$file" \
                 --debugger=gameboy-doctor \
                 --log=stderr | \
-      ./vendor/gameboy-doctor/gameboy-doctor - cpu_instrs "$$test_num" || \
+      ./tests/gameboy-doctor/gameboy-doctor - cpu_instrs "$$test_num" || \
       { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }; \
     echo "=== Finished cpu_instrs test $$file ===" ; \
   done
 
-vendor/gameboy-doctor/gameboy-doctor:
+tests/gameboy-doctor/gameboy-doctor:
 	git submodule init
 	git submodule update
 
-vendor/gb-test-roms/cpu_instrs/individual/*.gb:
+tests/gb-test-roms/cpu_instrs/individual/*.gb:
 	git submodule init
 	git submodule update
