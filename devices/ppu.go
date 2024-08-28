@@ -14,7 +14,7 @@ const (
 	CLK_MODE0_PERIOD_LEN = 204 // Technically, this is the ceiling
 	CLK_MODE1_PERIOD_LEN = 4560
 	CLK_MODE2_PERIOD_LEN = 80
-	CLK_MODE3_PERIOD_LEN = 172 // Tecnically, this is the floor
+	CLK_MODE3_PERIOD_LEN = 172 // Technically, this is the floor
 
 	FB_WIDTH  = 160
 	FB_HEIGHT = 144
@@ -263,12 +263,11 @@ func (lcdc *lcdCtrl) Write(value uint8) {
 }
 
 const (
-	LCD_STAT_BIT_PPU_MODE = iota
-	LCD_STAT_BIT_LYC_EQ_LY
-	LCD_STAT_BIT_MODE_0_INT_SEL
-	LCD_STAT_BIT_MODE_1_INT_SEL
-	LCD_STAT_BIT_MODE_2_INT_SEL
-	LCD_STAT_BIT_LYC_INT_SEL
+	LCD_STAT_BIT_LYC_EQ_LY      = 2
+	LCD_STAT_BIT_MODE_0_INT_SEL = 3
+	LCD_STAT_BIT_MODE_1_INT_SEL = 4
+	LCD_STAT_BIT_MODE_2_INT_SEL = 5
+	LCD_STAT_BIT_LYC_INT_SEL    = 6
 )
 
 type lcdStatus struct {
