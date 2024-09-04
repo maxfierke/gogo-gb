@@ -1,6 +1,6 @@
 module github.com/maxfierke/gogo-gb
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/hajimehoshi/ebiten/v2 v2.7.3
