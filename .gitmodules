@@ -1,6 +1,6 @@
 [submodule "vendor/gameboy-doctor"]
-	path = vendor/gameboy-doctor
+	path = tests/gameboy-doctor
 	url = git@github.com:robert/gameboy-doctor.git
 [submodule "vendor/gb-test-roms"]
-	path = vendor/gb-test-roms
+	path = tests/gb-test-roms
 	url = git@github.com:retrio/gb-test-roms.git
