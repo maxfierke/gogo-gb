@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -86,7 +87,7 @@ func debugPrintCartHeader(options *CLIOptions) {
 	defer cartFile.Close()
 
 	cartReader, err := cart.NewReader(cartFile)
-	if err == cart.ErrHeader {
+	if errors.Is(err, cart.ErrHeader) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
 		logger.Fatalf("ERROR: Unable to load cartridge. Please ensure it's inserted correctly or trying blowing on it: %v\n", err)
@@ -170,14 +171,14 @@ func loadCart(dmg *hardware.DMG, options *CLIOptions) error {
 	defer cartFile.Close()
 
 	cartReader, err := cart.NewReader(cartFile)
-	if err == cart.ErrHeader {
+	if errors.Is(err, cart.ErrHeader) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
 		return fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
 	}
 
 	err = dmg.LoadCartridge(cartReader)
-	if err == cart.ErrHeader {
+	if errors.Is(err, cart.ErrHeader) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
 		return fmt.Errorf("unable to load cartridge: %w", err)
