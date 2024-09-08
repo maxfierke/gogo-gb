@@ -4,3 +4,6 @@
 [submodule "vendor/gb-test-roms"]
 	path = tests/gb-test-roms
 	url = git@github.com:retrio/gb-test-roms.git
+[submodule "tests/mealybug-tearoom-tests"]
+	path = tests/mealybug-tearoom-tests
+	url = git@github.com:mattcurrie/mealybug-tearoom-tests.git
