@@ -43,8 +43,7 @@ func (operand *Operand) String() string {
 type Opcode struct {
 	Addr       uint8
 	CbPrefixed bool
-	Mnemonic   string `json:"mnemonic"`
-	Comment    string
+	Mnemonic   string       `json:"mnemonic"`
 	Bytes      int          `json:"bytes"`
 	Cycles     []int        `json:"cycles"`
 	Operands   []Operand    `json:"operands"`
@@ -60,18 +59,11 @@ func (opcode *Opcode) String() string {
 		operands = append(operands, operandText)
 	}
 
-	var comment string
-
-	if opcode.Comment != "" {
-		comment = fmt.Sprintf("; %s", opcode.Comment)
-	}
-
 	return fmt.Sprintf(
-		"0x%02X %s %s %s",
+		"0x%02X %s %s",
 		opcode.Addr,
 		opcode.Mnemonic,
 		strings.Join(operands, ", "),
-		comment,
 	)
 }
 
