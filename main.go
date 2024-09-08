@@ -59,7 +59,7 @@ func main() {
 func parseOptions(options *CLIOptions) {
 	flag.StringVar(&options.cartPath, "cart", "", "Path to cartridge file (.gb, .gbc)")
 	flag.StringVar(&options.serialPort, "serial-port", "", "Path to serial port IO (could be a file, UNIX socket, etc.)")
-	flag.StringVar(&options.debugger, "debugger", "none", "Specify debugger to use (\"none\", \"gameboy-doctor\")")
+	flag.StringVar(&options.debugger, "debugger", "none", "Specify debugger to use (\"none\", \"gameboy-doctor\", \"interactive\")")
 	flag.StringVar(&options.debugPrint, "debug-print", "", "Print out something for debugging purposes (\"cart-header\", \"opcodes\")")
 	flag.StringVar(&options.logPath, "log", "", "Path to log file. Default/empty implies stdout")
 	flag.BoolVar(&options.ui, "ui", false, "Launch with UI")
