@@ -20,6 +20,8 @@ func NewDebugger(name string) (Debugger, error) {
 	switch name {
 	case "gameboy-doctor":
 		return NewGBDoctorDebugger(), nil
+	case "interactive":
+		return NewInteractiveDebugger()
 	case "none":
 		return NewNullDebugger(), nil
 	default:

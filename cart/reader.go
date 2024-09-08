@@ -36,7 +36,7 @@ type Reader struct {
 // The Reader.Metadata fields will be valid in the Reader returned.
 func NewReader(r io.Reader) (*Reader, error) {
 	cartReader := new(Reader)
-	if err := cartReader.Reset(r); err == ErrHeader {
+	if err := cartReader.Reset(r); errors.Is(err, ErrHeader) {
 		// Pass header checksum errors onto caller and let them handle appropriately
 		return cartReader, err
 	} else if err != nil {
