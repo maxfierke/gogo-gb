@@ -10,7 +10,6 @@ import (
 	"github.com/abiosoft/ishell/v2"
 	"github.com/maxfierke/gogo-gb/cpu"
 	"github.com/maxfierke/gogo-gb/mem"
-	"github.com/samber/lo"
 )
 
 var ErrConsoleNotAttached = errors.New("debugger must be attached to a running console")
@@ -20,8 +19,10 @@ var registerNames = []string{
 	"AF", "BC", "DE", "HL", "SP", "PC",
 }
 
+type breakpoint struct{}
+
 type InteractiveDebugger struct {
-	breakpoints []uint16
+	breakpoints map[uint16]breakpoint
 	isStepping  bool
 	shell       *ishell.Shell
 }
@@ -30,7 +31,7 @@ var _ Debugger = (*InteractiveDebugger)(nil)
 
 func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 	debugger := &InteractiveDebugger{
-		breakpoints: []uint16{},
+		breakpoints: map[uint16]breakpoint{},
 	}
 
 	shell := ishell.New()
@@ -51,8 +52,8 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				return
 			}
 
-			if !slices.Contains(debugger.breakpoints, addr) {
-				debugger.breakpoints = append(debugger.breakpoints, addr)
+			if _, ok := debugger.breakpoints[addr]; !ok {
+				debugger.breakpoints[addr] = breakpoint{}
 				c.Printf("added breakpoint @ 0x%02X\n", addr)
 			}
 		},
@@ -243,10 +244,8 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				return
 			}
 
-			if !slices.Contains(debugger.breakpoints, addr) {
-				debugger.breakpoints = lo.Filter(debugger.breakpoints, func(b uint16, _ int) bool {
-					return b == addr
-				})
+			if _, ok := debugger.breakpoints[addr]; ok {
+				delete(debugger.breakpoints, addr)
 				c.Printf("cleared breakpoint @ 0x%02X\n", addr)
 			}
 		},
@@ -273,10 +272,9 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 }
 
 func (i *InteractiveDebugger) OnDecode(cpu *cpu.CPU, mmu *mem.MMU) {
-	if slices.Contains(i.breakpoints, cpu.PC.Read()) {
-		i.shell.Printf("reached 0x%02X\n", cpu.PC.Read())
-		i.attachShell(cpu, mmu)
-	} else if i.isStepping {
+	addr := cpu.PC.Read()
+	if _, ok := i.breakpoints[addr]; ok || i.isStepping {
+		i.shell.Printf("reached 0x%02X\n", addr)
 		i.attachShell(cpu, mmu)
 	}
 }
