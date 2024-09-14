@@ -68,6 +68,23 @@ cpu_instrs: bin/gogo-gb tests/gameboy-doctor/gameboy-doctor tests/gb-test-roms/c
     echo "=== Finished cpu_instrs test $$file ===" ; \
   done
 
+.PHONY: mem_timing
+mem_timing: bin/gogo-gb tests/gb-test-roms/mem_timing/individual/*.gb
+	@MEM_TESTS=( \
+    "01-read_timing.gb" \
+    "02-write_timing.gb" \
+    "03-modify_timing.gb" \
+  ); \
+  for file in "$${MEM_TESTS[@]}"; do \
+    test_name=$${file%*.gb}; \
+    test_num=$$((10#$${test_name%-*})); \
+    echo "=== WARNING: WIP, these will hang ==="; \
+    echo "=== Starting mem_timing test $$file ==="; \
+    bin/gogo-gb --cart "tests/gb-test-roms/mem_timing/individual/$$file" \
+                --log=stderr --serial-port=stdout; \
+    echo "=== Finished mem_timing test $$file ===" ; \
+  done
+
 .PHONY: dmg_acid2
 dmg_acid2: bin/gogo-gb tests/dmg-acid2/dmg-acid2.gb
 	bin/gogo-gb --cart "tests/dmg-acid2/dmg-acid2.gb" \
@@ -98,6 +115,10 @@ tests/gameboy-doctor/gameboy-doctor:
 	git submodule update
 
 tests/gb-test-roms/cpu_instrs/individual/*.gb:
+	git submodule init
+	git submodule update
+
+tests/gb-test-roms/mem_timing/individual/*.gb:
 	git submodule init
 	git submodule update
 
