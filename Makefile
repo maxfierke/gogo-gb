@@ -6,6 +6,7 @@ MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
 GO ?= go
+MOONEYE_TEST_SUITE_VERION ?= mts-20240127-1204-74ae166
 
 all: build
 
@@ -74,6 +75,20 @@ dmg_acid2: bin/gogo-gb tests/dmg-acid2/dmg-acid2.gb
               --serial-port=stdout \
               --ui
 
+.PHONY: mealybug_tests
+mealybug_tests: tests/mealybug-tearoom-tests/build/ppu/*.gb
+	bin/gogo-gb --cart "tests/mealybug-tearoom-tests/build/ppu/m3_scy_change.gb" \
+              --log=stderr \
+              --serial-port=stdout \
+              --ui
+
+.PHONY: mooneye_gb_tests
+mooneye_gb_tests: tests/mooneye-gb-test-suite/acceptance/*.gb
+	bin/gogo-gb --cart "tests/mooneye-gb-test-suite/acceptance/ppu/hblank_ly_scx_timing-GS.gb" \
+              --log=stderr \
+              --serial-port=stdout \
+              --ui
+
 tests/dmg-acid2/dmg-acid2.gb:
 	mkdir -p tests/dmg-acid2
 	curl -fSsL https://github.com/mattcurrie/dmg-acid2/releases/download/v1.0/dmg-acid2.gb > tests/dmg-acid2/dmg-acid2.gb
@@ -85,3 +100,14 @@ tests/gameboy-doctor/gameboy-doctor:
 tests/gb-test-roms/cpu_instrs/individual/*.gb:
 	git submodule init
 	git submodule update
+
+tests/mooneye-gb-test-suite/acceptance/*.gb:
+	mkdir -p tests/mooneye-gb-test-suite
+	curl -fSsL https://gekkio.fi/files/mooneye-test-suite/$(MOONEYE_TEST_SUITE_VERION)/$(MOONEYE_TEST_SUITE_VERION).tar.xz > tests/mooneye-gb-test-suite/$(MOONEYE_TEST_SUITE_VERION).tar.xz
+	tar -xf tests/mooneye-gb-test-suite/$(MOONEYE_TEST_SUITE_VERION).tar.xz -C tests/mooneye-gb-test-suite --strip-components=1
+
+tests/mealybug-tearoom-tests/build/ppu/*.gb:
+	git submodule init
+	git submodule update --recursive
+	mkdir -p tests/mealybug-tearoom-tests/build/ppu
+	cd tests/mealybug-tearoom-tests && unzip mealybug-tearoom-tests.zip -d build/ppu
