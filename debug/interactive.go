@@ -3,9 +3,12 @@ package debug
 import (
 	"errors"
 	"fmt"
+	"os"
+	"os/signal"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/abiosoft/ishell/v2"
 	"github.com/maxfierke/gogo-gb/cpu"
@@ -23,7 +26,8 @@ type breakpoint struct{}
 
 type InteractiveDebugger struct {
 	breakpoints map[uint16]breakpoint
-	isStepping  bool
+	stepping    bool
+	steppingMu  sync.Mutex
 	shell       *ishell.Shell
 }
 
@@ -64,7 +68,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Aliases: []string{"c"},
 		Help:    "Continue execution until next breakpoint",
 		Func: func(c *ishell.Context) {
-			debugger.isStepping = false
+			debugger.stopStepping()
 			c.Stop()
 		},
 	})
@@ -74,7 +78,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Aliases: []string{"s"},
 		Help:    "Execute the next instruction",
 		Func: func(c *ishell.Context) {
-			debugger.isStepping = true
+			debugger.startStepping()
 			c.Stop()
 		},
 	})
@@ -266,6 +270,16 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		},
 	})
 
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for range c {
+			if !debugger.isActive() {
+				debugger.startStepping()
+			}
+		}
+	}()
+
 	debugger.shell = shell
 
 	return debugger, nil
@@ -273,7 +287,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 
 func (i *InteractiveDebugger) OnDecode(cpu *cpu.CPU, mmu *mem.MMU) {
 	addr := cpu.PC.Read()
-	if _, ok := i.breakpoints[addr]; ok || i.isStepping {
+	if _, ok := i.breakpoints[addr]; ok || i.isStepping() {
 		i.shell.Printf("reached 0x%02X\n", addr)
 		i.attachShell(cpu, mmu)
 	}
@@ -308,6 +322,28 @@ func (i *InteractiveDebugger) attachShell(cpu *cpu.CPU, mmu *mem.MMU) {
 	defer i.shell.Del("mmu")
 
 	i.shell.Run()
+}
+
+func (i *InteractiveDebugger) isActive() bool {
+	return i.shell.Active()
+}
+
+func (i *InteractiveDebugger) startStepping() {
+	i.steppingMu.Lock()
+	defer i.steppingMu.Unlock()
+	i.stepping = true
+}
+
+func (i *InteractiveDebugger) stopStepping() {
+	i.steppingMu.Lock()
+	defer i.steppingMu.Unlock()
+	i.stepping = false
+}
+
+func (i *InteractiveDebugger) isStepping() bool {
+	i.steppingMu.Lock()
+	defer i.steppingMu.Unlock()
+	return i.stepping
 }
 
 func (i *InteractiveDebugger) printState(cpu *cpu.CPU, mmu *mem.MMU) {
