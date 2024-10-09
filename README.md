@@ -8,6 +8,7 @@ a gameboy emulator for funsies
 - [X] Implement timer
 - [X] Pass Blargg's `cpu_instrs`/`02-interrupts.gb` ROM (manually verified)
 - [X] Pass Blargg's `instr_timing.gb` ROM (manually verified)
+- [X] Implement a basic interactive debugger
 - [ ] Pass Blargg's `mem_timing.gb` ROM (manually verified)
 - [ ] Implement LCD
 - [ ] Implement PPU, VRAM, OAM, etc.

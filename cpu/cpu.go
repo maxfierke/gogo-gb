@@ -43,7 +43,7 @@ func (cpu *CPU) Step(mmu *mem.MMU) (uint8, error) {
 		return 4, nil
 	}
 
-	inst, err := cpu.fetchAndDecode(mmu)
+	inst, err := cpu.FetchAndDecode(mmu, cpu.PC.Read())
 	if err != nil {
 		return 0, err
 	}
@@ -54,9 +54,8 @@ func (cpu *CPU) Step(mmu *mem.MMU) (uint8, error) {
 	return cycles, err
 }
 
-func (cpu *CPU) fetchAndDecode(mmu *mem.MMU) (*isa.Instruction, error) {
+func (cpu *CPU) FetchAndDecode(mmu *mem.MMU, addr uint16) (*isa.Instruction, error) {
 	// Fetch :)
-	addr := cpu.PC.Read()
 	opcodeByte := mmu.Read8(addr)
 	prefixed := opcodeByte == 0xCB
 
