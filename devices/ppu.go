@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"log"
 
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
 const (
-	CLK_PERIOD_LEN       = 456
 	CLK_MODE0_PERIOD_LEN = 204 // Technically, this is the ceiling
-	CLK_MODE1_PERIOD_LEN = 4560
+	CLK_MODE1_PERIOD_LEN = 456
 	CLK_MODE2_PERIOD_LEN = 80
 	CLK_MODE3_PERIOD_LEN = 172 // Technically, this is the floor
 
@@ -308,7 +306,8 @@ func (stat *lcdStatus) Read(ppu *PPU) uint8 {
 		lycEqLy = 1 << LCD_STAT_BIT_LYC_EQ_LY
 	}
 
-	return (lycIntSel |
+	return (1<<7 | // Always set, but supposedly unused
+		lycIntSel |
 		mode2IntSel |
 		mode1IntSel |
 		mode0IntSel |
@@ -320,19 +319,35 @@ func (stat *lcdStatus) ShouldInterrupt() bool {
 	return stat.shouldInterrupt
 }
 
-func (stat *lcdStatus) statIntLine() bool {
-	return stat.mode0IntSel || stat.mode1IntSel || stat.mode2IntSel || stat.lycIntSel
+func (stat *lcdStatus) ModeInterruptEnabled(ppu *PPU) bool {
+	switch ppu.Mode {
+	case PPU_MODE_HBLANK:
+		return stat.mode0IntSel
+	case PPU_MODE_VBLANK:
+		return stat.mode1IntSel
+	case PPU_MODE_OAM:
+		return stat.mode2IntSel
+	default:
+		return false
+	}
 }
 
-func (stat *lcdStatus) Write(value uint8) {
-	prevStatIntLine := stat.statIntLine()
+func (stat *lcdStatus) statIntLine(ppu *PPU) bool {
+	return (stat.lycIntSel && ppu.IsCurrentLineEqualToCompare()) ||
+		stat.mode0IntSel ||
+		stat.mode1IntSel ||
+		stat.mode2IntSel
+}
+
+func (stat *lcdStatus) Write(ppu *PPU, value uint8) {
+	prevStatIntLine := stat.statIntLine(ppu)
 
 	stat.mode0IntSel = readBit(value, LCD_STAT_BIT_MODE_0_INT_SEL) == 1
 	stat.mode1IntSel = readBit(value, LCD_STAT_BIT_MODE_1_INT_SEL) == 1
 	stat.mode2IntSel = readBit(value, LCD_STAT_BIT_MODE_2_INT_SEL) == 1
 	stat.lycIntSel = readBit(value, LCD_STAT_BIT_LYC_INT_SEL) == 1
 
-	nextStatIntLine := stat.statIntLine()
+	nextStatIntLine := stat.statIntLine(ppu)
 	stat.shouldInterrupt = !prevStatIntLine && nextStatIntLine
 }
 
@@ -421,29 +436,32 @@ func (ppu *PPU) Step(cycles uint8) {
 		if ppu.clock >= CLK_MODE0_PERIOD_LEN {
 			ppu.clock = ppu.clock % CLK_MODE0_PERIOD_LEN
 			ppu.curScanLine += 1
+
 			if ppu.curScanLine >= VBLANK_PERIOD_BEGIN {
 				ppu.Mode = PPU_MODE_VBLANK
 				ppu.ic.RequestVBlank()
+				ppu.requestLCD()
 			} else {
 				ppu.Mode = PPU_MODE_OAM
+				ppu.requestLCD()
 			}
 
-			if ppu.IsCurrentLineEqualToCompare() {
+			if ppu.lcdStatus.lycIntSel && ppu.IsCurrentLineEqualToCompare() && ppu.lcdStatus.ShouldInterrupt() {
 				ppu.ic.RequestLCD()
 			}
 		}
 	case PPU_MODE_VBLANK:
-		if ppu.clock >= CLK_PERIOD_LEN {
-			ppu.clock = ppu.clock % CLK_PERIOD_LEN
+		if ppu.clock >= CLK_MODE1_PERIOD_LEN {
+			ppu.clock = ppu.clock % CLK_MODE1_PERIOD_LEN
+			ppu.curScanLine += 1
 
-			if ppu.curScanLine == VBLANK_PERIOD_END {
+			if ppu.curScanLine >= VBLANK_PERIOD_END {
 				ppu.Mode = PPU_MODE_OAM
 				ppu.curScanLine = 0
-			} else {
-				ppu.curScanLine += 1
+				ppu.requestLCD()
 			}
 
-			if ppu.IsCurrentLineEqualToCompare() {
+			if ppu.lcdStatus.lycIntSel && ppu.IsCurrentLineEqualToCompare() && ppu.lcdStatus.ShouldInterrupt() {
 				ppu.ic.RequestLCD()
 			}
 		}
@@ -457,11 +475,8 @@ func (ppu *PPU) Step(cycles uint8) {
 			ppu.clock = ppu.clock % CLK_MODE3_PERIOD_LEN
 			ppu.Mode = PPU_MODE_HBLANK
 			ppu.drawScanline()
+			ppu.requestLCD()
 		}
-	}
-
-	if ppu.lcdStatus.ShouldInterrupt() {
-		ppu.ic.RequestLCD()
 	}
 }
 
@@ -536,16 +551,11 @@ func (ppu *PPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	if addr == REG_PPU_LCDC {
 		ppu.lcdCtrl.Write(value)
-
-		log.Printf("LCDC: %#v\n", ppu.lcdCtrl)
-
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_PPU_LCDSTAT {
-		ppu.lcdStatus.Write(value)
-
-		log.Printf("LCDSTAT: %#v\n", ppu.lcdStatus)
+		ppu.lcdStatus.Write(ppu, value)
 
 		if ppu.lcdStatus.ShouldInterrupt() {
 			ppu.ic.RequestLCD()
@@ -605,7 +615,7 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	if addr >= OAM_START && addr <= OAM_END {
-		oamAddr := addr - OAM_START
+		oamAddr := uint8(addr - OAM_START)
 
 		if ppu.Mode == PPU_MODE_OAM || ppu.Mode == PPU_MODE_VRAM {
 			return mem.WriteBlock()
@@ -735,7 +745,13 @@ func (ppu *PPU) drawScanline() {
 	}
 }
 
-func (ppu *PPU) writeObj(oamAddr uint16, value byte) {
+func (ppu *PPU) requestLCD() {
+	if ppu.lcdStatus.ModeInterruptEnabled(ppu) && ppu.lcdStatus.ShouldInterrupt() {
+		ppu.ic.RequestLCD()
+	}
+}
+
+func (ppu *PPU) writeObj(oamAddr uint8, value byte) {
 	objIndex := oamAddr / 4
 	if objIndex > OAM_MAX_OBJECT_COUNT {
 		return
@@ -789,6 +805,6 @@ func NewTile() Tile {
 	return Tile{}
 }
 
-func readBit(value byte, bit int) uint8 {
+func readBit(value byte, bit uint8) uint8 {
 	return ((value >> bit) & 0b1)
 }
