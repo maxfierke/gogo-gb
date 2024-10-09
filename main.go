@@ -194,7 +194,7 @@ func loadBootROM(options *CLIOptions) (*os.File, error) {
 
 	if bootRomPath == "" {
 		for _, romPath := range DEFAULT_BOOT_ROM_PATHS {
-			if bootRomFile, err := os.Open(romPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			if bootRomFile, err = os.Open(romPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 				return nil, err
 			} else if bootRomFile != nil {
 				// yay! we found one!
