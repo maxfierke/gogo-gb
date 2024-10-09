@@ -67,6 +67,8 @@ type DMG struct {
 	debuggerHandler mem.MemHandlerHandle
 }
 
+var _ Console = (*DMG)(nil)
+
 func NewDMG(opts ...DMGOption) (*DMG, error) {
 	cpu, err := cpu.NewCPU()
 	if err != nil {
@@ -163,33 +165,28 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 	framebuffer := host.Framebuffer()
 	defer close(framebuffer)
 
-	// TODO(bootrom): remove when bootrom is working
-	dmg.cpu.ResetToBootROM()
-
 	dmg.serial.AttachCable(host.SerialCable())
 	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
 
 	hostExit := host.Exited()
 
-	clockRate := time.NewTicker(time.Second / DMG_CPU_HZ)
-	defer clockRate.Stop()
+	fakeVBlank := time.NewTicker(time.Second / 60)
+	defer fakeVBlank.Stop()
 
 	for {
 		if err := dmg.Step(); err != nil {
 			return err
 		}
 
-		if dmg.ic.NextRequest() == devices.INT_STAT {
-			framebuffer <- dmg.ppu.Draw()
-		}
-
 		select {
 		case <-hostExit:
 			return nil
+		case <-fakeVBlank.C:
+			framebuffer <- dmg.ppu.Draw()
 		default:
 			// Do nothing
 		}
 
-		<-clockRate.C
+		<-time.After(time.Second / DMG_CPU_HZ)
 	}
 }
