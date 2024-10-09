@@ -2,6 +2,7 @@ package hardware
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -13,15 +14,40 @@ import (
 )
 
 const (
-	DMG_CPU_HZ   = 4194304
-	DMG_RAM_SIZE = 0xFFFF + 1
+	DMG_BOOTROM_SIZE = 0x100
+	DMG_CPU_HZ       = 4194304
+	DMG_RAM_SIZE     = 0x10000
 )
 
-type DMGOption func(dmg *DMG)
+type DMGOption func(dmg *DMG) error
+
+func WithBootROM(r io.Reader) DMGOption {
+	return func(dmg *DMG) error {
+		rom := make([]byte, DMG_BOOTROM_SIZE)
+		if _, err := r.Read(rom); err != nil {
+			return fmt.Errorf("unable to load boot ROM: %w", err)
+		}
+
+		dmg.bootROM = devices.NewBootROM()
+		dmg.bootROM.LoadROM(rom)
+
+		dmg.mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x00FF}, dmg.bootROM)
+
+		return nil
+	}
+}
 
 func WithDebugger(debugger debug.Debugger) DMGOption {
-	return func(dmg *DMG) {
+	return func(dmg *DMG) error {
 		dmg.AttachDebugger(debugger)
+		return nil
+	}
+}
+
+func WithFakeBootROM() DMGOption {
+	return func(dmg *DMG) error {
+		dmg.cpu.ResetToBootROM()
+		return nil
 	}
 }
 
@@ -36,6 +62,7 @@ type DMG struct {
 	timer     *devices.Timer
 
 	// Non-components
+	bootROM         *devices.BootROM
 	debugger        debug.Debugger
 	debuggerHandler mem.MemHandlerHandle
 }
@@ -65,7 +92,10 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 	}
 
 	for _, opt := range opts {
-		opt(dmg)
+		err = opt(dmg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, dmg.cartridge) // MBCs ROM Banks

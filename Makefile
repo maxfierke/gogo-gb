@@ -61,6 +61,7 @@ cpu_instrs: bin/gogo-gb tests/gameboy-doctor/gameboy-doctor tests/gb-test-roms/c
     test_num=$$((10#$${test_name%-*})); \
     echo "=== Starting cpu_instrs test $$file ==="; \
     bin/gogo-gb --cart "tests/gb-test-roms/cpu_instrs/individual/$$file" \
+                --skip-bootrom \
                 --debugger=gameboy-doctor \
                 --log=stderr | \
       ./tests/gameboy-doctor/gameboy-doctor - cpu_instrs "$$test_num" || \
