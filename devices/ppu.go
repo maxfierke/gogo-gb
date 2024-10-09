@@ -671,7 +671,7 @@ func (ppu *PPU) drawScanline() {
 
 			tilePixelValue := ppu.tileset[tileIndex][tilePixelY][tilePixelX]
 			if ppu.lcdCtrl.bgWindowTileset == TILESET_1 && tileIndex < 128 {
-				tilePixelValue = ppu.tileset[256+uint16(tileIndex)][tilePixelY][tilePixelX]
+				tilePixelValue = ppu.tileset[VRAM_TILESET_SIZE-128+uint16(tileIndex)][tilePixelY][tilePixelX]
 			}
 
 			color := ppu.bgPalette[tilePixelValue]
@@ -686,8 +686,43 @@ func (ppu *PPU) drawScanline() {
 		}
 	}
 
+	if ppu.lcdCtrl.bgWindowEnabled && ppu.lcdCtrl.windowEnabled {
+		if ppu.curScanLine >= ppu.windowY {
+			windowMapAddr := VRAM_TILEMAP_1_START
+			if ppu.lcdCtrl.windowTilemap == TILEMAP_AREA2 {
+				windowMapAddr = VRAM_TILEMAP_2_START
+			}
+
+			tileY := (ppu.curScanLine - ppu.windowY) / 8
+			tilePixelY := (ppu.curScanLine - ppu.windowY) % 8
+
+			tileMapBegin := windowMapAddr - VRAM_START
+			tileMapOffset := tileMapBegin + uint16(tileY)*32
+
+			for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
+				if (lineX + 7) <= uint16(ppu.windowX) {
+					continue
+				}
+
+				tileX := (lineX + 7 - uint16(ppu.windowX)) / 8
+				tilePixelX := (lineX + 7 - uint16(ppu.windowX)) % 8
+
+				tileIndex := ppu.vram[tileMapOffset+uint16(tileX)]
+
+				tilePixelValue := ppu.tileset[tileIndex][tilePixelY][tilePixelX]
+				if ppu.lcdCtrl.bgWindowTileset == TILESET_1 && tileIndex < 128 {
+					tilePixelValue = ppu.tileset[VRAM_TILESET_SIZE-128+uint16(tileIndex)][tilePixelY][tilePixelX]
+				}
+
+				color := ppu.bgPalette[tilePixelValue]
+				ppu.scanLines[ppu.curScanLine][lineX].colorID = ColorID(tilePixelValue)
+				ppu.scanLines[ppu.curScanLine][lineX].color = color
+			}
+		}
+	}
+
 	if ppu.lcdCtrl.objectEnabled {
-		objHeight := 8
+		objHeight := uint8(8)
 		if ppu.lcdCtrl.objectSize == OBJ_SIZE_8x16 {
 			objHeight = 16
 		}
@@ -699,40 +734,41 @@ func (ppu *PPU) drawScanline() {
 				break
 			}
 
-			if object.posY <= ppu.curScanLine && (object.posY+uint8(objHeight)) > ppu.curScanLine {
-				pixelY := ppu.curScanLine - object.posY
+			if object.posY <= ppu.curScanLine && (object.posY+objHeight) > ppu.curScanLine {
+				objPixelY := ppu.curScanLine - object.posY
 				tileIndex := object.tileIndex
 				if objHeight == 16 &&
-					((!object.attributes.flipY && pixelY > 7) ||
-						(object.attributes.flipY && pixelY <= 7)) {
+					((!object.attributes.flipY && objPixelY > 7) ||
+						(object.attributes.flipY && objPixelY <= 7)) {
 					tileIndex += 1
 				}
 
 				tile := ppu.tileset[tileIndex]
-				tileRow := tile[pixelY%8]
+				tilePixelY := objPixelY % 8
+				tileRow := tile[tilePixelY]
 				if object.attributes.flipY {
-					tileRow = tile[7-(pixelY%8)]
+					tileRow = tile[7-tilePixelY]
 				}
 
 				renderedObject := false
 				for x := uint8(0); x < 8; x++ {
-					pixelX := x
+					tilePixelX := x
 					if object.attributes.flipX {
-						pixelX = 7 - x
+						tilePixelX = 7 - x
 					}
 
-					offsetX := object.posX + x
-					tilePixelValue := tileRow[pixelX]
+					pixelX := object.posX + x
+					tilePixelValue := tileRow[tilePixelX]
 
-					if offsetX < FB_WIDTH &&
+					if pixelX < FB_WIDTH &&
 						// Skip transparent pixels
 						tilePixelValue != VRAM_TILE_PIXEL_ZERO &&
 						// Priority over BG or BG is color 0
-						(object.attributes.priority || ppu.scanLines[ppu.curScanLine][offsetX].colorID == COLOR_ID_WHITE) {
+						(object.attributes.priority || ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE) {
 
 						color := ppu.objPalettes[object.attributes.paletteID][tilePixelValue]
-						ppu.scanLines[ppu.curScanLine][offsetX].colorID = ColorID(tilePixelValue)
-						ppu.scanLines[ppu.curScanLine][offsetX].color = color
+						ppu.scanLines[ppu.curScanLine][pixelX].colorID = ColorID(tilePixelValue)
+						ppu.scanLines[ppu.curScanLine][pixelX].color = color
 						renderedObject = true
 					}
 				}
