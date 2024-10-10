@@ -287,15 +287,15 @@ func (stat *lcdStatus) Read(ppu *PPU) uint8 {
 	)
 
 	if stat.mode0IntSel {
-		lycIntSel = 1 << LCD_STAT_BIT_MODE_0_INT_SEL
+		mode0IntSel = 1 << LCD_STAT_BIT_MODE_0_INT_SEL
 	}
 
 	if stat.mode1IntSel {
-		lycIntSel = 1 << LCD_STAT_BIT_MODE_1_INT_SEL
+		mode1IntSel = 1 << LCD_STAT_BIT_MODE_1_INT_SEL
 	}
 
 	if stat.mode2IntSel {
-		lycIntSel = 1 << LCD_STAT_BIT_MODE_2_INT_SEL
+		mode2IntSel = 1 << LCD_STAT_BIT_MODE_2_INT_SEL
 	}
 
 	if stat.lycIntSel {
@@ -445,7 +445,7 @@ func (ppu *PPU) Step(cycles uint8) {
 				ppu.requestLCD()
 			}
 
-			if ppu.lcdStatus.lycIntSel && ppu.IsCurrentLineEqualToCompare() && ppu.lcdStatus.ShouldInterrupt() {
+			if ppu.IsCurrentLineEqualToCompare() && ppu.lcdStatus.ShouldInterrupt() {
 				ppu.ic.RequestLCD()
 			}
 		}
@@ -460,7 +460,7 @@ func (ppu *PPU) Step(cycles uint8) {
 				ppu.requestLCD()
 			}
 
-			if ppu.lcdStatus.lycIntSel && ppu.IsCurrentLineEqualToCompare() && ppu.lcdStatus.ShouldInterrupt() {
+			if ppu.IsCurrentLineEqualToCompare() && ppu.lcdStatus.ShouldInterrupt() {
 				ppu.ic.RequestLCD()
 			}
 		}
