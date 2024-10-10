@@ -136,9 +136,9 @@ func (pal *objPalette) Read() uint8 {
 
 func (pal *objPalette) Write(value uint8) {
 	pal[0] = 0x0 // This should be skipped over/treated as transparent
-	pal[1] = value & 0b0000_1100
-	pal[2] = value & 0b0011_0000
-	pal[3] = value & 0b1100_0000
+	pal[1] = (value & 0b0000_1100) >> 2
+	pal[2] = (value & 0b0011_0000) >> 4
+	pal[3] = (value & 0b1100_0000) >> 6
 }
 
 type bgPalette [4]uint8
@@ -152,9 +152,9 @@ func (pal *bgPalette) Read() uint8 {
 
 func (pal *bgPalette) Write(value uint8) {
 	pal[0] = value & 0b0000_0011
-	pal[1] = value & 0b0000_1100
-	pal[2] = value & 0b0011_0000
-	pal[3] = value & 0b1100_0000
+	pal[1] = (value & 0b0000_1100) >> 2
+	pal[2] = (value & 0b0011_0000) >> 4
+	pal[3] = (value & 0b1100_0000) >> 6
 }
 
 const (
@@ -412,8 +412,7 @@ func (ppu *PPU) Draw() image.Image {
 
 	for y := 0; y < FB_HEIGHT; y++ {
 		for x, scanLine := range ppu.scanLines[y] {
-			fbImage.Set(x, y, grayScales[scanLine.colorID])
-			//fbImage.SetGray(x, y, color.Gray{Y: 255 - scanLine.color})
+			fbImage.Set(x, y, grayScales[scanLine.color])
 		}
 	}
 
