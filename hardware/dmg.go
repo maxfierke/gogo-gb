@@ -32,6 +32,7 @@ func WithBootROM(r io.Reader) DMGOption {
 		dmg.bootROM.LoadROM(rom)
 
 		dmg.mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x00FF}, dmg.bootROM)
+		dmg.mmu.AddHandler(mem.MemRegion{Start: 0xFF50, End: 0xFF50}, dmg.bootROM)
 
 		return nil
 	}
