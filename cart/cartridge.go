@@ -51,6 +51,10 @@ func (c *Cartridge) LoadCartridge(r *Reader) error {
 		c.mbc = mbc.NewMBC0(rom)
 	case CART_TYPE_MBC1, CART_TYPE_MBC1_RAM, CART_TYPE_MBC1_RAM_BAT:
 		c.mbc = mbc.NewMBC1(rom, ram)
+	case CART_TYPE_MBC3, CART_TYPE_MBC3_RAM, CART_TYPE_MBC3_RAM_BAT:
+		c.mbc = mbc.NewMBC3(rom, ram, false)
+	case CART_TYPE_MBC3_RTC_BAT, CART_TYPE_MBC3_RTC_RAM_BAT:
+		c.mbc = mbc.NewMBC3(rom, ram, true)
 	case CART_TYPE_MBC5, CART_TYPE_MBC5_RAM, CART_TYPE_MBC5_RAM_BAT:
 		c.mbc = mbc.NewMBC5(rom, ram)
 	default:
