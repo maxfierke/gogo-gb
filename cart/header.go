@@ -239,16 +239,16 @@ func (hdr *Header) RamSizeBytes() uint {
 }
 
 func (hdr *Header) DebugPrint(logger *log.Logger) {
-	logger.Printf("== Cartridge Info ==\n\n")
-
-	logger.Printf("Title:			%s\n", hdr.Title)
+	logger.Printf("== Cartridge Info ==\n")
+	logger.Printf("\n")
+	logger.Printf("Title:		%s\n", hdr.Title)
 	logger.Printf("Licensee:		%s\n", hdr.Licensee())
-	logger.Printf("Color:			%s (0x%x)\n", hdr.Cgb(), hdr.cgb)
+	logger.Printf("Color:		%s (0x%x)\n", hdr.Cgb(), hdr.cgb)
 	logger.Printf("TV-Ready:		%s (0x%x)\n", hdr.SgbMode(), hdr.sgb)
 	logger.Printf("Cart Type:		%s (0x%x)\n", hdr.CartTypeName(), hdr.CartType)
-	logger.Printf("ROM Size:		%d KiB\n", hdr.RomSizeBytes()/1024)
-	logger.Printf("RAM Size:		%d KiB\n", hdr.RamSizeBytes()/1024)
-	logger.Printf("Destination:		%s (0x%x)\n", hdr.Destination(), hdr.destinationCode)
+	logger.Printf("ROM Size:		%d KiB (0x%x)\n", hdr.RomSizeBytes()/1024, hdr.romSize)
+	logger.Printf("RAM Size:		%d KiB (0x%x)\n", hdr.RamSizeBytes()/1024, hdr.ramSize)
+	logger.Printf("Destination:	%s (0x%x)\n", hdr.Destination(), hdr.destinationCode)
 	logger.Printf("Mask ROM Version:	0x%x\n", hdr.maskROMVersion)
 	logger.Printf("Header Checksum:	0x%x\n", hdr.HeaderChecksum)
 	logger.Printf("Global Checksum:	0x%x\n", hdr.GlobalChecksum)
