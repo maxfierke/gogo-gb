@@ -209,3 +209,63 @@ func (m *MBC3) writeRtcReg(reg mbc3RtcReg, value byte) {
 		panic(fmt.Sprintf("Attempting to write RTC reg 0x%02X with 0x%02X, which is out-of-bounds for MBC3", reg, value))
 	}
 }
+
+var (
+	MBC30_ROM_BANKS = mem.MemRegion{Start: 0x4000, End: 0x7FFF}
+
+	MBC30_REG_ROM_BANK = mem.MemRegion{Start: 0x2000, End: 0x3FFF}
+
+	MBC30_REG_RAM_BANK_OR_RTC_REG_SEL = mem.MemRegion{Start: 0x4000, End: 0x5FFF}
+)
+
+type MBC30 struct {
+	MBC3
+}
+
+func NewMBC30(rom []byte, ram []byte, rtcAvailable bool) *MBC30 {
+	return &MBC30{
+		MBC3: MBC3{
+			ram:          ram,
+			rom:          rom,
+			rtcAvailable: rtcAvailable,
+		},
+	}
+}
+
+func (m *MBC30) Step(cycles uint8) {
+	m.MBC3.Step(cycles)
+}
+
+func (m *MBC30) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
+	if MBC30_ROM_BANKS.Contains(addr, false) {
+		bankByte := readBankAddr(
+			m.rom,
+			MBC30_ROM_BANKS,
+			ROM_BANK_SIZE,
+			m.curRomBank,
+			addr,
+		)
+		return mem.ReadReplace(bankByte)
+	}
+
+	return m.MBC3.OnRead(mmu, addr)
+}
+
+func (m *MBC30) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
+	if MBC30_REG_ROM_BANK.Contains(addr, false) {
+		m.curRomBank = uint16(value)
+		if m.curRomBank == 0 {
+			m.curRomBank = 1
+		}
+		return mem.WriteBlock()
+	}
+
+	if MBC30_REG_RAM_BANK_OR_RTC_REG_SEL.Contains(addr, false) && value <= 0x7 {
+		m.curRamBank = value & 0x7
+		m.ramSelected = true
+		m.rtcRegSelected = MBC3_RTC_REG_NONE
+		return mem.WriteBlock()
+	}
+
+	return m.MBC3.OnWrite(mmu, addr, value)
+}

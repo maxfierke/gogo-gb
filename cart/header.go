@@ -126,25 +126,25 @@ func (hdr *Header) CartTypeName() string {
 	case CART_TYPE_MBC3_RTC_BAT:
 		return "MBC3+TIMER+BATTERY"
 	case CART_TYPE_MBC3_RTC_RAM_BAT:
-		if hdr.ramSize == 0x05 {
+		if hdr.IsMBC30() {
 			return "MBC30+TIMER+RAM+BATTERY"
-		} else {
-			return "MBC3+TIMER+RAM+BATTERY"
 		}
+		return "MBC3+TIMER+RAM+BATTERY"
 	case CART_TYPE_MBC3:
+		if hdr.IsMBC30() {
+			return "MBC30"
+		}
 		return "MBC3"
 	case CART_TYPE_MBC3_RAM:
-		if hdr.ramSize == 0x05 {
+		if hdr.IsMBC30() {
 			return "MBC30+RAM"
-		} else {
-			return "MBC3+RAM"
 		}
+		return "MBC3+RAM"
 	case CART_TYPE_MBC3_RAM_BAT:
-		if hdr.ramSize == 0x05 {
+		if hdr.IsMBC30() {
 			return "MBC30+RAM+BATTERY"
-		} else {
-			return "MBC3+RAM+BATTERY"
 		}
+		return "MBC3+RAM+BATTERY"
 	case CART_TYPE_MBC5:
 		return "MBC5"
 	case CART_TYPE_MBC5_RAM:
@@ -191,6 +191,19 @@ func (hdr *Header) Destination() string {
 		return "JPN"
 	} else {
 		return "Non-JPN"
+	}
+}
+
+func (hdr *Header) IsMBC30() bool {
+	switch hdr.CartType {
+	case CART_TYPE_MBC3,
+		CART_TYPE_MBC3_RAM,
+		CART_TYPE_MBC3_RAM_BAT,
+		CART_TYPE_MBC3_RTC_BAT,
+		CART_TYPE_MBC3_RTC_RAM_BAT:
+		return hdr.ramSize == 0x05 || hdr.romSize == 0x07
+	default:
+		return false
 	}
 }
 
