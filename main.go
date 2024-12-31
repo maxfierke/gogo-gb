@@ -236,6 +236,8 @@ func loadCart(dmg *hardware.DMG, options *CLIOptions) error {
 		return fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
 	}
 
+	cartReader.Header.DebugPrint(logger)
+
 	err = dmg.LoadCartridge(cartReader)
 	if errors.Is(err, cart.ErrHeader) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
