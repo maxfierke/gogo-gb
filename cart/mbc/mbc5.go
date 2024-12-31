@@ -97,14 +97,18 @@ func (m *MBC5) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		m.curRamBank = value & MBC5_REG_RAM_BANK_SEL_MASK
 		return mem.WriteBlock()
 	} else if MBC5_RAM_BANKS.Contains(addr, false) {
-		writeBankAddr(
-			m.ram,
-			MBC5_RAM_BANKS,
-			RAM_BANK_SIZE,
-			uint16(m.curRamBank),
-			addr,
-			value,
-		)
+		if m.ramEnabled {
+			writeBankAddr(
+				m.ram,
+				MBC5_RAM_BANKS,
+				RAM_BANK_SIZE,
+				uint16(m.curRamBank),
+				addr,
+				value,
+			)
+		}
+		return mem.WriteBlock()
+	} else if MBC5_ROM_BANKS.Contains(addr, false) {
 		return mem.WriteBlock()
 	}
 
