@@ -18,7 +18,7 @@ var (
 	MBC3_REG_RAM_RTC_ENABLED     = byte(0xA)
 
 	MBC3_REG_ROM_BANK          = mem.MemRegion{Start: 0x2000, End: 0x3FFF}
-	MBC3_REG_ROM_BANK_SEL_MASK = byte(0x80)
+	MBC3_REG_ROM_BANK_SEL_MASK = uint16(0x7F)
 
 	MBC3_REG_RAM_BANK_OR_RTC_REG_SEL = mem.MemRegion{Start: 0x4000, End: 0x5FFF}
 
@@ -42,7 +42,7 @@ const (
 
 type MBC3 struct {
 	curRamBank  uint8
-	curRomBank  uint8
+	curRomBank  uint16
 	ram         []byte
 	ramEnabled  bool
 	ramSelected bool
@@ -76,12 +76,11 @@ func (m *MBC3) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if MBC3_ROM_BANK_00.Contains(addr, false) {
 		return mem.ReadReplace(m.rom[addr])
 	} else if MBC3_ROM_BANKS.Contains(addr, false) {
-		romBank := max(m.curRomBank, 1)
 		bankByte := readBankAddr(
 			m.rom,
 			MBC3_ROM_BANKS,
 			ROM_BANK_SIZE,
-			uint16(romBank),
+			m.curRomBank,
 			addr,
 		)
 		return mem.ReadReplace(bankByte)
@@ -119,7 +118,10 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 		return mem.WriteBlock()
 	} else if MBC3_REG_ROM_BANK.Contains(addr, false) {
-		m.curRomBank = value & MBC3_REG_ROM_BANK_SEL_MASK
+		m.curRomBank = uint16(value) & MBC3_REG_ROM_BANK_SEL_MASK
+		if m.curRomBank == 0 {
+			m.curRomBank = 1
+		}
 		return mem.WriteBlock()
 	} else if MBC3_REG_RAM_BANK_OR_RTC_REG_SEL.Contains(addr, false) {
 		if value <= 0x3 {
