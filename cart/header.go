@@ -24,6 +24,7 @@ const (
 	globalChkOffset   = 0x14E // 0x14E-0x14F
 	HEADER_START      = 0x100
 	HEADER_END        = 0x14F
+	HEADER_SIZE       = HEADER_END + 1
 )
 
 const (
@@ -33,35 +34,37 @@ const (
 	CGB_UNKNOWN        = "Unknown"
 )
 
+type cartType byte
+
 const (
-	CART_TYPE_MBC0                       = 0x00
-	CART_TYPE_MBC1                       = 0x01
-	CART_TYPE_MBC1_RAM                   = 0x02
-	CART_TYPE_MBC1_RAM_BAT               = 0x03
-	CART_TYPE_MBC2                       = 0x05
-	CART_TYPE_MBC2_BAT                   = 0x06
-	CART_TYPE_UNK_ROM_RAM                = 0x08
-	CART_TYPE_UNK_ROM_RAM_BAT            = 0x09
-	CART_TYPE_MMM01                      = 0x0B
-	CART_TYPE_MMM01_RAM                  = 0x0C
-	CART_TYPE_MMM01_RAM_BAT              = 0x0D
-	CART_TYPE_MBC3_RTC_BAT               = 0x0F
-	CART_TYPE_MBC3_RTC_RAM_BAT           = 0x10
-	CART_TYPE_MBC3                       = 0x11
-	CART_TYPE_MBC3_RAM                   = 0x12
-	CART_TYPE_MBC3_RAM_BAT               = 0x13
-	CART_TYPE_MBC5                       = 0x19
-	CART_TYPE_MBC5_RAM                   = 0x1A
-	CART_TYPE_MBC5_RAM_BAT               = 0x1B
-	CART_TYPE_MBC5_RUMBLE                = 0x1C
-	CART_TYPE_MBC5_RUMBLE_RAM            = 0x1D
-	CART_TYPE_MBC5_RUMBLE_RAM_BAT        = 0x1E
-	CART_TYPE_MBC6                       = 0x20
-	CART_TYPE_MBC7_SENSOR_RUMBLE_RAM_BAT = 0x22
-	CART_TYPE_POCKET_CAM                 = 0xFC
-	CART_TYPE_BANDAI_TAMA5               = 0xFD
-	CART_TYPE_HUC3                       = 0xFE
-	CART_TYPE_HUC1_RAM_BAT               = 0xFF
+	CART_TYPE_MBC0                       cartType = 0x00
+	CART_TYPE_MBC1                       cartType = 0x01
+	CART_TYPE_MBC1_RAM                   cartType = 0x02
+	CART_TYPE_MBC1_RAM_BAT               cartType = 0x03
+	CART_TYPE_MBC2                       cartType = 0x05
+	CART_TYPE_MBC2_BAT                   cartType = 0x06
+	CART_TYPE_UNK_ROM_RAM                cartType = 0x08
+	CART_TYPE_UNK_ROM_RAM_BAT            cartType = 0x09
+	CART_TYPE_MMM01                      cartType = 0x0B
+	CART_TYPE_MMM01_RAM                  cartType = 0x0C
+	CART_TYPE_MMM01_RAM_BAT              cartType = 0x0D
+	CART_TYPE_MBC3_RTC_BAT               cartType = 0x0F
+	CART_TYPE_MBC3_RTC_RAM_BAT           cartType = 0x10
+	CART_TYPE_MBC3                       cartType = 0x11
+	CART_TYPE_MBC3_RAM                   cartType = 0x12
+	CART_TYPE_MBC3_RAM_BAT               cartType = 0x13
+	CART_TYPE_MBC5                       cartType = 0x19
+	CART_TYPE_MBC5_RAM                   cartType = 0x1A
+	CART_TYPE_MBC5_RAM_BAT               cartType = 0x1B
+	CART_TYPE_MBC5_RUMBLE                cartType = 0x1C
+	CART_TYPE_MBC5_RUMBLE_RAM            cartType = 0x1D
+	CART_TYPE_MBC5_RUMBLE_RAM_BAT        cartType = 0x1E
+	CART_TYPE_MBC6                       cartType = 0x20
+	CART_TYPE_MBC7_SENSOR_RUMBLE_RAM_BAT cartType = 0x22
+	CART_TYPE_POCKET_CAM                 cartType = 0xFC
+	CART_TYPE_BANDAI_TAMA5               cartType = 0xFD
+	CART_TYPE_HUC3                       cartType = 0xFE
+	CART_TYPE_HUC1_RAM_BAT               cartType = 0xFF
 )
 
 type Header struct {
@@ -69,7 +72,7 @@ type Header struct {
 	cgb             byte
 	newLicenseeCode string
 	sgb             byte
-	CartType        byte
+	CartType        cartType
 	romSize         byte
 	ramSize         byte
 	destinationCode byte
@@ -85,7 +88,7 @@ func NewHeader(bytes []byte) Header {
 		cgb:             bytes[cgbOffset],
 		newLicenseeCode: string(bytes[newLicenseeOffset:sgbOffset]),
 		sgb:             bytes[sgbOffset],
-		CartType:        bytes[cartTypeOffset],
+		CartType:        cartType(bytes[cartTypeOffset]),
 		romSize:         bytes[romSizeOffset],
 		ramSize:         bytes[ramSizeOffset],
 		destinationCode: bytes[destCodeOffset],
@@ -123,25 +126,25 @@ func (hdr *Header) CartTypeName() string {
 	case CART_TYPE_MBC3_RTC_BAT:
 		return "MBC3+TIMER+BATTERY"
 	case CART_TYPE_MBC3_RTC_RAM_BAT:
-		if hdr.ramSize == 0x05 {
+		if hdr.IsMBC30() {
 			return "MBC30+TIMER+RAM+BATTERY"
-		} else {
-			return "MBC3+TIMER+RAM+BATTERY"
 		}
+		return "MBC3+TIMER+RAM+BATTERY"
 	case CART_TYPE_MBC3:
+		if hdr.IsMBC30() {
+			return "MBC30"
+		}
 		return "MBC3"
 	case CART_TYPE_MBC3_RAM:
-		if hdr.ramSize == 0x05 {
+		if hdr.IsMBC30() {
 			return "MBC30+RAM"
-		} else {
-			return "MBC3+RAM"
 		}
+		return "MBC3+RAM"
 	case CART_TYPE_MBC3_RAM_BAT:
-		if hdr.ramSize == 0x05 {
+		if hdr.IsMBC30() {
 			return "MBC30+RAM+BATTERY"
-		} else {
-			return "MBC3+RAM+BATTERY"
 		}
+		return "MBC3+RAM+BATTERY"
 	case CART_TYPE_MBC5:
 		return "MBC5"
 	case CART_TYPE_MBC5_RAM:
@@ -191,6 +194,19 @@ func (hdr *Header) Destination() string {
 	}
 }
 
+func (hdr *Header) IsMBC30() bool {
+	switch hdr.CartType {
+	case CART_TYPE_MBC3,
+		CART_TYPE_MBC3_RAM,
+		CART_TYPE_MBC3_RAM_BAT,
+		CART_TYPE_MBC3_RTC_BAT,
+		CART_TYPE_MBC3_RTC_RAM_BAT:
+		return hdr.ramSize == 0x05 || hdr.romSize == 0x07
+	default:
+		return false
+	}
+}
+
 func (hdr *Header) Sgb() bool {
 	return hdr.sgb == 0x03
 }
@@ -223,16 +239,16 @@ func (hdr *Header) RamSizeBytes() uint {
 }
 
 func (hdr *Header) DebugPrint(logger *log.Logger) {
-	logger.Printf("== Cartridge Info ==\n\n")
-
-	logger.Printf("Title:			%s\n", hdr.Title)
+	logger.Printf("== Cartridge Info ==\n")
+	logger.Printf("\n")
+	logger.Printf("Title:		%s\n", hdr.Title)
 	logger.Printf("Licensee:		%s\n", hdr.Licensee())
-	logger.Printf("Color:			%s (0x%x)\n", hdr.Cgb(), hdr.cgb)
+	logger.Printf("Color:		%s (0x%x)\n", hdr.Cgb(), hdr.cgb)
 	logger.Printf("TV-Ready:		%s (0x%x)\n", hdr.SgbMode(), hdr.sgb)
 	logger.Printf("Cart Type:		%s (0x%x)\n", hdr.CartTypeName(), hdr.CartType)
-	logger.Printf("ROM Size:		%d KiB\n", hdr.RomSizeBytes()/1024)
-	logger.Printf("RAM Size:		%d KiB\n", hdr.RamSizeBytes()/1024)
-	logger.Printf("Destination:		%s (0x%x)\n", hdr.Destination(), hdr.destinationCode)
+	logger.Printf("ROM Size:		%d KiB (0x%x)\n", hdr.RomSizeBytes()/1024, hdr.romSize)
+	logger.Printf("RAM Size:		%d KiB (0x%x)\n", hdr.RamSizeBytes()/1024, hdr.ramSize)
+	logger.Printf("Destination:	%s (0x%x)\n", hdr.Destination(), hdr.destinationCode)
 	logger.Printf("Mask ROM Version:	0x%x\n", hdr.maskROMVersion)
 	logger.Printf("Header Checksum:	0x%x\n", hdr.HeaderChecksum)
 	logger.Printf("Global Checksum:	0x%x\n", hdr.GlobalChecksum)
