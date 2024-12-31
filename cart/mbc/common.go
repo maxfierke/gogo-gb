@@ -8,13 +8,13 @@ const (
 )
 
 func readBankAddr(memory []byte, banksRegion mem.MemRegion, bankSize uint16, currentBank uint16, addr uint16) byte {
-	bankBaseAddr := currentBank * bankSize
-	bankSlotAddr := addr - banksRegion.Start
+	bankBaseAddr := uint(currentBank) * uint(bankSize)
+	bankSlotAddr := uint(addr) - uint(banksRegion.Start)
 	return memory[bankBaseAddr+bankSlotAddr]
 }
 
 func writeBankAddr(memory []byte, banksRegion mem.MemRegion, bankSize uint16, currentBank uint16, addr uint16, value byte) {
-	bankBaseAddr := currentBank * bankSize
-	bankSlotAddr := addr - banksRegion.Start
+	bankBaseAddr := uint(currentBank) * uint(bankSize)
+	bankSlotAddr := uint(addr) - uint(banksRegion.Start)
 	memory[bankBaseAddr+bankSlotAddr] = value
 }
