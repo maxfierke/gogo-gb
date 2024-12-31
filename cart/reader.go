@@ -3,6 +3,7 @@ package cart
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 )
 
@@ -33,7 +34,7 @@ type Reader struct {
 //
 // It is the caller's responsibility to call Close on the Reader when done.
 //
-// The Reader.Metadata fields will be valid in the Reader returned.
+// The Reader.Header fields will be valid in the Reader returned.
 func NewReader(r io.Reader) (*Reader, error) {
 	cartReader := new(Reader)
 	if err := cartReader.Reset(r); errors.Is(err, ErrHeader) {
@@ -61,7 +62,7 @@ func (cr *Reader) Reset(r io.Reader) error {
 
 func (cr *Reader) readHeader() (hdr Header, err error) {
 	if _, err = io.ReadFull(cr.r, cr.headerBuf[:]); err != nil {
-		return hdr, err
+		return hdr, fmt.Errorf("reading cartridge header: %w", err)
 	}
 
 	hdr = NewHeader(cr.headerBuf[:])

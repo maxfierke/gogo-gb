@@ -1,9 +1,9 @@
 package cart
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 
 	"github.com/maxfierke/gogo-gb/cart/mbc"
@@ -37,12 +37,21 @@ func (c *Cartridge) LoadCartridge(r *Reader) error {
 
 	c.Header = r.Header
 
-	rom := make([]byte, r.Header.RomSizeBytes())
-	copy(rom, r.headerBuf[:])
-	_, err := io.ReadFull(r, rom[HEADER_END+1:])
+	romSize := r.Header.RomSizeBytes()
+	romBuffer := new(bytes.Buffer)
+	romBuffer.Grow(int(romSize))
+	headerBytes, err := romBuffer.Write(r.headerBuf[:])
 	if err != nil {
-		return err
+		return fmt.Errorf("copying cartridge header: %w. read %d bytes", err, headerBytes)
 	}
+
+	n, err := romBuffer.ReadFrom(r)
+	if err != nil {
+		return fmt.Errorf("reading cartridge ROM: %w. read %d bytes", err, n)
+	}
+
+	rom := make([]byte, romSize)
+	copy(rom, romBuffer.Bytes())
 
 	ram := make([]byte, r.Header.RamSizeBytes())
 

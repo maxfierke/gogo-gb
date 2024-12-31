@@ -24,6 +24,7 @@ const (
 	globalChkOffset   = 0x14E // 0x14E-0x14F
 	HEADER_START      = 0x100
 	HEADER_END        = 0x14F
+	HEADER_SIZE       = HEADER_END + 1
 )
 
 const (
