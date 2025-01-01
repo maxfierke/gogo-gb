@@ -58,6 +58,7 @@ type DMG struct {
 	mmu       *mem.MMU
 	cartridge *cart.Cartridge
 	ic        *devices.InterruptController
+	joypad    *devices.Joypad
 	ppu       *devices.PPU
 	serial    *devices.SerialPort
 	timer     *devices.Timer
@@ -89,6 +90,7 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 		cartridge: cart.NewCartridge(),
 		debugger:  debug.NewNullDebugger(),
 		ic:        ic,
+		joypad:    devices.NewJoypad(ic),
 		ppu:       devices.NewPPU(ic),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
@@ -107,6 +109,7 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0xE000, End: 0xFDFF}, echo)     // Echo RAM (mirrors WRAM)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFEA0, End: 0xFEFF}, unmapped) // Nop writes, zero reads
 
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF00, End: 0xFF00}, dmg.joypad) // Joypad
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, dmg.serial) // Serial Port (Control & Data)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, dmg.timer)  // Timer (not RTC)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF41}, dmg.ppu)    // LCD status, control registers
@@ -173,6 +176,12 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 
 	fakeVBlank := time.NewTicker(time.Second / 60)
 	defer fakeVBlank.Stop()
+
+	go func() {
+		for inputs := range host.JoypadInput() {
+			dmg.joypad.ReceiveInputs(inputs)
+		}
+	}()
 
 	for {
 		if err := dmg.Step(); err != nil {
