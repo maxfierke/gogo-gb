@@ -10,16 +10,19 @@ a gameboy emulator for funsies
 - [X] Pass Blargg's `instr_timing.gb` ROM (manually verified)
 - [X] Implement a basic interactive debugger
 - [ ] Pass Blargg's `mem_timing.gb` ROM (manually verified)
-- [ ] Implement LCD
-- [ ] Implement PPU, VRAM, OAM, etc.
+- [X] Implement LCD
+- [X] Implement PPU, VRAM, OAM, etc.
 - [ ] Pass all of Blargg's `mem_timing-2` ROMs (manually verified)
-- [ ] Implement Joypad
+- [X] Implement Joypad
+- [ ] Implement SRAM save & restore
+- [ ] Pass `dmg-acid2` test ROM
+- [ ] Implement Sound/APU
 
 ## Maybe Never?
 
 Just being realistic about my likelihood of getting to these:
 
-- [ ] Implement Sound/APU
+- [ ] FIFO-based rendering PPU (currently scanline)
 - [ ] Implement emulation for every known DMG bug
 - [ ] Implement SGB mode
 - [ ] Implement MBC6
