@@ -14,6 +14,7 @@ a gameboy emulator for funsies
 - [X] Implement PPU, VRAM, OAM, etc.
 - [ ] Pass all of Blargg's `mem_timing-2` ROMs (manually verified)
 - [X] Implement Joypad
+- [ ] Implement RTC for MBC3
 - [ ] Implement SRAM save & restore
 - [ ] Pass `dmg-acid2` test ROM
 - [ ] Implement Sound/APU
