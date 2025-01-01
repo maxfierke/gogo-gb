@@ -365,6 +365,11 @@ const (
 	PPU_MODE_VRAM
 )
 
+type ppuDMARequest struct {
+	addr  uint8
+	value byte
+}
+
 type PPU struct {
 	Mode PPUMode
 
@@ -387,14 +392,18 @@ type PPU struct {
 	vram       [VRAM_SIZE]byte
 	tileset    [VRAM_TILESET_SIZE]Tile
 
-	clock uint
+	clock      uint
+	dmaClock   uint
+	dmaEnabled bool
+	pendingDMA []*ppuDMARequest
 
 	ic *InterruptController
 }
 
 func NewPPU(ic *InterruptController) *PPU {
 	return &PPU{
-		ic: ic,
+		ic:         ic,
+		pendingDMA: make([]*ppuDMARequest, 0, 160),
 	}
 }
 
@@ -424,6 +433,22 @@ func (ppu *PPU) IsCurrentLineEqualToCompare() bool {
 }
 
 func (ppu *PPU) Step(cycles uint8) {
+	if ppu.dmaEnabled {
+		ppu.dmaClock += uint(cycles)
+
+		if ppu.dmaClock >= 640 {
+			ppu.dmaClock = 0
+
+			for _, request := range ppu.pendingDMA {
+				ppu.oam[request.addr] = request.value
+				ppu.writeObj(request.addr, request.value)
+			}
+
+			ppu.pendingDMA = make([]*ppuDMARequest, 0, 160)
+			ppu.dmaEnabled = false
+		}
+	}
+
 	if !ppu.lcdCtrl.enabled {
 		return
 	}
@@ -583,10 +608,28 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		return mem.WriteBlock()
 	}
 
-	// if addr == REG_PPU_DMA {
-	// 	// TODO: Implement DMA
-	// 	return mem.WriteBlock()
-	// }
+	if addr == REG_PPU_DMA {
+		if ppu.dmaEnabled {
+			return mem.WriteBlock()
+		}
+
+		srcAddrStart := uint16(value) << 8
+
+		for oamAddr := uint8(0); oamAddr < 160; oamAddr++ {
+			srcAddr := srcAddrStart + uint16(oamAddr)
+			copiedValue := mmu.Read8(srcAddr)
+
+			ppu.pendingDMA = append(ppu.pendingDMA,
+				&ppuDMARequest{
+					addr:  oamAddr,
+					value: copiedValue,
+				},
+			)
+		}
+		ppu.dmaEnabled = true
+
+		return mem.WriteBlock()
+	}
 
 	if addr == REG_PPU_BGP {
 		ppu.bgPalette.Write(value)
