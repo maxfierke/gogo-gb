@@ -12,6 +12,7 @@ import (
 
 type UI struct {
 	fbChan      chan image.Image
+	inputChan   chan devices.JoypadInputs
 	logger      *log.Logger
 	exitedChan  chan bool
 	serialCable devices.SerialCable
@@ -24,6 +25,7 @@ var _ Host = (*UI)(nil)
 func NewUIHost() *UI {
 	return &UI{
 		fbChan:      make(chan image.Image, 3),
+		inputChan:   make(chan devices.JoypadInputs),
 		exitedChan:  make(chan bool),
 		logger:      log.Default(),
 		serialCable: &devices.NullSerialCable{},
@@ -32,6 +34,10 @@ func NewUIHost() *UI {
 
 func (ui *UI) Framebuffer() chan<- image.Image {
 	return ui.fbChan
+}
+
+func (ui *UI) JoypadInput() <-chan devices.JoypadInputs {
+	return ui.inputChan
 }
 
 func (ui *UI) Log(msg string, args ...any) {
@@ -63,6 +69,38 @@ func (ui *UI) AttachSerialCable(serialCable devices.SerialCable) {
 }
 
 func (ui *UI) Update() error {
+	var inputs devices.JoypadInputs
+
+	if ebiten.IsKeyPressed(ebiten.KeyX) {
+		inputs.A = true
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyZ) {
+		inputs.B = true
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyEnter) {
+		inputs.Start = true
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyShiftRight) {
+		inputs.Select = true
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+		inputs.Up = true
+	} else if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+		inputs.Down = true
+	}
+
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+		inputs.Left = true
+	} else if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+		inputs.Right = true
+	}
+
+	ui.inputChan <- inputs
+
 	return nil
 }
 
@@ -99,6 +137,7 @@ func (ui *UI) Run(console hardware.Console) error {
 		}
 	}()
 
+	defer close(ui.inputChan)
 	defer close(ui.exitedChan)
 
 	ui.Log("Handing over to ebiten")

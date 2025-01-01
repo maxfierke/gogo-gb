@@ -150,6 +150,10 @@ func (ic *InterruptController) RequestLCD() {
 	ic.requested.lcd = true
 }
 
+func (ic *InterruptController) RequestJoypad() {
+	ic.requested.joypad = true
+}
+
 func (ic *InterruptController) RequestSerial() {
 	ic.requested.serial = true
 }

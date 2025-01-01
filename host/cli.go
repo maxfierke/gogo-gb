@@ -10,6 +10,7 @@ import (
 
 type CLIHost struct {
 	fbChan      chan image.Image
+	inputChan   chan devices.JoypadInputs
 	logger      *log.Logger
 	exitedChan  chan bool
 	serialCable devices.SerialCable
@@ -20,6 +21,7 @@ var _ Host = (*CLIHost)(nil)
 func NewCLIHost() *CLIHost {
 	return &CLIHost{
 		fbChan:      make(chan image.Image, 3),
+		inputChan:   make(chan devices.JoypadInputs),
 		exitedChan:  make(chan bool),
 		logger:      log.Default(),
 		serialCable: &devices.NullSerialCable{},
@@ -28,6 +30,10 @@ func NewCLIHost() *CLIHost {
 
 func (h *CLIHost) Framebuffer() chan<- image.Image {
 	return h.fbChan
+}
+
+func (h *CLIHost) JoypadInput() <-chan devices.JoypadInputs {
+	return h.inputChan
 }
 
 func (h *CLIHost) Log(msg string, args ...any) {
@@ -61,6 +67,7 @@ func (h *CLIHost) AttachSerialCable(serialCable devices.SerialCable) {
 func (h *CLIHost) Run(console hardware.Console) error {
 	done := make(chan error)
 	defer close(h.exitedChan)
+	defer close(h.inputChan)
 
 	// "Renderer"
 	go func() {
