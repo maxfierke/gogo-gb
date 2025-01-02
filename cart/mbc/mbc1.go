@@ -2,6 +2,7 @@ package mbc
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -33,6 +34,8 @@ type MBC1 struct {
 	ramSelected bool
 	rom         []byte
 }
+
+var _ MBC = (*MBC1)(nil)
 
 func NewMBC1(rom []byte, ram []byte) *MBC1 {
 	return &MBC1{
@@ -127,4 +130,30 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for MBC1", value, addr))
+}
+
+func (m *MBC1) Save(w io.Writer) error {
+	if len(m.ram) == 0 {
+		return nil
+	}
+
+	n, err := w.Write(m.ram)
+	if err != nil {
+		return fmt.Errorf("mbc1: saving SRAM: %w. wrote %d bytes", err, n)
+	}
+
+	return nil
+}
+
+func (m *MBC1) LoadSave(r io.Reader) error {
+	if len(m.ram) == 0 {
+		return nil
+	}
+
+	n, err := io.ReadFull(r, m.ram)
+	if err != nil {
+		return fmt.Errorf("mbc1: loading save into SRAM: %w. read %d bytes", err, n)
+	}
+
+	return nil
 }

@@ -138,8 +138,39 @@ func (dmg *DMG) DetachDebugger() {
 	dmg.debugger = debug.NewNullDebugger()
 }
 
+func (dmg *DMG) CartridgeHeader() cart.Header {
+	if dmg.cartridge == nil {
+		return cart.Header{}
+	}
+
+	return dmg.cartridge.Header
+}
+
 func (dmg *DMG) LoadCartridge(r *cart.Reader) error {
-	return dmg.cartridge.LoadCartridge(r)
+	err := dmg.cartridge.LoadCartridge(r)
+	if err != nil {
+		return fmt.Errorf("dmg: loading cartridge: %w", err)
+	}
+
+	return nil
+}
+
+func (dmg *DMG) LoadSave(r io.Reader) error {
+	err := dmg.cartridge.LoadSave(r)
+	if err != nil {
+		return fmt.Errorf("dmg: loading save: %w", err)
+	}
+
+	return nil
+}
+
+func (dmg *DMG) Save(w io.Writer) error {
+	err := dmg.cartridge.Save(w)
+	if err != nil {
+		return fmt.Errorf("dmg: writing save: %w", err)
+	}
+
+	return nil
 }
 
 func (dmg *DMG) DebugPrint(logger *log.Logger) {

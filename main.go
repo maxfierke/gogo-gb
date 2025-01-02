@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu/isa"
@@ -16,15 +18,16 @@ import (
 )
 
 type CLIOptions struct {
-	bootRomPath string
-	cartPath    string
-	debugger    string
-	debugPrint  string
-	logPath     string
-	logger      *log.Logger
-	serialPort  string
-	skipBootRom bool
-	ui          bool
+	bootRomPath  string
+	cartPath     string
+	cartSavePath string
+	debugger     string
+	debugPrint   string
+	logPath      string
+	logger       *log.Logger
+	serialPort   string
+	skipBootRom  bool
+	ui           bool
 }
 
 const LOG_PREFIX = ""
@@ -68,6 +71,7 @@ func main() {
 func parseOptions(options *CLIOptions) {
 	flag.StringVar(&options.bootRomPath, "bootrom", "", "Path to boot ROM file (dmg_bios.bin, mgb_bios.bin, etc.). Defaults to a lookup on common boot ROM filenames in current directory")
 	flag.StringVar(&options.cartPath, "cart", "", "Path to cartridge file (.gb, .gbc)")
+	flag.StringVar(&options.cartSavePath, "cart-save", "", "Path to cartridge save file (.sav). Defaults to a .sav file with the same name as the cartridge file")
 	flag.StringVar(&options.debugger, "debugger", "none", "Specify debugger to use (\"none\", \"gameboy-doctor\", \"interactive\")")
 	flag.StringVar(&options.debugPrint, "debug-print", "", "Print out something for debugging purposes (\"cart-header\", \"opcodes\")")
 	flag.StringVar(&options.logPath, "log", "", "Path to log file. Default/empty implies stdout")
@@ -116,6 +120,24 @@ func debugPrintOpcodes(options *CLIOptions) {
 	}
 
 	opcodes.DebugPrint(logger)
+}
+
+func getCartSaveFilePath(options *CLIOptions) string {
+	cartSaveFilePath := options.cartSavePath
+
+	if cartSaveFilePath == "" && options.cartPath != "" {
+		cartSaveDir := filepath.Dir(options.cartPath)
+		cartSaveFileName := strings.Replace(
+			filepath.Base(options.cartPath),
+			filepath.Ext(options.cartPath),
+			".sav",
+			1,
+		)
+
+		cartSaveFilePath = filepath.Join(cartSaveDir, cartSaveFileName)
+	}
+
+	return cartSaveFilePath
 }
 
 func initHost(options *CLIOptions) (host.Host, error) {
@@ -216,16 +238,16 @@ func loadBootROM(options *CLIOptions) (*os.File, error) {
 	return bootRomFile, nil
 }
 
-func loadCart(dmg *hardware.DMG, options *CLIOptions) error {
+func loadCart(dmg *hardware.DMG, options *CLIOptions) (*cart.Reader, error) {
 	if options.cartPath == "" {
-		return nil
+		return nil, nil
 	}
 
 	logger := options.logger
 
 	cartFile, err := os.Open(options.cartPath)
 	if options.cartPath == "" || err != nil {
-		return fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
+		return nil, fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
 	}
 	defer cartFile.Close()
 
@@ -233,7 +255,7 @@ func loadCart(dmg *hardware.DMG, options *CLIOptions) error {
 	if errors.Is(err, cart.ErrHeader) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
-		return fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
+		return nil, fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
 	}
 
 	cartReader.Header.DebugPrint(logger)
@@ -242,8 +264,49 @@ func loadCart(dmg *hardware.DMG, options *CLIOptions) error {
 	if errors.Is(err, cart.ErrHeader) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
-		return fmt.Errorf("unable to load cartridge: %w", err)
+		return nil, fmt.Errorf("unable to load cartridge: %w", err)
 	}
+
+	return cartReader, nil
+}
+
+func loadCartSave(dmg *hardware.DMG, options *CLIOptions) error {
+	cartSaveFilePath := getCartSaveFilePath(options)
+
+	cartSaveFile, err := os.Open(cartSaveFilePath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("unable to open or create cartridge save file: %w", err)
+	}
+
+	if cartSaveFile != nil {
+		defer cartSaveFile.Close()
+
+		err = dmg.LoadSave(cartSaveFile)
+		if err != nil {
+			return fmt.Errorf("unable to load cartridge save: %w", err)
+		}
+
+		options.logger.Printf("Loaded cartridge save from %s\n", cartSaveFilePath)
+	}
+
+	return nil
+}
+
+func saveCart(dmg *hardware.DMG, options *CLIOptions) error {
+	cartSaveFilePath := getCartSaveFilePath(options)
+
+	cartSaveFile, err := os.OpenFile(cartSaveFilePath, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return fmt.Errorf("unable to open or create cartridge save file: %w", err)
+	}
+	defer cartSaveFile.Close()
+
+	err = dmg.Save(cartSaveFile)
+	if err != nil {
+		return fmt.Errorf("unable to write cartridge save file: %w", err)
+	}
+
+	options.logger.Printf("Saved cartridge save to %s\n", cartSaveFilePath)
 
 	return nil
 }
@@ -256,16 +319,31 @@ func runCart(options *CLIOptions) error {
 
 	dmg, err := initDMG(options)
 	if err != nil {
-		return err
+		return fmt.Errorf("initializing DMG: %w", err)
 	}
 
-	if err := loadCart(dmg, options); err != nil {
-		return err
+	cartReader, err := loadCart(dmg, options)
+	if err != nil {
+		return fmt.Errorf("loading cartridge: %w", err)
+	}
+
+	if cartReader.Header.SupportsSaving() {
+		err := loadCartSave(dmg, options)
+		if err != nil {
+			return fmt.Errorf("loading cartridge save: %w", err)
+		}
+
+		defer func() {
+			err := saveCart(dmg, options)
+			if err != nil {
+				options.logger.Printf("WARN: Error occurred while saving: %s", err.Error())
+			}
+		}()
 	}
 
 	err = hostDevice.Run(dmg)
 	if err != nil {
-		return err
+		return fmt.Errorf("running emulation: %w", err)
 	}
 
 	return nil

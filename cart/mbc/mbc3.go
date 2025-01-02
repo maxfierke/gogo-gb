@@ -2,6 +2,7 @@ package mbc
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -59,6 +60,8 @@ type MBC3 struct {
 	rtcHalt           bool
 	rtcDaysOverflow   bool
 }
+
+var _ MBC = (*MBC3)(nil)
 
 func NewMBC3(rom []byte, ram []byte, rtcAvailable bool) *MBC3 {
 	return &MBC3{
@@ -210,6 +213,36 @@ func (m *MBC3) writeRtcReg(reg mbc3RtcReg, value byte) {
 	}
 }
 
+func (m *MBC3) Save(w io.Writer) error {
+	if len(m.ram) == 0 {
+		return nil
+	}
+
+	n, err := w.Write(m.ram)
+	if err != nil {
+		return fmt.Errorf("mbc3: saving SRAM: %w. wrote %d bytes", err, n)
+	}
+
+	// TODO: Write RTC registers
+
+	return nil
+}
+
+func (m *MBC3) LoadSave(r io.Reader) error {
+	if len(m.ram) == 0 {
+		return nil
+	}
+
+	n, err := io.ReadFull(r, m.ram)
+	if err != nil {
+		return fmt.Errorf("mbc3: loading save into SRAM: %w. read %d bytes", err, n)
+	}
+
+	// TODO: Read RTC registers
+
+	return nil
+}
+
 var (
 	MBC30_ROM_BANKS = mem.MemRegion{Start: 0x4000, End: 0x7FFF}
 
@@ -268,4 +301,12 @@ func (m *MBC30) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	return m.MBC3.OnWrite(mmu, addr, value)
+}
+
+func (m *MBC30) Save(w io.Writer) error {
+	return m.MBC3.Save(w)
+}
+
+func (m *MBC30) LoadSave(r io.Reader) error {
+	return m.MBC3.LoadSave(r)
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 
 	"github.com/maxfierke/gogo-gb/cart/mbc"
@@ -17,7 +18,7 @@ var (
 
 type Cartridge struct {
 	Header Header
-	mbc    mem.MemHandler
+	mbc    mbc.MBC
 }
 
 func NewCartridge() *Cartridge {
@@ -79,6 +80,14 @@ func (c *Cartridge) LoadCartridge(r *Reader) error {
 	}
 
 	return nil
+}
+
+func (c *Cartridge) Save(w io.Writer) error {
+	return c.mbc.Save(w)
+}
+
+func (c *Cartridge) LoadSave(r io.Reader) error {
+	return c.mbc.LoadSave(r)
 }
 
 func (c *Cartridge) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {

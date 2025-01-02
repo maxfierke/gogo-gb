@@ -2,6 +2,7 @@ package mbc
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -14,6 +15,8 @@ var (
 type MBC0 struct {
 	rom []byte
 }
+
+var _ MBC = (*MBC0)(nil)
 
 func NewMBC0(rom []byte) *MBC0 {
 	return &MBC0{rom: rom}
@@ -39,4 +42,12 @@ func (m *MBC0) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for MBC0", value, addr))
+}
+
+func (m *MBC0) Save(w io.Writer) error {
+	return nil
+}
+
+func (m *MBC0) LoadSave(r io.Reader) error {
+	return nil
 }

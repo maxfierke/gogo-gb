@@ -238,6 +238,10 @@ func (hdr *Header) RamSizeBytes() uint {
 	}
 }
 
+func (hdr *Header) SupportsSaving() bool {
+	return hdr.RamSizeBytes() > 0
+}
+
 func (hdr *Header) DebugPrint(logger *log.Logger) {
 	logger.Printf("== Cartridge Info ==\n")
 	logger.Printf("\n")

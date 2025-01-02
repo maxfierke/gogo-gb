@@ -1,6 +1,10 @@
 package mbc
 
-import "github.com/maxfierke/gogo-gb/mem"
+import (
+	"io"
+
+	"github.com/maxfierke/gogo-gb/mem"
+)
 
 const (
 	RAM_BANK_SIZE = 0x2000
@@ -17,4 +21,10 @@ func writeBankAddr(memory []byte, banksRegion mem.MemRegion, bankSize uint16, cu
 	bankBaseAddr := uint(currentBank) * uint(bankSize)
 	bankSlotAddr := uint(addr) - uint(banksRegion.Start)
 	memory[bankBaseAddr+bankSlotAddr] = value
+}
+
+type MBC interface {
+	mem.MemHandler
+	Save(w io.Writer) error
+	LoadSave(r io.Reader) error
 }
