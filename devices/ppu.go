@@ -529,6 +529,10 @@ func (ppu *PPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 		return mem.ReadReplace(ppu.cmpScanLine)
 	}
 
+	if addr == REG_PPU_DMA {
+		return mem.ReadPassthrough()
+	}
+
 	if addr == REG_PPU_BGP {
 		return mem.ReadReplace(ppu.bgPalette.Read())
 	}
@@ -609,26 +613,25 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	if addr == REG_PPU_DMA {
-		if ppu.dmaEnabled {
-			return mem.WriteBlock()
+		if !ppu.dmaEnabled {
+			srcAddrStart := uint16(value) << 8
+
+			for oamAddr := uint8(0); oamAddr < 160; oamAddr++ {
+				srcAddr := srcAddrStart + uint16(oamAddr)
+				copiedValue := mmu.Read8(srcAddr)
+
+				ppu.pendingDMA = append(ppu.pendingDMA,
+					&ppuDMARequest{
+						addr:  oamAddr,
+						value: copiedValue,
+					},
+				)
+			}
+			ppu.dmaEnabled = true
 		}
 
-		srcAddrStart := uint16(value) << 8
-
-		for oamAddr := uint8(0); oamAddr < 160; oamAddr++ {
-			srcAddr := srcAddrStart + uint16(oamAddr)
-			copiedValue := mmu.Read8(srcAddr)
-
-			ppu.pendingDMA = append(ppu.pendingDMA,
-				&ppuDMARequest{
-					addr:  oamAddr,
-					value: copiedValue,
-				},
-			)
-		}
-		ppu.dmaEnabled = true
-
-		return mem.WriteBlock()
+		// Reads should return last written value, so we'll pass it through it
+		return mem.WritePassthrough()
 	}
 
 	if addr == REG_PPU_BGP {
