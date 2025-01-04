@@ -52,6 +52,12 @@ func TestReadBankAddr(t *testing.T) {
 		byte(0x6),
 		readBankAddr(rom, banksRegion, ROM_BANK_SIZE, 6, ROM_BANK_SIZE-1),
 	)
+
+	// Out-of-bounds reads should return from masked bank addr (so, 0x2 in this case)
+	assert.Equal(
+		byte(0x2),
+		readBankAddr(rom, banksRegion, ROM_BANK_SIZE, 10, ROM_BANK_SIZE-1),
+	)
 }
 
 func TestWriteBankAddr(t *testing.T) {
@@ -93,5 +99,12 @@ func TestWriteBankAddr(t *testing.T) {
 	assert.Equal(
 		byte(0xFD),
 		rom[ROM_BANK_SIZE*6+(ROM_BANK_SIZE-1)],
+	)
+
+	// Out-of-bounds writes should write to masked bank address
+	writeBankAddr(rom, banksRegion, ROM_BANK_SIZE, 10, ROM_BANK_SIZE-1, 0x22)
+	assert.Equal(
+		byte(0x22),
+		rom[ROM_BANK_SIZE*2+(ROM_BANK_SIZE-1)],
 	)
 }

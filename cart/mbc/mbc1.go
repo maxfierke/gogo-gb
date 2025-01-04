@@ -103,7 +103,7 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		if m.ramSelected {
 			m.curRamBank = value & 0x3
 		} else {
-			msb := uint16(value) & 0x3 << 5
+			msb := (uint16(value) & 0x3) << 5
 			m.curRomBank = (m.curRomBank & MBC1_REG_MSB_ROM_BANK_SEL_MASK) | msb
 		}
 		return mem.WriteBlock()
@@ -118,14 +118,17 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 		return mem.WriteBlock()
 	} else if MBC1_RAM_BANKS.Contains(addr, false) {
-		writeBankAddr(
-			m.ram,
-			MBC1_RAM_BANKS,
-			RAM_BANK_SIZE,
-			uint16(m.curRamBank),
-			addr,
-			value,
-		)
+		if m.ramEnabled {
+			writeBankAddr(
+				m.ram,
+				MBC1_RAM_BANKS,
+				RAM_BANK_SIZE,
+				uint16(m.curRamBank),
+				addr,
+				value,
+			)
+		}
+
 		return mem.WriteBlock()
 	}
 
