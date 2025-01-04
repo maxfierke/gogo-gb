@@ -1,11 +1,11 @@
 # gogo-gb
 a gameboy emulator for funsies
 
-Current status: Games are playable, but slow. Graphics are buggy. No audio.
+Current status: Games are playable, but slow. Timer and timing not quite right. No audio.
 
 ## TODO
 
-- [X] Pass all of Blargg's `cpu_instrs` ROMs via `gameboy-doctor` (expect `02-interrupts.gb`, which isn't verifyable via `gameboy-doctor`)
+- [X] Pass all of Blargg's `cpu_instrs` ROMs via `gameboy-doctor` (except `02-interrupts.gb`, which isn't verifyable via `gameboy-doctor`)
 - [X] Implement serial port (w/ option to log to console)
 - [X] Implement timer
 - [X] Pass Blargg's `cpu_instrs`/`02-interrupts.gb` ROM (manually verified)
