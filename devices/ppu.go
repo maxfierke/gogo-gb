@@ -80,30 +80,30 @@ type objectData struct {
 }
 
 const (
-	OAM_ATTR_BIT_PALETTE_ID = 4
-	OAM_ATTR_BIT_X_FLIP     = 5
-	OAM_ATTR_BIT_Y_FLIP     = 6
-	OAM_ATTR_BIT_PRIORITY   = 7
+	OAM_ATTR_BIT_PALETTE_ID  = 4
+	OAM_ATTR_BIT_X_FLIP      = 5
+	OAM_ATTR_BIT_Y_FLIP      = 6
+	OAM_ATTR_BIT_BG_PRIORITY = 7
 )
 
 type objectAttributes struct {
-	priority  bool
-	flipY     bool
-	flipX     bool
-	paletteID uint8
+	bgPriority bool
+	flipY      bool
+	flipX      bool
+	paletteID  uint8
 	//TODO(gbc): Add GBC palette & bank info
 }
 
 func (attrs *objectAttributes) Read() uint8 {
 	var (
-		priority  uint8
-		flipY     uint8
-		flipX     uint8
-		paletteID uint8
+		bgPriority uint8
+		flipY      uint8
+		flipX      uint8
+		paletteID  uint8
 	)
 
-	if attrs.priority {
-		priority = 1 << OAM_ATTR_BIT_PRIORITY
+	if attrs.bgPriority {
+		bgPriority = 1 << OAM_ATTR_BIT_BG_PRIORITY
 	}
 
 	if attrs.flipY {
@@ -116,11 +116,11 @@ func (attrs *objectAttributes) Read() uint8 {
 
 	paletteID = attrs.paletteID << OAM_ATTR_BIT_PALETTE_ID
 
-	return priority | flipY | flipX | paletteID
+	return bgPriority | flipY | flipX | paletteID
 }
 
 func (attrs *objectAttributes) Write(value uint8) {
-	attrs.priority = readBit(value, OAM_ATTR_BIT_PRIORITY) == 1
+	attrs.bgPriority = readBit(value, OAM_ATTR_BIT_BG_PRIORITY) == 1
 	attrs.flipY = readBit(value, OAM_ATTR_BIT_Y_FLIP) == 1
 	attrs.flipX = readBit(value, OAM_ATTR_BIT_X_FLIP) == 1
 	attrs.paletteID = readBit(value, OAM_ATTR_BIT_PALETTE_ID)
@@ -809,7 +809,7 @@ func (ppu *PPU) drawScanline() {
 						// Skip transparent pixels
 						tilePixelValue != VRAM_TILE_PIXEL_ZERO &&
 						// Priority over BG or BG is color 0
-						(object.attributes.priority || ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE) {
+						(!object.attributes.bgPriority || ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE) {
 
 						color := ppu.objPalettes[object.attributes.paletteID][tilePixelValue]
 						ppu.scanLines[ppu.curScanLine][pixelX].colorID = ColorID(tilePixelValue)
