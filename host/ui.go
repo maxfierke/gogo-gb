@@ -21,6 +21,7 @@ type UI struct {
 }
 
 var _ Host = (*UI)(nil)
+var _ ebiten.Game = (*UI)(nil)
 
 func NewUIHost() *UI {
 	return &UI{
@@ -124,6 +125,11 @@ func (ui *UI) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight
 func (ui *UI) Run(console hardware.Console) error {
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("gogo-gb, the go-getting GB emulator")
+	ebiten.SetVsyncEnabled(true)
+	ebiten.SetTPS(60)
+
+	// We only render full frames, so no need to waste resources clearing
+	ebiten.SetScreenClearedEveryFrame(false)
 
 	if console == nil {
 		return errors.New("console cannot be nil")
@@ -140,6 +146,6 @@ func (ui *UI) Run(console hardware.Console) error {
 	defer close(ui.inputChan)
 	defer close(ui.exitedChan)
 
-	ui.Log("Handing over to ebiten")
+	ui.Log("Handing over main thread to ebiten for rendering")
 	return ebiten.RunGame(ui)
 }

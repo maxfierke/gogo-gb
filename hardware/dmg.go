@@ -205,29 +205,31 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 
 	hostExit := host.Exited()
 
-	fakeVBlank := time.NewTicker(time.Second / 60)
-	defer fakeVBlank.Stop()
-
 	go func() {
 		for inputs := range host.JoypadInput() {
 			dmg.joypad.ReceiveInputs(inputs)
 		}
 	}()
 
-	for {
-		if err := dmg.Step(); err != nil {
-			return err
+	cyclesPerFrame := DMG_CPU_HZ / 4 / 60
+	ticker := time.NewTicker(time.Second / 60)
+
+	for range ticker.C {
+		for i := 0; i < cyclesPerFrame; i++ {
+			if err := dmg.Step(); err != nil {
+				return err
+			}
 		}
+
+		framebuffer <- dmg.ppu.Draw()
 
 		select {
 		case <-hostExit:
 			return nil
-		case <-fakeVBlank.C:
-			framebuffer <- dmg.ppu.Draw()
 		default:
 			// Do nothing
 		}
-
-		<-time.After(time.Second / DMG_CPU_HZ)
 	}
+
+	return nil
 }
