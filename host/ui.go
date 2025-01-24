@@ -88,15 +88,15 @@ func (ui *UI) Update() error {
 		inputs.Select = true
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) {
+	if ebiten.IsKeyPressed(ebiten.KeyArrowUp) || ebiten.IsKeyPressed(ebiten.KeyW) {
 		inputs.Up = true
-	} else if ebiten.IsKeyPressed(ebiten.KeyArrowDown) {
+	} else if ebiten.IsKeyPressed(ebiten.KeyArrowDown) || ebiten.IsKeyPressed(ebiten.KeyS) {
 		inputs.Down = true
 	}
 
-	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) {
+	if ebiten.IsKeyPressed(ebiten.KeyArrowLeft) || ebiten.IsKeyPressed(ebiten.KeyA) {
 		inputs.Left = true
-	} else if ebiten.IsKeyPressed(ebiten.KeyArrowRight) {
+	} else if ebiten.IsKeyPressed(ebiten.KeyArrowRight) || ebiten.IsKeyPressed(ebiten.KeyD) {
 		inputs.Right = true
 	}
 
