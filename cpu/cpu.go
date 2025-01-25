@@ -993,6 +993,8 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.Reg.F.HalfCarry = false
 			cpu.Reg.F.Carry = (value & 0x1) != 0x0
 			cpu.Reg.A.Write(newValue)
+		case 0x10:
+			// STOP n8
 		case 0x11:
 			// LD DE, n16
 			cpu.load16(cpu.Reg.DE, cpu.readNext16(mmu))
