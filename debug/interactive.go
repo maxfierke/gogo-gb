@@ -287,7 +287,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 
 func (i *InteractiveDebugger) OnDecode(cpu *cpu.CPU, mmu *mem.MMU) {
 	addr := cpu.PC.Read()
-	if _, ok := i.breakpoints[addr]; ok || i.isStepping() {
+	if _, ok := i.breakpoints[addr]; (ok || i.isStepping()) && !cpu.IsHalted() {
 		i.shell.Printf("reached 0x%02X\n", addr)
 		i.attachShell(cpu, mmu)
 	}

@@ -37,6 +37,10 @@ func NewCPU() (*CPU, error) {
 	return cpu, nil
 }
 
+func (cpu *CPU) IsHalted() bool {
+	return cpu.halted
+}
+
 func (cpu *CPU) Step(mmu *mem.MMU) (uint8, error) {
 	if cpu.halted {
 		// HALT is 4 cycles
@@ -1709,11 +1713,11 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 	return cpu.PC.Read() + uint16(opcode.Bytes), uint8(opcode.Cycles[0]), nil
 }
 
-func (cpu *CPU) PollInterrupts(mmu *mem.MMU, ic *devices.InterruptController) uint8 {
+func (cpu *CPU) PollInterrupts(mmu *mem.MMU, ic *devices.InterruptController) (bool, uint8) {
 	if cpu.ime {
 		interrupt := ic.ConsumeRequest()
 		if interrupt == devices.INT_NONE {
-			return 0
+			return false, 0
 		}
 
 		// Disable interrupts while we process this one
@@ -1728,17 +1732,17 @@ func (cpu *CPU) PollInterrupts(mmu *mem.MMU, ic *devices.InterruptController) ui
 
 		// Consuming an IRQ is 20 cycles (Or 5 M-cycles)
 		// ref: https://gbdev.io/pandocs/Interrupts.html#interrupt-handling
-		return 20
+		return true, 20
 	} else if cpu.halted {
 		if interrupt := ic.NextRequest(); interrupt != 0 {
 			// Wakey-wakey
 			cpu.halted = false
 		}
 
-		return 0
+		return false, 0
 	} else {
 		// Ignore
-		return 0
+		return false, 0
 	}
 }
 

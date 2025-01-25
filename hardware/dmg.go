@@ -180,18 +180,32 @@ func (dmg *DMG) DebugPrint(logger *log.Logger) {
 func (dmg *DMG) Step() error {
 	dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
 
+	var cycles uint8
+
+	haltedPriorToExecute := dmg.cpu.IsHalted()
+
 	cycles, err := dmg.cpu.Step(dmg.mmu)
 	if err != nil {
 		return fmt.Errorf("Unexpected error while executing instruction: %w", err)
 	}
 
-	cycles += dmg.cpu.PollInterrupts(dmg.mmu, dmg.ic)
+	// We're checking the halted state from _before_ the current instruction was
+	// executed, because we want to trigger the OnExecute for the HALT instruction
+	// itself, but not while halted, since the CPU isn't really executing during
+	// this time.
+	if !haltedPriorToExecute {
+		dmg.debugger.OnExecute(dmg.cpu, dmg.mmu)
+	}
+
+	hasInterrupt, intCycles := dmg.cpu.PollInterrupts(dmg.mmu, dmg.ic)
+	if hasInterrupt {
+		cycles += intCycles
+		dmg.debugger.OnInterrupt(dmg.cpu, dmg.mmu)
+	}
 
 	dmg.ppu.Step(cycles)
 	dmg.timer.Step(cycles, dmg.ic)
 	dmg.serial.Step(cycles, dmg.ic)
-
-	dmg.debugger.OnExecute(dmg.cpu, dmg.mmu)
 
 	return nil
 }
