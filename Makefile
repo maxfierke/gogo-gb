@@ -42,10 +42,9 @@ bin/gogo-gb:
 
 .PHONY: cpu_instrs
 cpu_instrs: bin/gogo-gb tests/gameboy-doctor/gameboy-doctor tests/gb-test-roms/cpu_instrs/individual/*.gb
-#  These are broken upstream:
-#    02-interrupts.gb
 	@CPU_TESTS=( \
     "01-special.gb" \
+    "02-interrupts.gb" \
     "03-op sp,hl.gb" \
     "04-op r,imm.gb" \
     "05-op rp.gb" \
