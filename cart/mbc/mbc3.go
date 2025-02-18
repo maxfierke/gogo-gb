@@ -148,7 +148,7 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 		return mem.WriteBlock()
 	} else if MBC3_RAM_BANKS.Contains(addr, false) {
-		if m.ramEnabled && m.ramSelected {
+		if m.ramEnabled && m.ramSelected && len(m.ram) > 0 {
 			writeBankAddr(
 				m.ram,
 				MBC3_RAM_BANKS,

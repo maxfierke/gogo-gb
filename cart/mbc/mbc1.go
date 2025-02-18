@@ -118,7 +118,7 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 		return mem.WriteBlock()
 	} else if MBC1_RAM_BANKS.Contains(addr, false) {
-		if m.ramEnabled {
+		if m.ramEnabled && len(m.ram) > 0 {
 			writeBankAddr(
 				m.ram,
 				MBC1_RAM_BANKS,
