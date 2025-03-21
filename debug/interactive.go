@@ -22,13 +22,21 @@ var registerNames = []string{
 	"AF", "BC", "DE", "HL", "SP", "PC",
 }
 
-type breakpoint struct{}
+type (
+	breakpoint struct{}
+	watch      struct {
+		lastValue byte
+	}
+)
 
 type InteractiveDebugger struct {
 	breakpoints map[uint16]breakpoint
-	stepping    bool
-	steppingMu  sync.Mutex
-	shell       *ishell.Shell
+	watches     map[uint16]watch
+
+	steppingMu sync.Mutex
+	stepping   bool
+
+	shell *ishell.Shell
 }
 
 var _ Debugger = (*InteractiveDebugger)(nil)
@@ -36,6 +44,7 @@ var _ Debugger = (*InteractiveDebugger)(nil)
 func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 	debugger := &InteractiveDebugger{
 		breakpoints: map[uint16]breakpoint{},
+		watches:     map[uint16]watch{},
 	}
 
 	shell := ishell.New()
@@ -270,6 +279,51 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		},
 	})
 
+	shell.AddCmd(&ishell.Cmd{
+		Name:    "unwatch",
+		Aliases: []string{"uw"},
+		Help:    "Remove watch at address",
+		Func: func(c *ishell.Context) {
+			if len(c.Args) == 0 {
+				c.Err(errors.New("must provide an address"))
+				return
+			}
+
+			addr, err := parseAddr(c.Args[0])
+			if err != nil {
+				c.Err(fmt.Errorf("parsing addr %w:", err))
+				return
+			}
+
+			if _, ok := debugger.watches[addr]; ok {
+				delete(debugger.watches, addr)
+				c.Printf("removed watch @ 0x%02X\n", addr)
+			}
+		},
+	})
+
+	shell.AddCmd(&ishell.Cmd{
+		Name:    "watch",
+		Aliases: []string{"w"},
+		Help:    "Set watch at address",
+		Func: func(c *ishell.Context) {
+			if len(c.Args) == 0 {
+				c.Err(errors.New("must provide an address"))
+			}
+
+			addr, err := parseAddr(c.Args[0])
+			if err != nil {
+				c.Err(fmt.Errorf("parsing addr %w:", err))
+				return
+			}
+
+			if _, ok := debugger.watches[addr]; !ok {
+				debugger.watches[addr] = watch{}
+				c.Printf("added watch @ 0x%02X\n", addr)
+			}
+		},
+	})
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
@@ -304,6 +358,11 @@ func (i *InteractiveDebugger) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 }
 
 func (i *InteractiveDebugger) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
+	if w, ok := i.watches[addr]; ok && w.lastValue != value {
+		i.shell.Printf("watched 0x%02X: 0x%02X\n", addr, value)
+		i.watches[addr] = watch{lastValue: value}
+	}
+
 	return mem.WritePassthrough()
 }
 
