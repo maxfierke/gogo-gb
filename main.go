@@ -102,7 +102,7 @@ func debugPrintCartHeader(options *CLIOptions) {
 	defer cartFile.Close()
 
 	cartReader, err := cart.NewReader(cartFile)
-	if errors.Is(err, cart.ErrHeader) {
+	if errors.Is(err, cart.ErrChecksum) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
 		logger.Fatalf("ERROR: Unable to load cartridge. Please ensure it's inserted correctly or trying blowing on it: %v\n", err)
@@ -238,36 +238,27 @@ func loadBootROM(options *CLIOptions) (*os.File, error) {
 	return bootRomFile, nil
 }
 
-func loadCart(dmg *hardware.DMG, options *CLIOptions) (*cart.Reader, error) {
+func loadCart(dmg *hardware.DMG, options *CLIOptions) error {
 	if options.cartPath == "" {
-		return nil, nil
+		return nil
 	}
 
 	logger := options.logger
 
 	cartFile, err := os.Open(options.cartPath)
 	if options.cartPath == "" || err != nil {
-		return nil, fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
+		return fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
 	}
 	defer cartFile.Close()
 
-	cartReader, err := cart.NewReader(cartFile)
-	if errors.Is(err, cart.ErrHeader) {
+	err = dmg.LoadCartridge(cartFile)
+	if errors.Is(err, cart.ErrChecksum) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
-		return nil, fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
+		return fmt.Errorf("unable to load cartridge: %w", err)
 	}
 
-	cartReader.Header.DebugPrint(logger.Writer())
-
-	err = dmg.LoadCartridge(cartReader)
-	if errors.Is(err, cart.ErrHeader) {
-		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
-	} else if err != nil {
-		return nil, fmt.Errorf("unable to load cartridge: %w", err)
-	}
-
-	return cartReader, nil
+	return nil
 }
 
 func loadCartSave(dmg *hardware.DMG, options *CLIOptions) error {
@@ -322,12 +313,12 @@ func runCart(options *CLIOptions) error {
 		return fmt.Errorf("initializing DMG: %w", err)
 	}
 
-	cartReader, err := loadCart(dmg, options)
+	err = loadCart(dmg, options)
 	if err != nil {
 		return fmt.Errorf("loading cartridge: %w", err)
 	}
 
-	if cartReader.Header.SupportsSaving() {
+	if dmg.CartridgeHeader().SupportsSaving() {
 		err := loadCartSave(dmg, options)
 		if err != nil {
 			return fmt.Errorf("loading cartridge save: %w", err)

@@ -213,6 +213,26 @@ func (m *MBC3) writeRtcReg(reg mbc3RtcReg, value byte) {
 	}
 }
 
+func (m *MBC3) DebugPrint(w io.Writer) {
+	fmt.Fprintf(w, "== MBC3/MBC30 ==\n\n")
+
+	fmt.Fprintf(w, "Current ROM bank: %d\n", m.curRomBank)
+	fmt.Fprintf(w, "Current RAM bank: %d\n", m.curRamBank)
+	fmt.Fprintf(w, "RAM enabled: %t\n", m.ramEnabled)
+	fmt.Fprintf(w, "RAM selected: %t\n", m.ramSelected)
+
+	fmt.Fprintf(w, "RTC available: %t\n", m.rtcAvailable)
+	if m.rtcAvailable {
+		fmt.Fprintf(w, "RTC enabled: %t\n", m.rtcEnabled)
+		fmt.Fprintf(w, "RTC register selected: %d\n", m.rtcRegSelected)
+		fmt.Fprintf(w, "RTC latch requested: %t\n", m.rtcLatchRequested)
+		fmt.Fprintf(w, "RTC halt: %t\n", m.rtcHalt)
+		fmt.Fprintf(w, "RTC days overflow: %t\n", m.rtcDaysOverflow)
+
+		fmt.Fprintf(w, "Current time: %d:%d:%d\t\tDay: %d\n", m.rtcHours, m.rtcMinutes, m.rtcSeconds, m.rtcDays)
+	}
+}
+
 func (m *MBC3) Save(w io.Writer) error {
 	if len(m.ram) == 0 {
 		return nil
@@ -301,6 +321,10 @@ func (m *MBC30) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	return m.MBC3.OnWrite(mmu, addr, value)
+}
+
+func (m *MBC30) DebugPrint(w io.Writer) {
+	m.MBC3.DebugPrint(w)
 }
 
 func (m *MBC30) Save(w io.Writer) error {

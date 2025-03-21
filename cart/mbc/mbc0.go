@@ -44,6 +44,9 @@ func (m *MBC0) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for MBC0", value, addr))
 }
 
+func (m *MBC0) DebugPrint(w io.Writer) {
+}
+
 func (m *MBC0) Save(w io.Writer) error {
 	return nil
 }

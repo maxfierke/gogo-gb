@@ -7,13 +7,8 @@ import (
 	"io"
 )
 
-var (
-	// ErrChecksum is returned when reading cartridge data that has an invalid checksum.
-	ErrChecksum = errors.New("cart: invalid checksum")
-
-	// ErrHeader is returned when reading cartridge data that has an invalid header.
-	ErrHeader = errors.New("cart: invalid header")
-)
+// ErrChecksum is returned when reading cartridge data that has an invalid checksum.
+var ErrChecksum = errors.New("cart: invalid checksum")
 
 type byteReader interface {
 	io.Reader
@@ -37,7 +32,7 @@ type Reader struct {
 // The Reader.Header fields will be valid in the Reader returned.
 func NewReader(r io.Reader) (*Reader, error) {
 	cartReader := new(Reader)
-	if err := cartReader.Reset(r); errors.Is(err, ErrHeader) {
+	if err := cartReader.Reset(r); errors.Is(err, ErrChecksum) {
 		// Pass header checksum errors onto caller and let them handle appropriately
 		return cartReader, err
 	} else if err != nil {
@@ -76,7 +71,7 @@ func (cr *Reader) readHeader() (hdr Header, err error) {
 	}
 
 	if hdrChksum != hdr.HeaderChecksum {
-		return hdr, ErrHeader
+		return hdr, ErrChecksum
 	}
 
 	return hdr, nil

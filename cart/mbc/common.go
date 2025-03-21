@@ -29,6 +29,8 @@ func writeBankAddr(memory []byte, banksRegion mem.MemRegion, bankSize uint16, cu
 
 type MBC interface {
 	mem.MemHandler
+
+	DebugPrint(w io.Writer)
 	Save(w io.Writer) error
 	LoadSave(r io.Reader) error
 }

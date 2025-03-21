@@ -118,6 +118,14 @@ func (m *MBC5) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for MBC5", value, addr))
 }
 
+func (m *MBC5) DebugPrint(w io.Writer) {
+	fmt.Fprintf(w, "== MBC5 ==\n\n")
+
+	fmt.Fprintf(w, "Current ROM bank: %d\n", m.curRomBank)
+	fmt.Fprintf(w, "Current RAM bank: %d\n", m.curRamBank)
+	fmt.Fprintf(w, "RAM enabled: %t\n", m.ramEnabled)
+}
+
 func (m *MBC5) Save(w io.Writer) error {
 	if len(m.ram) == 0 {
 		return nil

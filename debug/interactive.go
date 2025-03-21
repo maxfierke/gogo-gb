@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/abiosoft/ishell/v2"
+	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -69,6 +70,23 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				debugger.breakpoints[addr] = breakpoint{}
 				c.Printf("added breakpoint @ 0x%02X\n", addr)
 			}
+		},
+	})
+
+	shell.AddCmd(&ishell.Cmd{
+		Name:    "cartridge",
+		Aliases: []string{"cart"},
+		Help:    "Print information about the loaded cartridge and MBC state",
+		Func: func(c *ishell.Context) {
+			cart, err := getCartridge(c)
+			if err != nil {
+				c.Err(fmt.Errorf("accessing cartridge: %w", err))
+				return
+			}
+
+			var output strings.Builder
+			cart.DebugPrint(&output)
+			c.Print(output.String())
 		},
 	})
 
@@ -366,7 +384,8 @@ func (i *InteractiveDebugger) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem
 	return mem.WritePassthrough()
 }
 
-func (i *InteractiveDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU) {
+func (i *InteractiveDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU, cart *cart.Cartridge) {
+	i.shell.Set("cart", cart)
 	i.attachShell(cpu, mmu)
 }
 
@@ -460,6 +479,14 @@ func parseAddr(addrString string) (uint16, error) {
 		return 0, err
 	}
 	return uint16(parsedAddr), nil
+}
+
+func getCartridge(c *ishell.Context) (*cart.Cartridge, error) {
+	cart, ok := c.Get("cart").(*cart.Cartridge)
+	if !ok {
+		return nil, ErrConsoleNotAttached
+	}
+	return cart, nil
 }
 
 func getCPU(c *ishell.Context) (*cpu.CPU, error) {

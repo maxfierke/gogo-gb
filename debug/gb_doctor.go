@@ -3,6 +3,7 @@ package debug
 import (
 	"fmt"
 
+	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -13,7 +14,7 @@ func NewGBDoctorDebugger() *GBDoctorDebugger {
 	return &GBDoctorDebugger{}
 }
 
-func (gbd *GBDoctorDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU) {
+func (gbd *GBDoctorDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU, cart *cart.Cartridge) {
 	cpu.ResetToBootROM()
 	gbd.printState(cpu, mmu)
 }

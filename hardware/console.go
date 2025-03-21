@@ -12,7 +12,7 @@ type Console interface {
 	AttachDebugger(debugger debug.Debugger)
 	DetachDebugger()
 	CartridgeHeader() cart.Header
-	LoadCartridge(r *cart.Reader) error
+	LoadCartridge(r io.Reader) error
 	Save(w io.Writer) error
 	LoadSave(r io.Reader) error
 	Step() error

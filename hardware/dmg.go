@@ -1,6 +1,7 @@
 package hardware
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -145,8 +146,13 @@ func (dmg *DMG) CartridgeHeader() cart.Header {
 	return dmg.cartridge.Header
 }
 
-func (dmg *DMG) LoadCartridge(r *cart.Reader) error {
-	err := dmg.cartridge.LoadCartridge(r)
+func (dmg *DMG) LoadCartridge(r io.Reader) error {
+	cartReader, err := cart.NewReader(r)
+	if err != nil && !errors.Is(err, cart.ErrChecksum) {
+		return fmt.Errorf("dmg: loading cartridge: %w", err)
+	}
+
+	err = dmg.cartridge.LoadCartridge(cartReader)
 	if err != nil {
 		return fmt.Errorf("dmg: loading cartridge: %w", err)
 	}
@@ -170,10 +176,6 @@ func (dmg *DMG) Save(w io.Writer) error {
 	}
 
 	return nil
-}
-
-func (dmg *DMG) DebugPrint(w io.Writer) {
-	dmg.cartridge.DebugPrint(w)
 }
 
 func (dmg *DMG) Step() error {
@@ -214,7 +216,7 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 	defer close(framebuffer)
 
 	dmg.serial.AttachCable(host.SerialCable())
-	dmg.debugger.Setup(dmg.cpu, dmg.mmu)
+	dmg.debugger.Setup(dmg.cpu, dmg.mmu, dmg.cartridge)
 
 	hostExit := host.Exited()
 

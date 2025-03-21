@@ -100,7 +100,7 @@ func NewHeader(bytes []byte) Header {
 	}
 }
 
-func (hdr *Header) CartTypeName() string {
+func (hdr Header) CartTypeName() string {
 	switch hdr.CartType {
 	case CART_TYPE_MBC0:
 		return "ROM-only / MBC0"
@@ -175,7 +175,7 @@ func (hdr *Header) CartTypeName() string {
 	}
 }
 
-func (hdr *Header) Cgb() string {
+func (hdr Header) Cgb() string {
 	if hdr.cgb == 0x00 {
 		return CGB_COLOR_NONE
 	} else if hdr.cgb == 0x80 {
@@ -187,7 +187,7 @@ func (hdr *Header) Cgb() string {
 	}
 }
 
-func (hdr *Header) Destination() string {
+func (hdr Header) Destination() string {
 	if hdr.destinationCode == 0x00 {
 		return "JPN"
 	} else {
@@ -195,7 +195,7 @@ func (hdr *Header) Destination() string {
 	}
 }
 
-func (hdr *Header) IsMBC30() bool {
+func (hdr Header) IsMBC30() bool {
 	switch hdr.CartType {
 	case CART_TYPE_MBC3,
 		CART_TYPE_MBC3_RAM,
@@ -208,11 +208,11 @@ func (hdr *Header) IsMBC30() bool {
 	}
 }
 
-func (hdr *Header) Sgb() bool {
+func (hdr Header) Sgb() bool {
 	return hdr.sgb == 0x03
 }
 
-func (hdr *Header) SgbMode() string {
+func (hdr Header) SgbMode() string {
 	if hdr.Sgb() {
 		return "Yes"
 	} else {
@@ -220,11 +220,11 @@ func (hdr *Header) SgbMode() string {
 	}
 }
 
-func (hdr *Header) RomSizeBytes() uint {
+func (hdr Header) RomSizeBytes() uint {
 	return 32768 * (1 << hdr.romSize)
 }
 
-func (hdr *Header) RamSizeBytes() uint {
+func (hdr Header) RamSizeBytes() uint {
 	switch hdr.ramSize {
 	case 0x02:
 		return 8192
@@ -239,27 +239,26 @@ func (hdr *Header) RamSizeBytes() uint {
 	}
 }
 
-func (hdr *Header) SupportsSaving() bool {
+func (hdr Header) SupportsSaving() bool {
 	return hdr.RamSizeBytes() > 0
 }
 
-func (hdr *Header) DebugPrint(w io.Writer) {
-	fmt.Fprintf(w, "== Cartridge Info ==\n")
-	fmt.Fprintf(w, "\n")
-	fmt.Fprintf(w, "Title:		%s\n", hdr.Title)
+func (hdr Header) DebugPrint(w io.Writer) {
+	fmt.Fprintf(w, "== Cartridge Info ==\n\n")
+	fmt.Fprintf(w, "Title:			%s\n", hdr.Title)
 	fmt.Fprintf(w, "Licensee:		%s\n", hdr.Licensee())
-	fmt.Fprintf(w, "Color:		%s (0x%x)\n", hdr.Cgb(), hdr.cgb)
+	fmt.Fprintf(w, "Color:			%s (0x%x)\n", hdr.Cgb(), hdr.cgb)
 	fmt.Fprintf(w, "TV-Ready:		%s (0x%x)\n", hdr.SgbMode(), hdr.sgb)
 	fmt.Fprintf(w, "Cart Type:		%s (0x%x)\n", hdr.CartTypeName(), hdr.CartType)
 	fmt.Fprintf(w, "ROM Size:		%d KiB (0x%x)\n", hdr.RomSizeBytes()/1024, hdr.romSize)
 	fmt.Fprintf(w, "RAM Size:		%d KiB (0x%x)\n", hdr.RamSizeBytes()/1024, hdr.ramSize)
-	fmt.Fprintf(w, "Destination:	%s (0x%x)\n", hdr.Destination(), hdr.destinationCode)
+	fmt.Fprintf(w, "Destination:		%s (0x%x)\n", hdr.Destination(), hdr.destinationCode)
 	fmt.Fprintf(w, "Mask ROM Version:	0x%x\n", hdr.maskROMVersion)
 	fmt.Fprintf(w, "Header Checksum:	0x%x\n", hdr.HeaderChecksum)
-	fmt.Fprintf(w, "Global Checksum:	0x%x\n", hdr.GlobalChecksum)
+	fmt.Fprintf(w, "Global Checksum:	0x%x\n\n", hdr.GlobalChecksum)
 }
 
-func (hdr *Header) Licensee() string {
+func (hdr Header) Licensee() string {
 	if hdr.oldLicenseeCode != 0x33 {
 		// https://gbdev.io/pandocs/The_Cartridge_Header.html#014b--old-licensee-code
 		switch hdr.oldLicenseeCode {

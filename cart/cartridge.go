@@ -27,6 +27,7 @@ func NewCartridge() *Cartridge {
 func (c *Cartridge) DebugPrint(w io.Writer) {
 	if c.mbc != nil {
 		c.Header.DebugPrint(w)
+		c.mbc.DebugPrint(w)
 	}
 }
 

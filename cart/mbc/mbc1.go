@@ -95,9 +95,8 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 		return mem.WriteBlock()
 	} else if MBC1_REG_ROM_BANK.Contains(addr, false) {
-		m.curRomBank =
-			(m.curRomBank & ^MBC1_REG_ROM_BANK_SEL_MASK) |
-				(uint16(value) & MBC1_REG_ROM_BANK_SEL_MASK)
+		m.curRomBank = (m.curRomBank & ^MBC1_REG_ROM_BANK_SEL_MASK) |
+			(uint16(value) & MBC1_REG_ROM_BANK_SEL_MASK)
 		return mem.WriteBlock()
 	} else if MBC1_REG_RAM_BANK_OR_MSB_ROM_BANK.Contains(addr, false) {
 		if m.ramSelected {
@@ -133,6 +132,20 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for MBC1", value, addr))
+}
+
+func (m *MBC1) DebugPrint(w io.Writer) {
+	fmt.Fprintf(w, "== MBC1 ==\n\n")
+
+	bankMode := 0
+	if m.ramSelected {
+		bankMode = 1
+	}
+
+	fmt.Fprintf(w, "Current ROM bank: %d\n", m.curRomBank)
+	fmt.Fprintf(w, "Current RAM bank: %d\n", m.curRamBank)
+	fmt.Fprintf(w, "RAM enabled: %t\n", m.ramEnabled)
+	fmt.Fprintf(w, "Bank mode: %d\n", bankMode)
 }
 
 func (m *MBC1) Save(w io.Writer) error {
