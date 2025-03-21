@@ -3,7 +3,6 @@ package hardware
 import (
 	"fmt"
 	"io"
-	"log"
 	"time"
 
 	"github.com/maxfierke/gogo-gb/cart"
@@ -173,8 +172,8 @@ func (dmg *DMG) Save(w io.Writer) error {
 	return nil
 }
 
-func (dmg *DMG) DebugPrint(logger *log.Logger) {
-	dmg.cartridge.DebugPrint(logger)
+func (dmg *DMG) DebugPrint(w io.Writer) {
+	dmg.cartridge.DebugPrint(w)
 }
 
 func (dmg *DMG) Step() error {

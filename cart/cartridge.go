@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/maxfierke/gogo-gb/cart/mbc"
 	"github.com/maxfierke/gogo-gb/mem"
@@ -25,9 +24,9 @@ func NewCartridge() *Cartridge {
 	return &Cartridge{}
 }
 
-func (c *Cartridge) DebugPrint(logger *log.Logger) {
+func (c *Cartridge) DebugPrint(w io.Writer) {
 	if c.mbc != nil {
-		c.Header.DebugPrint(logger)
+		c.Header.DebugPrint(w)
 	}
 }
 

@@ -108,7 +108,7 @@ func debugPrintCartHeader(options *CLIOptions) {
 		logger.Fatalf("ERROR: Unable to load cartridge. Please ensure it's inserted correctly or trying blowing on it: %v\n", err)
 	}
 
-	cartReader.Header.DebugPrint(logger)
+	cartReader.Header.DebugPrint(logger.Writer())
 }
 
 func debugPrintOpcodes(options *CLIOptions) {
@@ -119,7 +119,7 @@ func debugPrintOpcodes(options *CLIOptions) {
 		logger.Fatalf("ERROR: Unable to load opcodes: %v\n", err)
 	}
 
-	opcodes.DebugPrint(logger)
+	opcodes.DebugPrint(logger.Writer())
 }
 
 func getCartSaveFilePath(options *CLIOptions) string {
@@ -258,7 +258,7 @@ func loadCart(dmg *hardware.DMG, options *CLIOptions) (*cart.Reader, error) {
 		return nil, fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
 	}
 
-	cartReader.Header.DebugPrint(logger)
+	cartReader.Header.DebugPrint(logger.Writer())
 
 	err = dmg.LoadCartridge(cartReader)
 	if errors.Is(err, cart.ErrHeader) {
@@ -295,7 +295,7 @@ func loadCartSave(dmg *hardware.DMG, options *CLIOptions) error {
 func saveCart(dmg *hardware.DMG, options *CLIOptions) error {
 	cartSaveFilePath := getCartSaveFilePath(options)
 
-	cartSaveFile, err := os.OpenFile(cartSaveFilePath, os.O_RDWR|os.O_CREATE, 0644)
+	cartSaveFile, err := os.OpenFile(cartSaveFilePath, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
 		return fmt.Errorf("unable to open or create cartridge save file: %w", err)
 	}

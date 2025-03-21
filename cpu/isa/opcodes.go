@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"log"
+	"io"
 	"os"
 	"strings"
 )
@@ -97,23 +97,22 @@ func (opcodes *Opcodes) InstructionFromByte(addr uint16, value byte, prefixed bo
 	}, true
 }
 
-func (opcodes *Opcodes) DebugPrint(logger *log.Logger) {
-	logger.Println("== Opcodes ==")
+func (opcodes *Opcodes) DebugPrint(w io.Writer) {
+	fmt.Fprint(w, "== Opcodes ==\n")
 
-	logger.Printf("=== Unprefixed: \n\n")
+	fmt.Fprintf(w, "=== Unprefixed: \n\n")
 	for k := range opcodes.Unprefixed {
-		logger.Printf("0x%02X %s\n", k, opcodes.Unprefixed[k].String())
+		fmt.Fprintf(w, "0x%02X %s\n", k, opcodes.Unprefixed[k].String())
 	}
 
-	logger.Printf("\n=== Cbprefixed: \n\n")
+	fmt.Fprintf(w, "\n=== Cbprefixed: \n\n")
 	for k := range opcodes.CbPrefixed {
-		logger.Printf("0x%02X %s\n", k, opcodes.CbPrefixed[k].String())
+		fmt.Fprintf(w, "0x%02X %s\n", k, opcodes.CbPrefixed[k].String())
 	}
 }
 
 func LoadOpcodesFromPath(path string) (*Opcodes, error) {
 	jsonBytes, err := os.ReadFile(path)
-
 	if err != nil {
 		return nil, err
 	}
