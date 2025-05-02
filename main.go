@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/maxfierke/gogo-gb/cart"
+	"github.com/maxfierke/gogo-gb/cart/mbc"
 	"github.com/maxfierke/gogo-gb/cpu/isa"
 	"github.com/maxfierke/gogo-gb/debug"
 	"github.com/maxfierke/gogo-gb/devices"
@@ -229,7 +230,7 @@ func loadBootROM(options *CLIOptions) (*os.File, error) {
 
 	if bootRomFile == nil {
 		// Bail out if no boot ROM loaded
-		logger.Printf("WARN: No boot ROM provided. Some emulation functionality may be incorrect.")
+		logger.Printf("WARN: No boot ROM provided. Some emulation functionality may be incorrect")
 		return nil, nil
 	}
 
@@ -274,7 +275,12 @@ func loadCartSave(dmg *hardware.DMG, options *CLIOptions) error {
 
 		err = dmg.LoadSave(cartSaveFile)
 		if err != nil {
-			return fmt.Errorf("unable to load cartridge save: %w", err)
+			switch {
+			case errors.Is(err, mbc.ErrMBC3BadClockBattery):
+				options.logger.Printf("WARN: Unable to load RTC data from save. In-game clock may be incorrect")
+			default:
+				return fmt.Errorf("unable to load cartridge save: %w", err)
+			}
 		}
 
 		options.logger.Printf("Loaded cartridge save from %s\n", cartSaveFilePath)

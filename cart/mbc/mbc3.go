@@ -1,8 +1,11 @@
 package mbc
 
 import (
+	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/maxfierke/gogo-gb/mem"
 )
@@ -24,22 +27,154 @@ var (
 	MBC3_REG_RAM_BANK_OR_RTC_REG_SEL = mem.MemRegion{Start: 0x4000, End: 0x5FFF}
 
 	MBC3_REG_RTC_LATCH_DATA = mem.MemRegion{Start: 0x6000, End: 0x7FFF}
+
+	ErrMBC3BadClockBattery = errors.New("unable to load saved RTC registers")
 )
 
-type mbc3RtcReg byte
+type mbc3RTCReg byte
+
+func (rtcReg mbc3RTCReg) String() string {
+	switch rtcReg {
+	case MBC3_RTC_REG_NONE:
+		return "None"
+	case MBC3_RTC_REG_SECONDS:
+		return "Seconds"
+	case MBC3_RTC_REG_MINUTES:
+		return "Minutes"
+	case MBC3_RTC_REG_HOURS:
+		return "Hours"
+	case MBC3_RTC_REG_DAY_LOW:
+		return "Day (Low)"
+	case MBC3_RTC_REG_DAY_HIGH:
+		return "Day (High) / Halt / Carry"
+	default:
+		return "Unknown"
+	}
+}
 
 const (
-	MBC3_RTC_REG_NONE     mbc3RtcReg = 0x00
-	MBC3_RTC_REG_SECONDS  mbc3RtcReg = 0x08
-	MBC3_RTC_REG_MINUTES  mbc3RtcReg = 0x09
-	MBC3_RTC_REG_HOURS    mbc3RtcReg = 0x0A
-	MBC3_RTC_REG_DAY_LOW  mbc3RtcReg = 0x0B
-	MBC3_RTC_REG_DAY_HIGH mbc3RtcReg = 0x0C
+	MBC3_RTC_REG_NONE     mbc3RTCReg = 0x00
+	MBC3_RTC_REG_SECONDS  mbc3RTCReg = 0x08
+	MBC3_RTC_REG_MINUTES  mbc3RTCReg = 0x09
+	MBC3_RTC_REG_HOURS    mbc3RTCReg = 0x0A
+	MBC3_RTC_REG_DAY_LOW  mbc3RTCReg = 0x0B
+	MBC3_RTC_REG_DAY_HIGH mbc3RTCReg = 0x0C
 
 	MBC3_RTC_REG_DAY_HIGH_BIT_DAY_MSB = 0
 	MBC3_RTC_REG_DAY_HIGH_BIT_HALT    = 1 << 6
 	MBC3_RTC_REG_DAY_HIGH_BIT_CARRY   = 1 << 7
 )
+
+type mbc3RTCRegs struct {
+	Seconds      uint8
+	Minutes      uint8
+	Hours        uint8
+	Days         uint32
+	Halt         bool
+	DaysOverflow bool
+	Timestamp    time.Time
+}
+
+func (regs *mbc3RTCRegs) readReg(reg mbc3RTCReg) byte {
+	switch reg {
+	case MBC3_RTC_REG_SECONDS:
+		return regs.Seconds & 0x3B
+	case MBC3_RTC_REG_MINUTES:
+		return regs.Minutes & 0x3B
+	case MBC3_RTC_REG_HOURS:
+		return regs.Hours & 0x17
+	case MBC3_RTC_REG_DAY_LOW:
+		return byte(regs.Days & 0xFF)
+	case MBC3_RTC_REG_DAY_HIGH:
+		dayCounterMsb := byte(((regs.Days & 0x100) >> 8) & 0b1)
+		overflow := byte(0x0)
+		if regs.DaysOverflow {
+			overflow = 1 << 7
+		}
+
+		halt := byte(0x0)
+		if regs.Halt {
+			halt = 1 << 6
+		}
+
+		return (overflow | halt | dayCounterMsb)
+	default:
+		panic(fmt.Sprintf("Attempting to read RTC reg 0x%02X, which is out-of-bounds for MBC3", reg))
+	}
+}
+
+func (regs *mbc3RTCRegs) writeReg(reg mbc3RTCReg, value byte) {
+	switch reg {
+	case MBC3_RTC_REG_SECONDS:
+		regs.Seconds = value & 0x3B
+	case MBC3_RTC_REG_MINUTES:
+		regs.Minutes = value & 0x3B
+	case MBC3_RTC_REG_HOURS:
+		regs.Hours = value & 0x17
+	case MBC3_RTC_REG_DAY_LOW:
+		regs.Days = (regs.Days & 0x100) | uint32(value)
+	case MBC3_RTC_REG_DAY_HIGH:
+		regs.Days = (regs.Days & 0xFF) | (uint32(value&0b1) << 8)
+		regs.Halt = ((value >> 6) & 0b1) == 1
+		regs.DaysOverflow = ((value >> 7) & 0b1) == 1
+	default:
+		panic(fmt.Sprintf("Attempting to write RTC reg 0x%02X with 0x%02X, which is out-of-bounds for MBC3", reg, value))
+	}
+}
+
+func (regs *mbc3RTCRegs) advanceTime(now time.Time) {
+	timestamp := regs.Timestamp
+	if timestamp.IsZero() {
+		timestamp = now
+	}
+
+	rtcDiff := now.Sub(timestamp).Truncate(time.Second)
+
+	if rtcDiff.Seconds() > 0.0 && !regs.Halt {
+		deltaDays := uint32(rtcDiff.Hours()) / 24
+		if deltaDays > 0 {
+			rtcDiff = rtcDiff - (24 * time.Hour * time.Duration(deltaDays))
+		}
+
+		deltaHours := uint(rtcDiff.Hours())
+		rtcDiff = rtcDiff - (time.Hour * time.Duration(deltaHours))
+
+		deltaMinutes := uint(rtcDiff.Minutes())
+		rtcDiff = rtcDiff - (time.Minute * time.Duration(deltaMinutes))
+
+		deltaSeconds := uint(rtcDiff.Seconds())
+
+		newSeconds := uint(regs.Seconds) + deltaSeconds
+		if newSeconds >= 60 {
+			deltaMinutes += newSeconds / 60
+			newSeconds = newSeconds % 60
+		}
+
+		newMinutes := uint(regs.Minutes) + deltaMinutes
+		if newMinutes >= 60 {
+			deltaHours += newMinutes / 60
+			newMinutes = newMinutes % 60
+		}
+
+		newHours := uint(regs.Hours) + deltaHours
+		if newHours >= 24 {
+			deltaDays += uint32(newHours / 24)
+			newHours = newHours % 24
+		}
+
+		newDays := regs.Days + deltaDays
+		if newDays >= 512 {
+			newDays = newDays % 512
+			regs.DaysOverflow = true
+		}
+
+		regs.Days = newDays
+		regs.Hours = uint8(newHours)
+		regs.Minutes = uint8(newMinutes)
+		regs.Seconds = uint8(newSeconds)
+		regs.Timestamp = now
+	}
+}
 
 type MBC3 struct {
 	curRamBank  uint8
@@ -52,13 +187,22 @@ type MBC3 struct {
 
 	rtcAvailable      bool
 	rtcLatchRequested bool
-	rtcRegSelected    mbc3RtcReg
-	rtcSeconds        uint8
-	rtcMinutes        uint8
-	rtcHours          uint8
-	rtcDays           uint
-	rtcHalt           bool
-	rtcDaysOverflow   bool
+	rtcRegSelected    mbc3RTCReg
+	rtc               mbc3RTCRegs
+}
+
+type mbc3SaveRTC struct {
+	CurrentSeconds              uint32
+	CurrentMinutes              uint32
+	CurrentHours                uint32
+	CurrentDays                 uint32
+	CurrentDaysHighOverflowHalt uint32
+	LatchedSeconds              uint32
+	LatchedMinutes              uint32
+	LatchedHours                uint32
+	LatchedDays                 uint32
+	LatchedDaysHighOverflowHalt uint32
+	UnixTimestamp               int64
 }
 
 var _ MBC = (*MBC3)(nil)
@@ -69,10 +213,6 @@ func NewMBC3(rom []byte, ram []byte, rtcAvailable bool) *MBC3 {
 		rom:          rom,
 		rtcAvailable: rtcAvailable,
 	}
-}
-
-func (m *MBC3) Step(cycles uint8) {
-	// TODO: tick the RTC
 }
 
 func (m *MBC3) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
@@ -98,7 +238,7 @@ func (m *MBC3) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 			)
 			return mem.ReadReplace(bankByte)
 		} else if m.rtcEnabled && m.rtcRegSelected != MBC3_RTC_REG_NONE {
-			value := m.readRtcReg(m.rtcRegSelected)
+			value := m.rtc.readReg(m.rtcRegSelected)
 			return mem.ReadReplace(value)
 		} else {
 			// Docs say this is usually 0xFF, but not guaranteed. Randomness needed?
@@ -133,14 +273,14 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 			m.rtcRegSelected = MBC3_RTC_REG_NONE
 		} else if value >= 0x08 && value <= 0x0C {
 			m.ramSelected = false
-			m.rtcRegSelected = mbc3RtcReg(value)
+			m.rtcRegSelected = mbc3RTCReg(value)
 		}
 		return mem.WriteBlock()
 	} else if MBC3_REG_RTC_LATCH_DATA.Contains(addr, false) {
 		if value == 0x00 && !m.rtcLatchRequested {
 			m.rtcLatchRequested = true
 		} else if value == 0x01 && m.rtcLatchRequested {
-			// TODO: Latch current time into RTC registers (?)
+			m.rtc.advanceTime(time.Now())
 			m.rtcLatchRequested = false
 		} else {
 			m.rtcLatchRequested = false
@@ -158,59 +298,15 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 				value,
 			)
 		} else if m.rtcEnabled && m.rtcRegSelected != MBC3_RTC_REG_NONE {
-			m.writeRtcReg(m.rtcRegSelected, value)
+			m.rtc.writeReg(m.rtcRegSelected, value)
+			now := time.Now()
+			m.rtc.advanceTime(now)
+			m.rtc.Timestamp = now
 		}
 		return mem.WriteBlock()
 	}
 
 	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for MBC3", value, addr))
-}
-
-func (m *MBC3) readRtcReg(reg mbc3RtcReg) byte {
-	switch reg {
-	case MBC3_RTC_REG_SECONDS:
-		return m.rtcSeconds
-	case MBC3_RTC_REG_MINUTES:
-		return m.rtcMinutes
-	case MBC3_RTC_REG_HOURS:
-		return m.rtcHours
-	case MBC3_RTC_REG_DAY_LOW:
-		return byte(m.rtcDays & 0xFF)
-	case MBC3_RTC_REG_DAY_HIGH:
-		dayCounterMsb := byte((m.rtcDays >> 8) & 0b1)
-		overflow := byte(0x0)
-		if m.rtcDaysOverflow {
-			overflow = 1 << 7
-		}
-
-		halt := byte(0x0)
-		if m.rtcHalt {
-			halt = 1 << 6
-		}
-
-		return (overflow | halt | dayCounterMsb)
-	}
-
-	panic(fmt.Sprintf("Attempting to read RTC reg 0x%02X, which is out-of-bounds for MBC3", reg))
-}
-
-func (m *MBC3) writeRtcReg(reg mbc3RtcReg, value byte) {
-	switch reg {
-	case MBC3_RTC_REG_SECONDS:
-		m.rtcSeconds = value & 0x3F
-	case MBC3_RTC_REG_MINUTES:
-		m.rtcMinutes = value & 0x3F
-	case MBC3_RTC_REG_HOURS:
-		m.rtcHours = value & 0x1F
-	case MBC3_RTC_REG_DAY_LOW:
-		m.rtcDays = (m.rtcDays & 0x100) | uint(value)
-	case MBC3_RTC_REG_DAY_HIGH:
-		m.rtcDays = (m.rtcDays & 0xFF) | (uint(value&0b1) << 8)
-		m.rtcHalt = ((value >> 6) & 0b1) == 1
-		m.rtcDaysOverflow = ((value >> 7) & 0b1) == 1
-	default:
-		panic(fmt.Sprintf("Attempting to write RTC reg 0x%02X with 0x%02X, which is out-of-bounds for MBC3", reg, value))
-	}
 }
 
 func (m *MBC3) DebugPrint(w io.Writer) {
@@ -224,12 +320,12 @@ func (m *MBC3) DebugPrint(w io.Writer) {
 	fmt.Fprintf(w, "RTC available: %t\n", m.rtcAvailable)
 	if m.rtcAvailable {
 		fmt.Fprintf(w, "RTC enabled: %t\n", m.rtcEnabled)
-		fmt.Fprintf(w, "RTC register selected: %d\n", m.rtcRegSelected)
+		fmt.Fprintf(w, "RTC register selected: %s (0x%02X)\n", m.rtcRegSelected.String(), byte(m.rtcRegSelected))
 		fmt.Fprintf(w, "RTC latch requested: %t\n", m.rtcLatchRequested)
-		fmt.Fprintf(w, "RTC halt: %t\n", m.rtcHalt)
-		fmt.Fprintf(w, "RTC days overflow: %t\n", m.rtcDaysOverflow)
+		fmt.Fprintf(w, "RTC halt: %t\n", m.rtc.Halt)
+		fmt.Fprintf(w, "RTC days overflow: %t\n", m.rtc.DaysOverflow)
 
-		fmt.Fprintf(w, "Current time: %d:%d:%d\t\tDay: %d\n", m.rtcHours, m.rtcMinutes, m.rtcSeconds, m.rtcDays)
+		fmt.Fprintf(w, "Current time: %02d:%02d:%02d\t\tDay: %d\n", m.rtc.Hours, m.rtc.Minutes, m.rtc.Seconds, m.rtc.Days)
 	}
 }
 
@@ -243,7 +339,12 @@ func (m *MBC3) Save(w io.Writer) error {
 		return fmt.Errorf("mbc3: saving SRAM: %w. wrote %d bytes", err, n)
 	}
 
-	// TODO: Write RTC registers
+	if m.rtcAvailable {
+		err := m.saveRTCRegsToSave(w)
+		if err != nil {
+			return fmt.Errorf("mbc3: saving RTC registers: %w", err)
+		}
+	}
 
 	return nil
 }
@@ -258,7 +359,64 @@ func (m *MBC3) LoadSave(r io.Reader) error {
 		return fmt.Errorf("mbc3: loading save into SRAM: %w. read %d bytes", err, n)
 	}
 
-	// TODO: Read RTC registers
+	if m.rtcAvailable {
+		err = m.loadRTCRegsFromSave(r)
+		if err != nil {
+			return fmt.Errorf("mbc3: %w: %w", ErrMBC3BadClockBattery, err)
+		}
+	}
+
+	return nil
+}
+
+func (m *MBC3) saveRTCRegsToSave(w io.Writer) error {
+	currentRTC := m.rtc
+	currentRTC.advanceTime(time.Now())
+
+	rtc := &mbc3SaveRTC{
+		CurrentSeconds:              uint32(currentRTC.readReg(MBC3_RTC_REG_SECONDS)),
+		CurrentMinutes:              uint32(currentRTC.readReg(MBC3_RTC_REG_MINUTES)),
+		CurrentHours:                uint32(currentRTC.readReg(MBC3_RTC_REG_HOURS)),
+		CurrentDays:                 uint32(currentRTC.readReg(MBC3_RTC_REG_DAY_LOW)),
+		CurrentDaysHighOverflowHalt: uint32(currentRTC.readReg(MBC3_RTC_REG_DAY_HIGH)),
+		LatchedSeconds:              uint32(m.rtc.readReg(MBC3_RTC_REG_SECONDS)),
+		LatchedMinutes:              uint32(m.rtc.readReg(MBC3_RTC_REG_MINUTES)),
+		LatchedHours:                uint32(m.rtc.readReg(MBC3_RTC_REG_HOURS)),
+		LatchedDays:                 uint32(m.rtc.readReg(MBC3_RTC_REG_DAY_LOW)),
+		LatchedDaysHighOverflowHalt: uint32(m.rtc.readReg(MBC3_RTC_REG_DAY_HIGH)),
+		UnixTimestamp:               currentRTC.Timestamp.Unix(),
+	}
+
+	err := binary.Write(w, binary.LittleEndian, rtc)
+	if err != nil {
+		return fmt.Errorf("encoding: %w", err)
+	}
+
+	return nil
+}
+
+func (m *MBC3) loadRTCRegsFromSave(r io.Reader) error {
+	savedRTC := mbc3SaveRTC{}
+	err := binary.Read(r, binary.LittleEndian, &savedRTC)
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+
+		return fmt.Errorf("decoding: %w", err)
+	}
+
+	loadedRTC := mbc3RTCRegs{
+		Seconds:   uint8(savedRTC.LatchedSeconds),
+		Minutes:   uint8(savedRTC.LatchedMinutes),
+		Hours:     uint8(savedRTC.LatchedHours),
+		Days:      uint32(savedRTC.LatchedDays & 0xFF),
+		Timestamp: time.Unix(savedRTC.UnixTimestamp, 0),
+	}
+	loadedRTC.writeReg(MBC3_RTC_REG_DAY_HIGH, byte(savedRTC.LatchedDaysHighOverflowHalt&0xFF))
+
+	m.rtc = loadedRTC
+	m.rtc.advanceTime(time.Now())
 
 	return nil
 }
@@ -283,10 +441,6 @@ func NewMBC30(rom []byte, ram []byte, rtcAvailable bool) *MBC30 {
 			rtcAvailable: rtcAvailable,
 		},
 	}
-}
-
-func (m *MBC30) Step(cycles uint8) {
-	m.MBC3.Step(cycles)
 }
 
 func (m *MBC30) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
