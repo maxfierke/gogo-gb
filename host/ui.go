@@ -130,7 +130,7 @@ func (ui *UI) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight
 }
 
 func (ui *UI) Run(console hardware.Console) error {
-	ebiten.SetWindowSize(640, 480)
+	ebiten.SetWindowSize(480, 432)
 	ebiten.SetWindowTitle("gogo-gb, the go-getting GB emulator")
 	ebiten.SetVsyncEnabled(true)
 	ebiten.SetTPS(60)
@@ -143,7 +143,7 @@ func (ui *UI) Run(console hardware.Console) error {
 	}
 
 	go func() {
-		ui.Log("Starting console main loop")
+		ui.Log("starting console main loop")
 		if err := console.Run(ui); err != nil {
 			ui.LogErr("unexpected error occurred during runtime: %w", err)
 			return
@@ -153,6 +153,6 @@ func (ui *UI) Run(console hardware.Console) error {
 	defer close(ui.inputChan)
 	defer close(ui.frameChan)
 
-	ui.Log("Handing over main thread to ebiten for rendering")
+	ui.Log("handing over main thread to ebiten for rendering")
 	return ebiten.RunGame(ui)
 }
