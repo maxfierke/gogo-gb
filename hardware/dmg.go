@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"time"
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
@@ -17,6 +16,8 @@ const (
 	DMG_BOOTROM_SIZE = 0x100
 	DMG_CPU_HZ       = 4194304
 	DMG_RAM_SIZE     = 0x10000
+
+	cyclesPerFrame uint = 70224
 )
 
 type DMGOption func(dmg *DMG) error
@@ -149,12 +150,12 @@ func (dmg *DMG) CartridgeHeader() cart.Header {
 func (dmg *DMG) LoadCartridge(r io.Reader) error {
 	cartReader, err := cart.NewReader(r)
 	if err != nil && !errors.Is(err, cart.ErrChecksum) {
-		return fmt.Errorf("dmg: loading cartridge: %w", err)
+		return fmt.Errorf("loading cartridge: %w", err)
 	}
 
 	err = dmg.cartridge.LoadCartridge(cartReader)
 	if err != nil {
-		return fmt.Errorf("dmg: loading cartridge: %w", err)
+		return fmt.Errorf("loading cartridge: %w", err)
 	}
 
 	return nil
@@ -163,7 +164,7 @@ func (dmg *DMG) LoadCartridge(r io.Reader) error {
 func (dmg *DMG) LoadSave(r io.Reader) error {
 	err := dmg.cartridge.LoadSave(r)
 	if err != nil {
-		return fmt.Errorf("dmg: loading save: %w", err)
+		return fmt.Errorf("loading save: %w", err)
 	}
 
 	return nil
@@ -172,13 +173,13 @@ func (dmg *DMG) LoadSave(r io.Reader) error {
 func (dmg *DMG) Save(w io.Writer) error {
 	err := dmg.cartridge.Save(w)
 	if err != nil {
-		return fmt.Errorf("dmg: writing save: %w", err)
+		return fmt.Errorf("writing save: %w", err)
 	}
 
 	return nil
 }
 
-func (dmg *DMG) Step() error {
+func (dmg *DMG) Step() (uint8, error) {
 	dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
 
 	var cycles uint8
@@ -187,7 +188,7 @@ func (dmg *DMG) Step() error {
 
 	cycles, err := dmg.cpu.Step(dmg.mmu)
 	if err != nil {
-		return fmt.Errorf("Unexpected error while executing instruction: %w", err)
+		return 0, fmt.Errorf("unexpected error while executing instruction: %w", err)
 	}
 
 	// We're checking the halted state from _before_ the current instruction was
@@ -208,7 +209,7 @@ func (dmg *DMG) Step() error {
 	dmg.timer.Step(cycles, dmg.ic)
 	dmg.serial.Step(cycles, dmg.ic)
 
-	return nil
+	return cycles, nil
 }
 
 func (dmg *DMG) Run(host devices.HostInterface) error {
@@ -218,32 +219,23 @@ func (dmg *DMG) Run(host devices.HostInterface) error {
 	dmg.serial.AttachCable(host.SerialCable())
 	dmg.debugger.Setup(dmg.cpu, dmg.mmu, dmg.cartridge)
 
-	hostExit := host.Exited()
-
 	go func() {
 		for inputs := range host.JoypadInput() {
 			dmg.joypad.ReceiveInputs(inputs)
 		}
 	}()
 
-	cyclesPerFrame := DMG_CPU_HZ / 4 / 60
-	ticker := time.NewTicker(time.Second / 60)
-
-	for range ticker.C {
-		for i := 0; i < cyclesPerFrame; i++ {
-			if err := dmg.Step(); err != nil {
+	for range host.RequestFrame() {
+		var frameCycles uint
+		for frameCycles < cyclesPerFrame {
+			cycles, err := dmg.Step()
+			if err != nil {
 				return err
 			}
+			frameCycles += uint(cycles)
 		}
 
 		framebuffer <- dmg.ppu.Draw()
-
-		select {
-		case <-hostExit:
-			return nil
-		default:
-			// Do nothing
-		}
 	}
 
 	return nil

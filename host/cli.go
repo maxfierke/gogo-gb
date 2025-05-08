@@ -3,6 +3,7 @@ package host
 import (
 	"image"
 	"log"
+	"time"
 
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/hardware"
@@ -10,9 +11,9 @@ import (
 
 type CLIHost struct {
 	fbChan      chan image.Image
+	frameChan   chan struct{}
 	inputChan   chan devices.JoypadInputs
 	logger      *log.Logger
-	exitedChan  chan bool
 	serialCable devices.SerialCable
 }
 
@@ -21,8 +22,8 @@ var _ Host = (*CLIHost)(nil)
 func NewCLIHost() *CLIHost {
 	return &CLIHost{
 		fbChan:      make(chan image.Image, 3),
+		frameChan:   make(chan struct{}),
 		inputChan:   make(chan devices.JoypadInputs),
-		exitedChan:  make(chan bool),
 		logger:      log.Default(),
 		serialCable: &devices.NullSerialCable{},
 	}
@@ -34,6 +35,10 @@ func (h *CLIHost) Framebuffer() chan<- image.Image {
 
 func (h *CLIHost) JoypadInput() <-chan devices.JoypadInputs {
 	return h.inputChan
+}
+
+func (h *CLIHost) RequestFrame() <-chan struct{} {
+	return h.frameChan
 }
 
 func (h *CLIHost) Log(msg string, args ...any) {
@@ -52,10 +57,6 @@ func (h *CLIHost) SetLogger(logger *log.Logger) {
 	h.logger = logger
 }
 
-func (h *CLIHost) Exited() <-chan bool {
-	return h.exitedChan
-}
-
 func (h *CLIHost) SerialCable() devices.SerialCable {
 	return h.serialCable
 }
@@ -66,13 +67,21 @@ func (h *CLIHost) AttachSerialCable(serialCable devices.SerialCable) {
 
 func (h *CLIHost) Run(console hardware.Console) error {
 	done := make(chan error)
-	defer close(h.exitedChan)
 	defer close(h.inputChan)
+	defer close(h.frameChan)
 
 	// "Renderer"
 	go func() {
 		for range h.fbChan {
 			// Consume frames
+		}
+	}()
+
+	go func() {
+		ticker := time.NewTicker(time.Second / 60)
+
+		for range ticker.C {
+			h.frameChan <- struct{}{}
 		}
 	}()
 

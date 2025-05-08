@@ -15,6 +15,6 @@ type Console interface {
 	LoadCartridge(r io.Reader) error
 	Save(w io.Writer) error
 	LoadSave(r io.Reader) error
-	Step() error
+	Step() (uint8, error)
 	Run(host devices.HostInterface) error
 }
