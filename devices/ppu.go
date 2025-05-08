@@ -91,7 +91,7 @@ type objectAttributes struct {
 	flipY      bool
 	flipX      bool
 	paletteID  uint8
-	//TODO(gbc): Add GBC palette & bank info
+	// TODO(gbc): Add GBC palette & bank info
 }
 
 func (attrs *objectAttributes) Read() uint8 {
@@ -419,7 +419,7 @@ func (ppu *PPU) Draw() image.Image {
 		image.Rect(0, 0, FB_WIDTH, FB_HEIGHT),
 	)
 
-	for y := 0; y < FB_HEIGHT; y++ {
+	for y := range FB_HEIGHT {
 		for x, scanLine := range ppu.scanLines[y] {
 			fbImage.Set(x, y, grayScales[scanLine.color])
 		}
@@ -885,8 +885,10 @@ func (ppu *PPU) writeTile(vramAddr uint16) {
 	}
 }
 
-type PPUPixel uint8
-type Tile [8][8]PPUPixel
+type (
+	PPUPixel uint8
+	Tile     [8][8]PPUPixel
+)
 
 func NewTile() Tile {
 	return Tile{}
