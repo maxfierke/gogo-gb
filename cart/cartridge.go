@@ -82,6 +82,10 @@ func (c *Cartridge) LoadCartridge(r *Reader) error {
 	return nil
 }
 
+func (c *Cartridge) Step(cycles uint8) {
+	c.mbc.Step(cycles)
+}
+
 func (c *Cartridge) Save(w io.Writer) error {
 	return c.mbc.Save(w)
 }

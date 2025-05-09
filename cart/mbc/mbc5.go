@@ -47,6 +47,8 @@ func NewMBC5(rom []byte, ram []byte) *MBC5 {
 	}
 }
 
+func (m *MBC5) Step(cycles uint8) {}
+
 func (m *MBC5) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if MBC5_ROM_BANK_00.Contains(addr, false) {
 		return mem.ReadReplace(m.rom[addr])
