@@ -3,6 +3,7 @@ package devices
 import (
 	"fmt"
 
+	"github.com/maxfierke/gogo-gb/bits"
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
@@ -71,11 +72,11 @@ func (il *InterruptLine) Read() uint8 {
 }
 
 func (il *InterruptLine) Write(value uint8) {
-	il.vblank = ((value >> vblankFlagBit) & 0b1) != 0
-	il.lcd = ((value >> lcdFlagBit) & 0b1) != 0
-	il.timer = ((value >> timerFlagBit) & 0b1) != 0
-	il.serial = ((value >> serialFlagBit) & 0b1) != 0
-	il.joypad = ((value >> joypadFlagBit) & 0b1) != 0
+	il.vblank = bits.Read(value, vblankFlagBit) != 0
+	il.lcd = bits.Read(value, lcdFlagBit) != 0
+	il.timer = bits.Read(value, timerFlagBit) != 0
+	il.serial = bits.Read(value, serialFlagBit) != 0
+	il.joypad = bits.Read(value, joypadFlagBit) != 0
 }
 
 type InterruptController struct {

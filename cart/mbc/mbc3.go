@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/maxfierke/gogo-gb/bits"
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
@@ -115,8 +116,8 @@ func (regs *mbc3RTCRegs) writeReg(reg mbc3RTCReg, value byte) {
 		regs.Days = (regs.Days & 0x100) | uint32(value)
 	case MBC3_RTC_REG_DAY_HIGH:
 		regs.Days = (regs.Days & 0xFF) | (uint32(value&0b1) << 8)
-		regs.Halt = ((value >> 6) & 0b1) == 1
-		regs.DaysOverflow = ((value >> 7) & 0b1) == 1
+		regs.Halt = bits.Read(value, 6) == 1
+		regs.DaysOverflow = bits.Read(value, 7) == 1
 	default:
 		panic(fmt.Sprintf("Attempting to write RTC reg 0x%02X with 0x%02X, which is out-of-bounds for MBC3", reg, value))
 	}
