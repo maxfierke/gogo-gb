@@ -395,7 +395,7 @@ func (m *MBC3) saveRTCRegsToSave(w io.Writer) error {
 		LatchedHours:                uint32(m.latchedRTC.readReg(MBC3_RTC_REG_HOURS)),
 		LatchedDays:                 uint32(m.latchedRTC.readReg(MBC3_RTC_REG_DAY_LOW)),
 		LatchedDaysHighOverflowHalt: uint32(m.latchedRTC.readReg(MBC3_RTC_REG_DAY_HIGH)),
-		UnixTimestamp:               time.Now().Unix(),
+		UnixTimestamp:               m.rtc.Timestamp.Unix(),
 	}
 
 	err := binary.Write(w, binary.LittleEndian, rtc)
