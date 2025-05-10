@@ -19,7 +19,7 @@ Current status: Games are playable at 60 FPS. CPU cycle accuracy, but some timin
 - [X] Implement SRAM save & restore
 - [X] Achieve ~60 FPS
 - [X] Implement `watch` in debugger for memory & register changes
-- [ ] Implement RTC for MBC3
+- [X] Implement RTC for MBC3
 - [ ] Implement PPU registers debugging
 - [ ] Implement GBC
 - [ ] Pass `dmg-acid2` test ROM

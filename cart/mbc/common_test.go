@@ -10,13 +10,25 @@ import (
 func makeRom(banks int) []byte {
 	rom := make([]byte, ROM_BANK_SIZE*banks)
 
-	for bankNum := 0; bankNum < banks; bankNum++ {
-		for bankSlot := 0; bankSlot < ROM_BANK_SIZE; bankSlot++ {
+	for bankNum := range banks {
+		for bankSlot := range ROM_BANK_SIZE {
 			rom[(ROM_BANK_SIZE*bankNum)+bankSlot] = byte(bankNum)
 		}
 	}
 
 	return rom
+}
+
+func makeRam(banks int) []byte {
+	ram := make([]byte, RAM_BANK_SIZE*banks)
+
+	for bankNum := range banks {
+		for bankSlot := range RAM_BANK_SIZE {
+			ram[(RAM_BANK_SIZE*bankNum)+bankSlot] = byte(bankNum)
+		}
+	}
+
+	return ram
 }
 
 func TestReadBankAddr(t *testing.T) {

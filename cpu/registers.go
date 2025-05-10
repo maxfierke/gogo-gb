@@ -1,5 +1,7 @@
 package cpu
 
+import "github.com/maxfierke/gogo-gb/bits"
+
 const (
 	zeroFlagBit      = 7
 	subtractFlagBit  = 6
@@ -50,10 +52,10 @@ func (flags *Flags) Read() uint8 {
 }
 
 func (flags *Flags) Write(value uint8) {
-	flags.Zero = ((value >> zeroFlagBit) & 0b1) != 0
-	flags.Subtract = ((value >> subtractFlagBit) & 0b1) != 0
-	flags.HalfCarry = ((value >> halfCarryFlagBit) & 0b1) != 0
-	flags.Carry = ((value >> carryFlagBit) & 0b1) != 0
+	flags.Zero = bits.Read(value, zeroFlagBit) != 0
+	flags.Subtract = bits.Read(value, subtractFlagBit) != 0
+	flags.HalfCarry = bits.Read(value, halfCarryFlagBit) != 0
+	flags.Carry = bits.Read(value, carryFlagBit) != 0
 }
 
 type Registerable interface {

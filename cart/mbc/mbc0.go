@@ -22,6 +22,8 @@ func NewMBC0(rom []byte) *MBC0 {
 	return &MBC0{rom: rom}
 }
 
+func (m *MBC0) Step(cycles uint8) {}
+
 func (m *MBC0) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if addr <= MBC0_ROM_BANK.End {
 		return mem.ReadReplace(m.rom[addr])

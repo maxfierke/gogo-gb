@@ -3,6 +3,7 @@ package devices
 import (
 	"sync"
 
+	"github.com/maxfierke/gogo-gb/bits"
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
@@ -124,8 +125,8 @@ func (j *Joypad) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 
 func (j *Joypad) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	if addr == REG_JOYP {
-		j.readButtons = readBit(value, REG_JOYP_BIT_BUTTONS_SEL) == 0
-		j.readDPad = readBit(value, REG_JOYP_BIT_DPAD_SEL) == 0
+		j.readButtons = bits.Read(value, REG_JOYP_BIT_BUTTONS_SEL) == 0
+		j.readDPad = bits.Read(value, REG_JOYP_BIT_DPAD_SEL) == 0
 	}
 
 	return mem.WriteBlock()

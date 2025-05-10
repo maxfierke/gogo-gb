@@ -5,6 +5,7 @@ import (
 	"image"
 	"image/color"
 
+	"github.com/maxfierke/gogo-gb/bits"
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
@@ -120,10 +121,10 @@ func (attrs *objectAttributes) Read() uint8 {
 }
 
 func (attrs *objectAttributes) Write(value uint8) {
-	attrs.bgPriority = readBit(value, OAM_ATTR_BIT_BG_PRIORITY) == 1
-	attrs.flipY = readBit(value, OAM_ATTR_BIT_Y_FLIP) == 1
-	attrs.flipX = readBit(value, OAM_ATTR_BIT_X_FLIP) == 1
-	attrs.paletteID = readBit(value, OAM_ATTR_BIT_PALETTE_ID)
+	attrs.bgPriority = bits.Read(value, OAM_ATTR_BIT_BG_PRIORITY) == 1
+	attrs.flipY = bits.Read(value, OAM_ATTR_BIT_Y_FLIP) == 1
+	attrs.flipX = bits.Read(value, OAM_ATTR_BIT_X_FLIP) == 1
+	attrs.paletteID = bits.Read(value, OAM_ATTR_BIT_PALETTE_ID)
 }
 
 type objPalette [4]uint8
@@ -250,14 +251,14 @@ func (lcdc *lcdCtrl) Read() uint8 {
 }
 
 func (lcdc *lcdCtrl) Write(value uint8) {
-	lcdc.enabled = readBit(value, LCDC_BIT_LCD_ENABLE) == 1
-	lcdc.windowTilemap = tileMapArea(readBit(value, LCDC_BIT_WINDOW_TILEMAP))
-	lcdc.windowEnabled = readBit(value, LCDC_BIT_WINDOW_ENABLE) == 1
-	lcdc.bgWindowTileset = tileSetArea(readBit(value, LCDC_BIT_BG_WINDOW_TILESET))
-	lcdc.bgTilemap = tileMapArea(readBit(value, LCDC_BIT_BG_TILEMAP))
-	lcdc.objectSize = objectSize(readBit(value, LCDC_BIT_OBJ_SIZE))
-	lcdc.objectEnabled = readBit(value, LCDC_BIT_OBJ_ENABLE) == 1
-	lcdc.bgWindowEnabled = readBit(value, LCDC_BIT_BG_WINDOW_ENABLE) == 1
+	lcdc.enabled = bits.Read(value, LCDC_BIT_LCD_ENABLE) == 1
+	lcdc.windowTilemap = tileMapArea(bits.Read(value, LCDC_BIT_WINDOW_TILEMAP))
+	lcdc.windowEnabled = bits.Read(value, LCDC_BIT_WINDOW_ENABLE) == 1
+	lcdc.bgWindowTileset = tileSetArea(bits.Read(value, LCDC_BIT_BG_WINDOW_TILESET))
+	lcdc.bgTilemap = tileMapArea(bits.Read(value, LCDC_BIT_BG_TILEMAP))
+	lcdc.objectSize = objectSize(bits.Read(value, LCDC_BIT_OBJ_SIZE))
+	lcdc.objectEnabled = bits.Read(value, LCDC_BIT_OBJ_ENABLE) == 1
+	lcdc.bgWindowEnabled = bits.Read(value, LCDC_BIT_BG_WINDOW_ENABLE) == 1
 }
 
 const (
@@ -342,10 +343,10 @@ func (stat *lcdStatus) statIntLine(ppu *PPU) bool {
 func (stat *lcdStatus) Write(ppu *PPU, value uint8) {
 	prevStatIntLine := stat.statIntLine(ppu)
 
-	stat.mode0IntSel = readBit(value, LCD_STAT_BIT_MODE_0_INT_SEL) == 1
-	stat.mode1IntSel = readBit(value, LCD_STAT_BIT_MODE_1_INT_SEL) == 1
-	stat.mode2IntSel = readBit(value, LCD_STAT_BIT_MODE_2_INT_SEL) == 1
-	stat.lycIntSel = readBit(value, LCD_STAT_BIT_LYC_INT_SEL) == 1
+	stat.mode0IntSel = bits.Read(value, LCD_STAT_BIT_MODE_0_INT_SEL) == 1
+	stat.mode1IntSel = bits.Read(value, LCD_STAT_BIT_MODE_1_INT_SEL) == 1
+	stat.mode2IntSel = bits.Read(value, LCD_STAT_BIT_MODE_2_INT_SEL) == 1
+	stat.lycIntSel = bits.Read(value, LCD_STAT_BIT_LYC_INT_SEL) == 1
 
 	nextStatIntLine := stat.statIntLine(ppu)
 	stat.shouldInterrupt = !prevStatIntLine && nextStatIntLine
@@ -892,8 +893,4 @@ type (
 
 func NewTile() Tile {
 	return Tile{}
-}
-
-func readBit(value byte, bit uint8) uint8 {
-	return ((value >> bit) & 0b1)
 }
