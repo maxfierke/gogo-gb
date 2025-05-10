@@ -217,16 +217,12 @@ func NewMBC3(rom []byte, ram []byte, rtcAvailable bool) *MBC3 {
 const cyclesPerRTCSecond = 4194304
 
 func (m *MBC3) Step(cycles uint8) {
-	if m.rtcAvailable {
+	if m.rtcAvailable && !m.rtc.Halt {
 		m.rtcClock += uint(cycles)
 
 		now := time.Now()
 		if m.rtc.Timestamp.IsZero() || m.rtc.Timestamp.After(now) {
 			m.rtc.Timestamp = now
-		}
-
-		if m.rtc.Halt {
-			m.rtcClock -= uint(cycles)
 		}
 
 		if m.rtcClock >= cyclesPerRTCSecond {
