@@ -289,7 +289,7 @@ func TestMBC3_Save_LoadSave_rtc(t *testing.T) {
 	err = mbc3.LoadSave(&saveFile)
 	assert.NoError(err)
 
-	rtcDiff := time.Now().Sub(currentRtcTimestamp)
+	rtcDiff := time.Since(currentRtcTimestamp)
 
 	assert.Equal(currentRTC.Days, mbc3.rtc.Days)
 	assert.Equal(currentRTC.DaysOverflow, mbc3.rtc.DaysOverflow)
