@@ -91,13 +91,14 @@ func (timer *Timer) Step(cycles uint8, ic *InterruptController) {
 }
 
 func (timer *Timer) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	if addr == REG_TIMER_DIV {
+	switch addr {
+	case REG_TIMER_DIV:
 		return mem.ReadReplace(timer.divider)
-	} else if addr == REG_TIMER_TIMA {
+	case REG_TIMER_TIMA:
 		return mem.ReadReplace(timer.counter)
-	} else if addr == REG_TIMER_TMA {
+	case REG_TIMER_TMA:
 		return mem.ReadReplace(timer.modulo)
-	} else if addr == REG_TIMER_TAC {
+	case REG_TIMER_TAC:
 		tac := byte(timer.freqSel)
 
 		if timer.incCounter {
@@ -105,20 +106,20 @@ func (timer *Timer) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 		}
 
 		return mem.ReadReplace(tac)
+	default:
+		return mem.ReadPassthrough()
 	}
-
-	return mem.ReadPassthrough()
 }
 
 func (timer *Timer) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
-	if addr == REG_TIMER_DIV {
+	switch addr {
+	case REG_TIMER_DIV:
 		timer.divider = 0
-	} else if addr == REG_TIMER_TIMA {
+	case REG_TIMER_TIMA:
 		timer.counter = value
-	} else if addr == REG_TIMER_TMA {
+	case REG_TIMER_TMA:
 		timer.modulo = value
-	} else if addr == REG_TIMER_TAC {
-
+	case REG_TIMER_TAC:
 		enableCounter := (value & TIMER_CLK_EN_MASK) == TIMER_CLK_EN_MASK
 
 		if enableCounter && !timer.incCounter {
@@ -127,7 +128,7 @@ func (timer *Timer) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite 
 		} else {
 			timer.incCounter = enableCounter
 		}
-	} else {
+	default:
 		panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for timer", value, addr))
 	}
 

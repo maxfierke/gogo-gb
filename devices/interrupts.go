@@ -168,23 +168,25 @@ func (ic *InterruptController) RequestVBlank() {
 }
 
 func (ic *InterruptController) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	if addr == REG_IE {
+	switch addr {
+	case REG_IE:
 		return mem.ReadReplace(ic.enabled.Read())
-	} else if addr == REG_IF {
+	case REG_IF:
 		return mem.ReadReplace(ic.requested.Read())
+	default:
+		return mem.ReadPassthrough()
 	}
-
-	return mem.ReadPassthrough()
 }
 
 func (ic *InterruptController) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
-	if addr == REG_IE {
+	switch addr {
+	case REG_IE:
 		ic.enabled.Write(value)
 		return mem.WriteBlock()
-	} else if addr == REG_IF {
+	case REG_IF:
 		ic.requested.Write(value)
 		return mem.WriteBlock()
+	default:
+		panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for interrupts", value, addr))
 	}
-
-	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for interrupts", value, addr))
 }

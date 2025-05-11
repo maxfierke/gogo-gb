@@ -109,20 +109,22 @@ func (sp *SerialPort) Step(cycles uint8, ic *InterruptController) {
 }
 
 func (sp *SerialPort) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	if addr == REG_SERIAL_SB {
+	switch addr {
+	case REG_SERIAL_SB:
 		return mem.ReadReplace(sp.buf)
-	} else if addr == REG_SERIAL_SC {
+	case REG_SERIAL_SC:
 		return mem.ReadReplace(sp.ctrl.Read())
+	default:
+		return mem.ReadPassthrough()
 	}
-
-	return mem.ReadPassthrough()
 }
 
 func (sp *SerialPort) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
-	if addr == REG_SERIAL_SB {
+	switch addr {
+	case REG_SERIAL_SB:
 		sp.buf = value
 		return mem.WriteBlock()
-	} else if addr == REG_SERIAL_SC {
+	case REG_SERIAL_SC:
 		sp.ctrl.Write(value)
 
 		if sp.ctrl.IsTransferEnabled() && sp.ctrl.IsClockInternal() {

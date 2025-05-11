@@ -109,13 +109,12 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		}
 		return mem.WriteBlock()
 	} else if MBC1_REG_BANK_MODE_SEL.Contains(addr, false) {
-		if value == 0x00 {
+		switch value {
+		case 0x00:
 			m.ramSelected = false
-		} else if value == 0x01 {
+		case 0x01:
 			m.ramSelected = true
 		}
-
-		// TODO: Log something / panic if unexpected value?
 
 		return mem.WriteBlock()
 	} else if MBC1_RAM_BANKS.Contains(addr, false) {

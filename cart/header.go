@@ -176,13 +176,14 @@ func (hdr Header) CartTypeName() string {
 }
 
 func (hdr Header) Cgb() string {
-	if hdr.cgb == 0x00 {
+	switch hdr.cgb {
+	case 0x00:
 		return CGB_COLOR_NONE
-	} else if hdr.cgb == 0x80 {
+	case 0x80:
 		return CGB_COLOR_ENHANCED
-	} else if hdr.cgb == 0xC0 {
+	case 0xC0:
 		return CGB_COLOR_ONLY
-	} else {
+	default:
 		return CGB_UNKNOWN
 	}
 }

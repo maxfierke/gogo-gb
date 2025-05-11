@@ -82,13 +82,12 @@ func (m *MBC5) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 
 func (m *MBC5) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	if MBC5_REG_RAM_ENABLE.Contains(addr, false) {
-		if value&MBC5_REG_RAM_ENABLE_MASK == MBC5_REG_RAM_ENABLED {
+		switch value & MBC5_REG_RAM_ENABLE_MASK {
+		case MBC5_REG_RAM_ENABLED:
 			m.ramEnabled = true
-		} else if value&MBC5_REG_RAM_ENABLE_MASK == MBC5_REG_RAM_DISABLED {
+		case MBC5_REG_RAM_DISABLED:
 			m.ramEnabled = false
 		}
-
-		// TODO: Log something / panic if unexpected value?
 
 		return mem.WriteBlock()
 	} else if MBC5_REG_LSB_ROM_BANK.Contains(addr, false) {

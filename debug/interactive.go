@@ -62,7 +62,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 
 			addr, err := parseAddr(c.Args[0])
 			if err != nil {
-				c.Err(fmt.Errorf("parsing addr %w:", err))
+				c.Err(fmt.Errorf("parsing addr: %w", err))
 				return
 			}
 
@@ -142,7 +142,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 			} else {
 				addr, err := parseAddr(c.Args[0])
 				if err != nil {
-					c.Err(fmt.Errorf("parsing addr %w:", err))
+					c.Err(fmt.Errorf("parsing addr: %w", err))
 					return
 				}
 
@@ -185,7 +185,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 			} else {
 				addr, err = parseAddr(c.Args[0])
 				if err != nil {
-					c.Err(fmt.Errorf("parsing addr %w:", err))
+					c.Err(fmt.Errorf("parsing addr: %w", err))
 					return
 				}
 			}
@@ -271,7 +271,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 
 			addr, err := parseAddr(c.Args[0])
 			if err != nil {
-				c.Err(fmt.Errorf("parsing addr %w:", err))
+				c.Err(fmt.Errorf("parsing addr: %w", err))
 				return
 			}
 
@@ -309,7 +309,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 
 			addr, err := parseAddr(c.Args[0])
 			if err != nil {
-				c.Err(fmt.Errorf("parsing addr %w:", err))
+				c.Err(fmt.Errorf("parsing addr: %w", err))
 				return
 			}
 
@@ -331,7 +331,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 
 			addr, err := parseAddr(c.Args[0])
 			if err != nil {
-				c.Err(fmt.Errorf("parsing addr %w:", err))
+				c.Err(fmt.Errorf("parsing addr: %w", err))
 				return
 			}
 

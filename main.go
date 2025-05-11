@@ -45,11 +45,12 @@ func main() {
 
 	parseOptions(&options)
 
-	if options.logPath == "" || options.logPath == "stdout" {
+	switch options.logPath {
+	case "", "stdout":
 		options.logger = log.New(os.Stdout, LOG_PREFIX, log.LstdFlags)
-	} else if options.logPath == "stderr" {
+	case "stderr":
 		options.logger = log.New(os.Stderr, LOG_PREFIX, log.LstdFlags)
-	} else {
+	default:
 		logFile, err := os.Create(options.logPath)
 		if err != nil {
 			log.Fatalf("ERROR: Unable to open log file '%s' for writing: %v\n", options.logPath, err)
@@ -155,11 +156,12 @@ func initHost(options *CLIOptions) (host.Host, error) {
 	if options.serialPort != "" {
 		serialCable := devices.NewHostSerialCable()
 
-		if options.serialPort == "stdout" || options.serialPort == "/dev/stdout" {
+		switch options.serialPort {
+		case "stdout", "/dev/stdout":
 			serialCable.SetWriter(os.Stdout)
-		} else if options.serialPort == "stderr" || options.serialPort == "/dev/stderr" {
+		case "stderr", "/dev/stderr":
 			serialCable.SetWriter(os.Stderr)
-		} else {
+		default:
 			serialPort, err := os.Create(options.serialPort)
 			if err != nil {
 				return nil, fmt.Errorf("unable to open file '%s' as serial port: %w", options.serialPort, err)
