@@ -23,7 +23,7 @@ func NewDebugger(name string) (Debugger, error) {
 		return NewGBDoctorDebugger(), nil
 	case "interactive":
 		return NewInteractiveDebugger()
-	case "none":
+	case "", "none":
 		return NewNullDebugger(), nil
 	default:
 		return nil, fmt.Errorf("unrecognized debugger: %v", name)
