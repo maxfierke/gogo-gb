@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -100,14 +102,21 @@ func (opcodes *Opcodes) InstructionFromByte(addr uint16, value byte, prefixed bo
 func (opcodes *Opcodes) DebugPrint(w io.Writer) {
 	fmt.Fprint(w, "== Opcodes ==\n")
 
-	fmt.Fprintf(w, "=== Unprefixed: \n\n")
-	for k := range opcodes.Unprefixed {
-		fmt.Fprintf(w, "0x%02X %s\n", k, opcodes.Unprefixed[k].String())
+	fmt.Fprintf(w, "=== 8-bit opcodes: \n\n")
+
+	unprefixedOpcodes := slices.Collect(maps.Keys(opcodes.Unprefixed))
+	slices.Sort(unprefixedOpcodes)
+
+	for _, k := range unprefixedOpcodes {
+		fmt.Fprintf(w, "%s\n", opcodes.Unprefixed[k].String())
 	}
 
-	fmt.Fprintf(w, "\n=== Cbprefixed: \n\n")
-	for k := range opcodes.CbPrefixed {
-		fmt.Fprintf(w, "0x%02X %s\n", k, opcodes.CbPrefixed[k].String())
+	cbPrefixedOpcodes := slices.Collect(maps.Keys(opcodes.CbPrefixed))
+	slices.Sort(cbPrefixedOpcodes)
+
+	fmt.Fprintf(w, "\n=== 16-bit opcodes: \n\n")
+	for _, k := range cbPrefixedOpcodes {
+		fmt.Fprintf(w, "0xCB %s\n", opcodes.CbPrefixed[k].String())
 	}
 }
 

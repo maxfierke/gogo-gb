@@ -59,10 +59,11 @@ cpu_instrs: bin/gogo-gb tests/gameboy-doctor/gameboy-doctor tests/gb-test-roms/c
     test_name=$${file%*.gb}; \
     test_num=$$((10#$${test_name%-*})); \
     echo "=== Starting cpu_instrs test $$file ==="; \
-    bin/gogo-gb --cart "tests/gb-test-roms/cpu_instrs/individual/$$file" \
+    bin/gogo-gb run "tests/gb-test-roms/cpu_instrs/individual/$$file" \
                 --skip-bootrom \
                 --debugger=gameboy-doctor \
-                --log=stderr | \
+                --log=stderr \
+                --headless | \
       ./tests/gameboy-doctor/gameboy-doctor - cpu_instrs "$$test_num" || \
       { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }; \
     echo "=== Finished cpu_instrs test $$file ===" ; \
@@ -80,31 +81,28 @@ mem_timing: bin/gogo-gb tests/gb-test-roms/mem_timing/individual/*.gb
     test_num=$$((10#$${test_name%-*})); \
     echo "=== WARNING: WIP, these will hang ==="; \
     echo "=== Starting mem_timing test $$file ==="; \
-    bin/gogo-gb --cart "tests/gb-test-roms/mem_timing/individual/$$file" \
-                --log=stderr --serial-port=stdout; \
+    bin/gogo-gb run "tests/gb-test-roms/mem_timing/individual/$$file" \
+                --log=stderr --serial-port=stdout --headless; \
     echo "=== Finished mem_timing test $$file ===" ; \
   done
 
 .PHONY: dmg_acid2
 dmg_acid2: bin/gogo-gb tests/dmg-acid2/dmg-acid2.gb
-	bin/gogo-gb --cart "tests/dmg-acid2/dmg-acid2.gb" \
+	bin/gogo-gb run "tests/dmg-acid2/dmg-acid2.gb" \
               --log=stderr \
-              --serial-port=stdout \
-              --ui
+              --serial-port=stdout
 
 .PHONY: mealybug_tests
 mealybug_tests: bin/gogo-gb tests/mealybug-tearoom-tests/build/ppu/*.gb
-	bin/gogo-gb --cart "tests/mealybug-tearoom-tests/build/ppu/$(MEALYBUG_TEST).gb" \
+	bin/gogo-gb run "tests/mealybug-tearoom-tests/build/ppu/$(MEALYBUG_TEST).gb" \
               --log=stderr \
-              --serial-port=stdout \
-              --ui
+              --serial-port=stdout
 
 .PHONY: mooneye_gb_tests
 mooneye_gb_tests: bin/gogo-gb tests/mooneye-gb-test-suite/**/*.gb
-	bin/gogo-gb --cart "tests/mooneye-gb-test-suite/$(MOONEYE_TEST).gb" \
+	bin/gogo-gb run "tests/mooneye-gb-test-suite/$(MOONEYE_TEST).gb" \
               --log=stderr \
-              --serial-port=stdout \
-              --ui
+              --serial-port=stdout
 
 tests/dmg-acid2/dmg-acid2.gb:
 	mkdir -p tests/dmg-acid2
