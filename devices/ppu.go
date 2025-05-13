@@ -27,7 +27,6 @@ const (
 	REG_PPU_SCX     uint16 = 0xFF43
 	REG_PPU_LY      uint16 = 0xFF44
 	REG_PPU_LYC     uint16 = 0xFF45
-	REG_PPU_DMA     uint16 = 0xFF46
 	REG_PPU_BGP     uint16 = 0xFF47
 	REG_PPU_OBP0    uint16 = 0xFF48
 	REG_PPU_OBP1    uint16 = 0xFF49
@@ -366,11 +365,6 @@ const (
 	PPU_MODE_VRAM
 )
 
-type ppuDMARequest struct {
-	addr  uint8
-	value byte
-}
-
 type PPU struct {
 	Mode PPUMode
 
@@ -393,18 +387,14 @@ type PPU struct {
 	vram       [VRAM_SIZE]byte
 	tileset    [VRAM_TILESET_SIZE]Tile
 
-	clock      uint
-	dmaClock   uint
-	dmaEnabled bool
-	pendingDMA []*ppuDMARequest
+	clock uint
 
 	ic *InterruptController
 }
 
 func NewPPU(ic *InterruptController) *PPU {
 	return &PPU{
-		ic:         ic,
-		pendingDMA: make([]*ppuDMARequest, 0, 160),
+		ic: ic,
 	}
 }
 
@@ -434,22 +424,6 @@ func (ppu *PPU) IsCurrentLineEqualToCompare() bool {
 }
 
 func (ppu *PPU) Step(cycles uint8) {
-	if ppu.dmaEnabled {
-		ppu.dmaClock += uint(cycles)
-
-		if ppu.dmaClock >= 640 {
-			ppu.dmaClock = 0
-
-			for _, request := range ppu.pendingDMA {
-				ppu.oam[request.addr] = request.value
-				ppu.writeObj(request.addr, request.value)
-			}
-
-			ppu.pendingDMA = make([]*ppuDMARequest, 0, 160)
-			ppu.dmaEnabled = false
-		}
-	}
-
 	if !ppu.lcdCtrl.enabled {
 		return
 	}
@@ -530,10 +504,6 @@ func (ppu *PPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 		return mem.ReadReplace(ppu.cmpScanLine)
 	}
 
-	if addr == REG_PPU_DMA {
-		return mem.ReadPassthrough()
-	}
-
 	if addr == REG_PPU_BGP {
 		return mem.ReadReplace(ppu.bgPalette.Read())
 	}
@@ -611,28 +581,6 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	if addr == REG_PPU_LYC {
 		ppu.cmpScanLine = value
 		return mem.WriteBlock()
-	}
-
-	if addr == REG_PPU_DMA {
-		if !ppu.dmaEnabled {
-			srcAddrStart := uint16(value) << 8
-
-			for oamAddr := uint8(0); oamAddr < 160; oamAddr++ {
-				srcAddr := srcAddrStart + uint16(oamAddr)
-				copiedValue := mmu.Read8(srcAddr)
-
-				ppu.pendingDMA = append(ppu.pendingDMA,
-					&ppuDMARequest{
-						addr:  oamAddr,
-						value: copiedValue,
-					},
-				)
-			}
-			ppu.dmaEnabled = true
-		}
-
-		// Reads should return last written value, so we'll pass it through it
-		return mem.WritePassthrough()
 	}
 
 	if addr == REG_PPU_BGP {

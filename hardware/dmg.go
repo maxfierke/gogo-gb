@@ -58,6 +58,7 @@ type DMG struct {
 	cpu       *cpu.CPU
 	mmu       *mem.MMU
 	cartridge *cart.Cartridge
+	dma       *devices.DMA
 	ic        *devices.InterruptController
 	joypad    *devices.Joypad
 	ppu       *devices.PPU
@@ -90,6 +91,7 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 		mmu:       mmu,
 		cartridge: cart.NewCartridge(),
 		debugger:  debug.NewNullDebugger(),
+		dma:       devices.NewDMA(),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
 		ppu:       devices.NewPPU(ic),
@@ -114,7 +116,9 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF01, End: 0xFF02}, dmg.serial) // Serial Port (Control & Data)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF04, End: 0xFF07}, dmg.timer)  // Timer (not RTC)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF40, End: 0xFF41}, dmg.ppu)    // LCD status, control registers
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF42, End: 0xFF4B}, dmg.ppu)    // PPU registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF42, End: 0xFF45}, dmg.ppu)    // PPU registers
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF46, End: 0xFF46}, dmg.dma)    // DMA
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF47, End: 0xFF4B}, dmg.ppu)    // PPU registers
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x8000, End: 0x9FFF}, dmg.ppu) // VRAM tiles
 	mmu.AddHandler(mem.MemRegion{Start: 0xFE00, End: 0xFE9F}, dmg.ppu) // OAM
@@ -206,6 +210,7 @@ func (dmg *DMG) Step() (uint8, error) {
 	}
 
 	dmg.cartridge.Step(cycles)
+	dmg.dma.Step(dmg.mmu, cycles)
 	dmg.ppu.Step(cycles)
 	dmg.timer.Step(cycles, dmg.ic)
 	dmg.serial.Step(cycles, dmg.ic)

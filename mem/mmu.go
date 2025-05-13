@@ -152,7 +152,7 @@ func (mmu *MMU) RemoveHandler(handle MemHandlerHandle) {
 		if exist {
 			newVal := make([]MMUHandler, len(val)-1)
 
-			for i := 0; i < len(val); i++ {
+			for i := range val {
 				if val[i].handle != handle {
 					newVal = append(newVal, val[i])
 				}
@@ -167,7 +167,7 @@ func (mmu *MMU) Read8(addr uint16) byte {
 	addrHandlers, handlersExist := mmu.handlers[addr]
 
 	if handlersExist {
-		for i := 0; i < len(addrHandlers); i++ {
+		for i := range addrHandlers {
 			handler := addrHandlers[i]
 
 			memread := handler.handler.OnRead(mmu, addr)
@@ -185,7 +185,7 @@ func (mmu *MMU) Write8(addr uint16, value byte) {
 	addrHandlers, handlersExist := mmu.handlers[addr]
 
 	if handlersExist {
-		for i := 0; i < len(addrHandlers); i++ {
+		for i := range addrHandlers {
 			handler := addrHandlers[i]
 
 			memwrite := handler.handler.OnWrite(mmu, addr, value)
