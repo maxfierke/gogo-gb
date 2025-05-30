@@ -21,7 +21,7 @@ var _ Host = (*CLIHost)(nil)
 
 func NewCLIHost() *CLIHost {
 	return &CLIHost{
-		fbChan:      make(chan image.Image, 3),
+		fbChan:      make(chan image.Image),
 		frameChan:   make(chan struct{}),
 		inputChan:   make(chan devices.JoypadInputs),
 		logger:      log.Default(),
@@ -72,16 +72,13 @@ func (h *CLIHost) Run(console hardware.Console) error {
 
 	// "Renderer"
 	go func() {
-		for range h.fbChan {
-			// Consume frames
-		}
-	}()
-
-	go func() {
 		ticker := time.NewTicker(time.Second / 60)
 
 		for range ticker.C {
 			h.frameChan <- struct{}{}
+
+			// Consume frame
+			<-h.fbChan
 		}
 	}()
 

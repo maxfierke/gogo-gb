@@ -10,6 +10,11 @@ import (
 	"github.com/maxfierke/gogo-gb/hardware"
 )
 
+const (
+	FB_HEIGHT = 144
+	FB_WIDTH  = 160
+)
+
 type UI struct {
 	fbChan      chan image.Image
 	frameChan   chan struct{}
@@ -27,7 +32,7 @@ var (
 
 func NewUIHost() *UI {
 	return &UI{
-		fbChan:      make(chan image.Image, 3),
+		fbChan:      make(chan image.Image),
 		frameChan:   make(chan struct{}),
 		inputChan:   make(chan devices.JoypadInputs),
 		logger:      log.Default(),
@@ -118,7 +123,15 @@ func (ui *UI) Update() error {
 func (ui *UI) Draw(screen *ebiten.Image) {
 	select {
 	case fbImage := <-ui.fbChan:
-		ui.framebufferImage = ebiten.NewImageFromImage(fbImage)
+		if ui.framebufferImage == nil {
+			ui.framebufferImage = ebiten.NewImageFromImage(fbImage)
+		} else {
+			for x := range FB_WIDTH {
+				for y := range FB_HEIGHT {
+					ui.framebufferImage.Set(x, y, fbImage.At(x, y))
+				}
+			}
+		}
 		screen.DrawImage(ui.framebufferImage, &ebiten.DrawImageOptions{})
 	default:
 		// do nothing
@@ -126,7 +139,7 @@ func (ui *UI) Draw(screen *ebiten.Image) {
 }
 
 func (ui *UI) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return 160, 144
+	return FB_WIDTH, FB_HEIGHT
 }
 
 func (ui *UI) Run(console hardware.Console) error {
