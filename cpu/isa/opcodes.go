@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"maps"
-	"os"
 	"slices"
 	"strings"
 )
@@ -118,15 +117,6 @@ func (opcodes *Opcodes) DebugPrint(w io.Writer) {
 	for _, k := range cbPrefixedOpcodes {
 		fmt.Fprintf(w, "0xCB %s\n", opcodes.CbPrefixed[k].String())
 	}
-}
-
-func LoadOpcodesFromPath(path string) (*Opcodes, error) {
-	jsonBytes, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return parseOpcodeJson(jsonBytes)
 }
 
 func LoadOpcodes() (*Opcodes, error) {
