@@ -10,10 +10,27 @@ import (
 )
 
 const (
-	CLK_MODE0_PERIOD_LEN = 204 // Technically, this is the ceiling
+	// CLK_MODE0_PERIOD_LEN is the dot length of Mode 0 (HBlank).
+	// 204 dots is the ceiling, but 200 dots was chosen for compatibility with
+	// orangeglo's LED Screen Timer test ROM. Mode 0 and Mode 3 just need to add
+	// up to 376.
+	// This is probably a bug of some kind, but not one I feel like fixing right now.
+	CLK_MODE0_PERIOD_LEN = 200
+
+	// CLK_MODE1_PERIOD_LEN is the dot length of a line in Mode 1 (VBlank)
+	// There are 10 lines in Mode 1, for a total of 4560 dots.
 	CLK_MODE1_PERIOD_LEN = 456
+
+	// CLK_MODE2_PERIOD_LEN is the dot length of Mode 2 (OAM Scan).
+	// It is fixed at 80 dots.
 	CLK_MODE2_PERIOD_LEN = 80
-	CLK_MODE3_PERIOD_LEN = 172 // Technically, this is the floor
+
+	// CLK_MODE3_PERIOD_LEN is the dot length of Mode 3 (VRAM / drawing).
+	// 172 dots is the floor, but 174 dots was chosen for compatibility with
+	// orangeglo's LED Screen Timer test ROM. Mode 0 and Mode 3 just need to add
+	// up to 376.
+	// This is probably a bug of some kind, but not one I feel like fixing right now.
+	CLK_MODE3_PERIOD_LEN = 174
 
 	FB_WIDTH  = 160
 	FB_HEIGHT = 144
@@ -436,7 +453,7 @@ func (ppu *PPU) Step(cycles uint8) {
 			ppu.clock = ppu.clock % CLK_MODE0_PERIOD_LEN
 			ppu.curScanLine += 1
 
-			if ppu.curScanLine >= VBLANK_PERIOD_BEGIN {
+			if ppu.curScanLine == VBLANK_PERIOD_BEGIN {
 				ppu.Mode = PPU_MODE_VBLANK
 				ppu.ic.RequestVBlank()
 				ppu.requestLCD()
@@ -454,7 +471,7 @@ func (ppu *PPU) Step(cycles uint8) {
 			ppu.clock = ppu.clock % CLK_MODE1_PERIOD_LEN
 			ppu.curScanLine += 1
 
-			if ppu.curScanLine >= VBLANK_PERIOD_END {
+			if ppu.curScanLine == VBLANK_PERIOD_END {
 				ppu.Mode = PPU_MODE_OAM
 				ppu.curScanLine = 0
 				ppu.requestLCD()
