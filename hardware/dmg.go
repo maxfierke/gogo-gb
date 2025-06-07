@@ -3,6 +3,7 @@ package hardware
 import (
 	"errors"
 	"fmt"
+	"image"
 	"io"
 
 	"github.com/maxfierke/gogo-gb/cart"
@@ -13,45 +14,11 @@ import (
 )
 
 const (
-	DMG_BOOTROM_SIZE = 0x100
-	DMG_CPU_HZ       = 4194304
-	DMG_RAM_SIZE     = 0x10000
+	DMG_CPU_HZ   = 4194304
+	DMG_RAM_SIZE = 0x10000
 
 	cyclesPerFrame uint = 70224
 )
-
-type DMGOption func(dmg *DMG) error
-
-func WithBootROM(r io.Reader) DMGOption {
-	return func(dmg *DMG) error {
-		rom := make([]byte, DMG_BOOTROM_SIZE)
-		if _, err := r.Read(rom); err != nil {
-			return fmt.Errorf("unable to load boot ROM: %w", err)
-		}
-
-		dmg.bootROM = devices.NewBootROM()
-		dmg.bootROM.LoadROM(rom)
-
-		dmg.mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x00FF}, dmg.bootROM)
-		dmg.mmu.AddHandler(mem.MemRegion{Start: 0xFF50, End: 0xFF50}, dmg.bootROM)
-
-		return nil
-	}
-}
-
-func WithDebugger(debugger debug.Debugger) DMGOption {
-	return func(dmg *DMG) error {
-		dmg.AttachDebugger(debugger)
-		return nil
-	}
-}
-
-func WithFakeBootROM() DMGOption {
-	return func(dmg *DMG) error {
-		dmg.cpu.ResetToBootROM()
-		return nil
-	}
-}
 
 type DMG struct {
 	// Components
@@ -73,10 +40,10 @@ type DMG struct {
 
 var _ Console = (*DMG)(nil)
 
-func NewDMG(opts ...DMGOption) (*DMG, error) {
+func NewDMG(opts ...ConsoleOption) (*DMG, error) {
 	cpu, err := cpu.NewCPU()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("constructing CPU: %w", err)
 	}
 
 	ram := make([]byte, DMG_RAM_SIZE)
@@ -100,7 +67,7 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 	}
 
 	for _, opt := range opts {
-		err = opt(dmg)
+		err = opt(dmg, mmu)
 		if err != nil {
 			return nil, err
 		}
@@ -130,17 +97,29 @@ func NewDMG(opts ...DMGOption) (*DMG, error) {
 	return dmg, nil
 }
 
+func (dmg *DMG) AttachCable(cable devices.SerialCable) {
+	dmg.serial.AttachCable(cable)
+}
+
 func (dmg *DMG) AttachDebugger(debugger debug.Debugger) {
-	dmg.DetachDebugger()
+	dmg.detachDebugger()
 
 	dmg.debuggerHandler = dmg.mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0xFFFF}, debugger)
 	dmg.debugger = debugger
 }
 
-func (dmg *DMG) DetachDebugger() {
+func (dmg *DMG) detachDebugger() {
 	// Remove any existing handlers
 	dmg.mmu.RemoveHandler(dmg.debuggerHandler)
 	dmg.debugger = debug.NewNullDebugger()
+}
+
+func (dmg *DMG) SetupDebugger() {
+	dmg.debugger.Setup(dmg.cpu, dmg.mmu, dmg.cartridge)
+}
+
+func (dmg *DMG) Debugger() debug.Debugger {
+	return dmg.debugger
 }
 
 func (dmg *DMG) CartridgeHeader() cart.Header {
@@ -165,6 +144,10 @@ func (dmg *DMG) LoadCartridge(r io.Reader) error {
 	return nil
 }
 
+func (dmg *DMG) Draw() image.Image {
+	return dmg.ppu.Draw()
+}
+
 func (dmg *DMG) LoadSave(r io.Reader) error {
 	err := dmg.cartridge.LoadSave(r)
 	if err != nil {
@@ -181,6 +164,10 @@ func (dmg *DMG) Save(w io.Writer) error {
 	}
 
 	return nil
+}
+
+func (dmg *DMG) ReceiveInputs(inputs devices.JoypadInputs) {
+	dmg.joypad.ReceiveInputs(inputs)
 }
 
 func (dmg *DMG) Step() (uint8, error) {
@@ -216,33 +203,4 @@ func (dmg *DMG) Step() (uint8, error) {
 	dmg.serial.Step(cycles, dmg.ic)
 
 	return cycles, nil
-}
-
-func (dmg *DMG) Run(host devices.HostInterface) error {
-	framebuffer := host.Framebuffer()
-	defer close(framebuffer)
-
-	dmg.serial.AttachCable(host.SerialCable())
-	dmg.debugger.Setup(dmg.cpu, dmg.mmu, dmg.cartridge)
-
-	go func() {
-		for inputs := range host.JoypadInput() {
-			dmg.joypad.ReceiveInputs(inputs)
-		}
-	}()
-
-	for range host.RequestFrame() {
-		var frameCycles uint
-		for frameCycles < cyclesPerFrame {
-			cycles, err := dmg.Step()
-			if err != nil {
-				return err
-			}
-			frameCycles += uint(cycles)
-		}
-
-		framebuffer <- dmg.ppu.Draw()
-	}
-
-	return nil
 }

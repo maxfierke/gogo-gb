@@ -135,7 +135,7 @@ func initDMG(logger *log.Logger, options *RunCmdOptions) (*hardware.DMG, error) 
 		return nil, fmt.Errorf("unable to initialize Debugger: %w", err)
 	}
 
-	opts := []hardware.DMGOption{
+	opts := []hardware.ConsoleOption{
 		hardware.WithDebugger(debugger),
 	}
 
