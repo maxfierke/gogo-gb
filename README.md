@@ -46,9 +46,9 @@ Use "gogo-gb [command] --help" for more information about a command.
 - [X] Achieve ~60 FPS
 - [X] Implement `watch` in debugger for memory & register changes
 - [X] Implement RTC for MBC3
+- [X] Pass `dmg-acid2` test ROM
 - [ ] Implement PPU registers debugging
 - [ ] Implement GBC
-- [ ] Pass `dmg-acid2` test ROM
 - [ ] Implement Sound/APU
 
 ## Later/Maybe Never?
