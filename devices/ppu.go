@@ -394,6 +394,7 @@ type PPU struct {
 	scrollBackgroundY uint8 // SCY
 	windowX           uint8 // WX
 	windowY           uint8 // WY
+	curWindowLine     uint8 // Internal counter for window rendering
 
 	bgPalette   bgPalette
 	objPalettes [2]objPalette
@@ -455,6 +456,7 @@ func (ppu *PPU) Step(cycles uint8) {
 
 			if ppu.curScanLine == VBLANK_PERIOD_BEGIN {
 				ppu.Mode = PPU_MODE_VBLANK
+				ppu.curWindowLine = 0
 				ppu.ic.RequestVBlank()
 				ppu.requestLCD()
 			} else {
@@ -462,7 +464,7 @@ func (ppu *PPU) Step(cycles uint8) {
 				ppu.requestLCD()
 			}
 
-			if ppu.IsCurrentLineEqualToCompare() && ppu.lcdStatus.ShouldInterrupt() {
+			if ppu.IsCurrentLineEqualToCompare() {
 				ppu.ic.RequestLCD()
 			}
 		}
@@ -477,7 +479,7 @@ func (ppu *PPU) Step(cycles uint8) {
 				ppu.requestLCD()
 			}
 
-			if ppu.IsCurrentLineEqualToCompare() && ppu.lcdStatus.ShouldInterrupt() {
+			if ppu.IsCurrentLineEqualToCompare() {
 				ppu.ic.RequestLCD()
 			}
 		}
@@ -706,21 +708,29 @@ func (ppu *PPU) drawBgScanline() {
 
 func (ppu *PPU) drawWinScanline() {
 	if ppu.curScanLine >= ppu.windowY {
+		if ppu.curScanLine == ppu.windowY {
+			ppu.curWindowLine = 0
+		}
+
 		windowMapAddr := VRAM_TILEMAP_1_START
 		if ppu.lcdCtrl.windowTilemap == TILEMAP_AREA2 {
 			windowMapAddr = VRAM_TILEMAP_2_START
 		}
 
-		tileY := (ppu.curScanLine - ppu.windowY) / 8
-		tilePixelY := (ppu.curScanLine - ppu.windowY) % 8
+		tileY := ppu.curWindowLine / 8
+		tilePixelY := ppu.curWindowLine % 8
 
 		tileMapBegin := windowMapAddr - VRAM_START
 		tileMapOffset := tileMapBegin + uint16(tileY)*32
 
+		rendered := false
+
 		for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
-			if (lineX + 7) <= uint16(ppu.windowX) {
+			if (lineX + 7) < uint16(ppu.windowX) {
 				continue
 			}
+
+			rendered = true
 
 			tileX := (lineX + 7 - uint16(ppu.windowX)) / 8
 			tilePixelX := (lineX + 7 - uint16(ppu.windowX)) % 8
@@ -736,6 +746,10 @@ func (ppu *PPU) drawWinScanline() {
 			ppu.scanLines[ppu.curScanLine][lineX].colorID = ColorID(tilePixelValue)
 			ppu.scanLines[ppu.curScanLine][lineX].color = color
 		}
+
+		if rendered {
+			ppu.curWindowLine++
+		}
 	}
 }
 
@@ -747,6 +761,8 @@ func (ppu *PPU) drawObjScanline() {
 
 	renderedObjects := 0
 
+	renderedObjectsX := map[uint8]uint8{}
+
 	for _, object := range ppu.objectData {
 		if renderedObjects == OAM_MAX_OBJECTS_PER_SCANLINE {
 			break
@@ -755,10 +771,13 @@ func (ppu *PPU) drawObjScanline() {
 		if object.posY <= ppu.curScanLine && (object.posY+objHeight) > ppu.curScanLine {
 			objPixelY := ppu.curScanLine - object.posY
 			tileIndex := object.tileIndex
-			if objHeight == 16 &&
-				((!object.attributes.flipY && objPixelY > 7) ||
-					(object.attributes.flipY && objPixelY <= 7)) {
-				tileIndex += 1
+			if objHeight == 16 {
+				// Ignore bit 0 for 8x16
+				tileIndex &= 0xFE
+
+				if (!object.attributes.flipY && objPixelY > 7) || (object.attributes.flipY && objPixelY <= 7) {
+					tileIndex += 1
+				}
 			}
 
 			tile := ppu.tileset[tileIndex]
@@ -778,9 +797,14 @@ func (ppu *PPU) drawObjScanline() {
 				pixelX := object.posX + x
 				tilePixelValue := tileRow[tilePixelX]
 
+				renderedObjX, hasRenderedObj := renderedObjectsX[pixelX]
+
 				if pixelX < FB_WIDTH &&
 					// Skip transparent pixels
 					tilePixelValue != VRAM_TILE_PIXEL_ZERO &&
+					// Object is higher priority than currently rendered object
+					// TODO(GBC): Doesn't apply to CGB
+					(!hasRenderedObj || (hasRenderedObj && renderedObjX > object.posX)) &&
 					// Priority over BG or BG is color 0
 					(!object.attributes.bgPriority || ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE) {
 
@@ -788,6 +812,7 @@ func (ppu *PPU) drawObjScanline() {
 					ppu.scanLines[ppu.curScanLine][pixelX].colorID = ColorID(tilePixelValue)
 					ppu.scanLines[ppu.curScanLine][pixelX].color = color
 					renderedObject = true
+					renderedObjectsX[pixelX] = object.posX
 				}
 			}
 
