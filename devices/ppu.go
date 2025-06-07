@@ -726,7 +726,7 @@ func (ppu *PPU) drawWinScanline() {
 		rendered := false
 
 		for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
-			if (lineX + 7) <= uint16(ppu.windowX) {
+			if (lineX + 7) < uint16(ppu.windowX) {
 				continue
 			}
 
