@@ -1,6 +1,7 @@
 package hardware
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"io"
@@ -18,6 +19,7 @@ type Console interface {
 	Debugger() debug.Debugger
 	Draw() image.Image
 	CartridgeHeader() cart.Header
+	CyclesPerFrame() uint
 	LoadCartridge(r io.Reader) error
 	Save(w io.Writer) error
 	LoadSave(r io.Reader) error
@@ -27,20 +29,32 @@ type Console interface {
 
 type ConsoleOption func(console Console, mmu *mem.MMU) error
 
-const BOOTROM_SIZE = 0x100
+const (
+	ConsoleModelDMG ConsoleModel = "dmg"
+	ConsoleModelMGB ConsoleModel = "mgb"
+	ConsoleModelCGB ConsoleModel = "cgb"
+)
+
+type ConsoleModel string
 
 func WithBootROM(r io.Reader) ConsoleOption {
 	return func(console Console, mmu *mem.MMU) error {
-		rom := make([]byte, BOOTROM_SIZE)
-		if _, err := r.Read(rom); err != nil {
-			return fmt.Errorf("unable to load boot ROM: %w", err)
+		var bootROM devices.BootROM
+
+		switch console.(type) {
+		case *DMG:
+			bootROM = devices.NewDMGBootROM()
+		case *CGB:
+			bootROM = devices.NewCGBBootROM()
+		default:
+			return fmt.Errorf("unrecognized console")
 		}
 
-		bootROM := devices.NewBootROM()
-		bootROM.LoadROM(rom)
-
-		mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x00FF}, bootROM)
-		mmu.AddHandler(mem.MemRegion{Start: 0xFF50, End: 0xFF50}, bootROM)
+		err := bootROM.LoadROM(r)
+		if err != nil {
+			return fmt.Errorf("loading boot ROM: %w", err)
+		}
+		bootROM.AttachMemHandlers(mmu)
 
 		return nil
 	}
@@ -55,9 +69,33 @@ func WithDebugger(debugger debug.Debugger) ConsoleOption {
 
 func WithFakeBootROM() ConsoleOption {
 	return func(console Console, mmu *mem.MMU) error {
-		dmg := console.(*DMG) // TODO: Avoid the cast
-		dmg.cpu.ResetToBootROM()
-		return nil
+		if dmg, isDMG := console.(*DMG); isDMG {
+			dmg.cpu.ResetToBootROM()
+			return nil
+		}
+
+		return errors.New("WithFakeBootROM is only supported for DMG")
+	}
+}
+
+func NewConsole(model ConsoleModel, opts ...ConsoleOption) (Console, error) {
+	switch model {
+	case ConsoleModelDMG:
+		dmg, err := NewDMG(opts...)
+		if err != nil {
+			return nil, fmt.Errorf("unable to initialize DMG: %w", err)
+		}
+
+		return dmg, nil
+	case ConsoleModelCGB:
+		cgb, err := NewCGB(opts...)
+		if err != nil {
+			return nil, fmt.Errorf("unable to initialize CGB: %w", err)
+		}
+
+		return cgb, nil
+	default:
+		return nil, fmt.Errorf("unrecognized model: %s", model)
 	}
 }
 
@@ -76,7 +114,7 @@ func Run(console Console, host devices.HostInterface) error {
 
 	for range host.RequestFrame() {
 		var frameCycles uint
-		for frameCycles < cyclesPerFrame {
+		for frameCycles < console.CyclesPerFrame() {
 			cycles, err := console.Step()
 			if err != nil {
 				return err

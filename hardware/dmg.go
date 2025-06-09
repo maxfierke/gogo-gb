@@ -14,10 +14,9 @@ import (
 )
 
 const (
-	DMG_CPU_HZ   = 4194304
 	DMG_RAM_SIZE = 0x10000
 
-	cyclesPerFrame uint = 70224
+	dmgCyclesPerFrame uint = 70224
 )
 
 type DMG struct {
@@ -33,7 +32,6 @@ type DMG struct {
 	timer     *devices.Timer
 
 	// Non-components
-	bootROM         *devices.BootROM
 	debugger        debug.Debugger
 	debuggerHandler mem.MemHandlerHandle
 }
@@ -90,9 +88,9 @@ func NewDMG(opts ...ConsoleOption) (*DMG, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0x8000, End: 0x9FFF}, dmg.ppu) // VRAM tiles
 	mmu.AddHandler(mem.MemRegion{Start: 0xFE00, End: 0xFE9F}, dmg.ppu) // OAM
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, dmg.ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF0F, End: 0xFF0F}, dmg.ic)   // Interrupts Requested
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF4D, End: 0xFF77}, unmapped) // CGB regs
-	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, dmg.ic)
+	mmu.AddHandler(mem.MemRegion{Start: 0xFFFF, End: 0xFFFF}, dmg.ic)   // Interrupts Enabled
 
 	return dmg, nil
 }
@@ -128,6 +126,10 @@ func (dmg *DMG) CartridgeHeader() cart.Header {
 	}
 
 	return dmg.cartridge.Header
+}
+
+func (dmg *DMG) CyclesPerFrame() uint {
+	return dmgCyclesPerFrame
 }
 
 func (dmg *DMG) LoadCartridge(r io.Reader) error {

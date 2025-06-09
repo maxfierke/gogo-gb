@@ -92,6 +92,12 @@ dmg_acid2: bin/gogo-gb tests/dmg-acid2/dmg-acid2.gb
               --log=stderr \
               --serial-port=stdout
 
+.PHONY: cgb_acid2
+cgb_acid2: bin/gogo-gb tests/cgb-acid2/cgb-acid2.gbc
+	bin/gogo-gb run "tests/cgb-acid2/cgb-acid2.gbc" \
+              --log=stderr \
+              --serial-port=stdout
+
 .PHONY: mealybug_tests
 mealybug_tests: bin/gogo-gb tests/mealybug-tearoom-tests/build/ppu/*.gb
 	bin/gogo-gb run "tests/mealybug-tearoom-tests/build/ppu/$(MEALYBUG_TEST).gb" \
@@ -107,6 +113,10 @@ mooneye_gb_tests: bin/gogo-gb tests/mooneye-gb-test-suite/**/*.gb
 tests/dmg-acid2/dmg-acid2.gb:
 	mkdir -p tests/dmg-acid2
 	curl -fSsL https://github.com/mattcurrie/dmg-acid2/releases/download/v1.0/dmg-acid2.gb > tests/dmg-acid2/dmg-acid2.gb
+
+tests/cgb-acid2/cgb-acid2.gbc:
+	mkdir -p tests/cgb-acid2
+	curl -fSsL https://github.com/mattcurrie/cgb-acid2/releases/download/v1.1/cgb-acid2.gbc > tests/cgb-acid2/cgb-acid2.gbc
 
 tests/gameboy-doctor/gameboy-doctor:
 	git submodule init
