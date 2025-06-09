@@ -28,6 +28,7 @@ type CGB struct {
 	ppu       *devices.PPU
 	serial    *devices.SerialPort
 	timer     *devices.Timer
+	wram      *mem.WRAM
 
 	// Non-components
 	debugger        debug.Debugger
@@ -66,6 +67,7 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 		ppu:       devices.NewPPU(ic),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
+		wram:      mem.NewWRAM(),
 	}
 
 	for _, opt := range opts {
@@ -77,6 +79,8 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, cgb.cartridge) // MBCs ROM Banks
 	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, cgb.cartridge) // MBCs RAM Banks
+
+	mmu.AddHandler(mem.MemRegion{Start: 0xC000, End: 0xDFFF}, cgb.wram) // WRAM Banks
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xE000, End: 0xFDFF}, echo)     // Echo RAM (mirrors WRAM)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFEA0, End: 0xFEFF}, unmapped) // Nop writes, zero reads

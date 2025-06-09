@@ -86,7 +86,7 @@ func NewEchoRegion() *EchoRegion {
 
 func (umr *EchoRegion) OnRead(mmu *MMU, addr uint16) MemRead {
 	// Echo mirrors 0xC000
-	return ReadReplace(mmu.ram[addr-0x2000])
+	return ReadReplace(mmu.Read8(addr - 0x2000))
 }
 
 func (umr *EchoRegion) OnWrite(mmu *MMU, addr uint16, value byte) MemWrite {
