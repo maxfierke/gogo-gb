@@ -71,6 +71,7 @@ func WithFakeBootROM() ConsoleOption {
 	return func(console Console, mmu *mem.MMU) error {
 		if dmg, isDMG := console.(*DMG); isDMG {
 			dmg.cpu.ResetToBootROM()
+			return nil
 		}
 
 		return errors.New("WithFakeBootROM is only supported for DMG")
