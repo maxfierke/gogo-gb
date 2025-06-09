@@ -86,7 +86,7 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF46, End: 0xFF46}, cgb.dma)    // DMA
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF47, End: 0xFF4B}, cgb.ppu)    // PPU registers
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF4F, End: 0xFF45}, unmapped) // VRAM Bank Select
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF4F, End: 0xFF4F}, unmapped) // VRAM Bank Select
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF51, End: 0xFF55}, unmapped) // VRAM DMA
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF56, End: 0xFF56}, unmapped) // IR Port
