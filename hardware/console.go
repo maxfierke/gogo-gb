@@ -50,7 +50,10 @@ func WithBootROM(r io.Reader) ConsoleOption {
 			return fmt.Errorf("unrecognized console")
 		}
 
-		bootROM.LoadROM(r)
+		err := bootROM.LoadROM(r)
+		if err != nil {
+			return fmt.Errorf("loading boot ROM: %w", err)
+		}
 		bootROM.AttachMemHandlers(mmu)
 
 		return nil

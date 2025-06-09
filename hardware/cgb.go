@@ -43,7 +43,10 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 	}
 
 	// Enable CGB CPU Features
-	cgbCpu.EnableFeature(cpu.FeatureDoubleSpeed)
+	err = cgbCpu.EnableFeature(cpu.FeatureDoubleSpeed)
+	if err != nil {
+		return nil, fmt.Errorf("enabling double-speed CPU feature: %w", err)
+	}
 
 	ram := make([]byte, DMG_RAM_SIZE)
 	mmu := mem.NewMMU(ram)

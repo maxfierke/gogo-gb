@@ -25,9 +25,8 @@ type BootROM interface {
 }
 
 type DMGBootROM struct {
-	enabled        bool
-	rom            [BOOTROM_SIZE_DMG]byte
-	dmgModeEnabled bool
+	enabled bool
+	rom     [BOOTROM_SIZE_DMG]byte
 }
 
 var _ BootROM = (*DMGBootROM)(nil)
