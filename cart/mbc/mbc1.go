@@ -60,7 +60,7 @@ func (m *MBC1) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 			romBank += 1
 		}
 
-		bankByte := readBankAddr(
+		bankByte := mem.ReadBankAddr(
 			m.rom,
 			MBC1_ROM_BANKS,
 			ROM_BANK_SIZE,
@@ -70,7 +70,7 @@ func (m *MBC1) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 		return mem.ReadReplace(bankByte)
 	} else if MBC1_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled {
-			bankByte := readBankAddr(
+			bankByte := mem.ReadBankAddr(
 				m.ram,
 				MBC1_RAM_BANKS,
 				RAM_BANK_SIZE,
@@ -119,7 +119,7 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		return mem.WriteBlock()
 	} else if MBC1_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled && len(m.ram) > 0 {
-			writeBankAddr(
+			mem.WriteBankAddr(
 				m.ram,
 				MBC1_RAM_BANKS,
 				RAM_BANK_SIZE,

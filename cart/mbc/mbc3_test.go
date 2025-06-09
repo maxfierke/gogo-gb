@@ -8,6 +8,30 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func makeRom(banks int) []byte {
+	rom := make([]byte, ROM_BANK_SIZE*banks)
+
+	for bankNum := range banks {
+		for bankSlot := range ROM_BANK_SIZE {
+			rom[(ROM_BANK_SIZE*bankNum)+bankSlot] = byte(bankNum)
+		}
+	}
+
+	return rom
+}
+
+func makeRam(banks int) []byte {
+	ram := make([]byte, RAM_BANK_SIZE*banks)
+
+	for bankNum := range banks {
+		for bankSlot := range RAM_BANK_SIZE {
+			ram[(RAM_BANK_SIZE*bankNum)+bankSlot] = byte(bankNum)
+		}
+	}
+
+	return ram
+}
+
 func TestMBC3RTCRegs_writeReg_readReg(t *testing.T) {
 	testCases := map[string]struct {
 		initialRegs          mbc3RTCRegs
