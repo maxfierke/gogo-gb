@@ -23,6 +23,7 @@ type RunCmdOptions struct {
 	cartSavePath string
 	debugger     string
 	headless     bool
+	model        string
 	serialPort   string
 	skipBootRom  bool
 }
@@ -64,6 +65,7 @@ func init() {
 	_ = runCmd.MarkFlagFilename("save", ".sav")
 
 	runCmd.Flags().StringVarP(&runCmdOptions.debugger, "debugger", "d", "", "Specify debugger to use (\"gameboy-doctor\", \"interactive\")")
+	runCmd.Flags().StringVarP(&runCmdOptions.model, "model", "m", "auto", "Specify model to use (\"auto\", \"dmg\", \"cgb\")")
 	runCmd.Flags().StringVarP(&runCmdOptions.serialPort, "serial-port", "p", "", "Path to serial port IO (could be a file, UNIX socket, etc.)")
 	runCmd.Flags().BoolVar(&runCmdOptions.skipBootRom, "skip-bootrom", false, "Skip loading a boot ROM")
 	runCmd.Flags().BoolVar(&runCmdOptions.headless, "headless", false, "Launch without UI")
@@ -74,6 +76,19 @@ var DEFAULT_BOOT_ROM_PATHS = []string{
 	"dmg_bios.bin",
 	"mgb_bios.bin",
 	"dmg0_bios.bin",
+	"gb_boot.bin",
+	"dmg_boot.bin",
+	"mgb_boot.bin",
+	"dmg0_boot.bin",
+}
+
+var DEFAULT_CGB_BOOT_ROM_PATHS = []string{
+	"cgb_bios.bin",
+	"cgb0_bios.bin",
+	"gbc_bios.bin",
+	"gbc_boot.bin",
+	"cgb_boot.bin",
+	"cgb0_boot.bin",
 }
 
 func getCartSaveFilePath(options *RunCmdOptions) string {
@@ -129,10 +144,10 @@ func initHost(logger *log.Logger, options *RunCmdOptions) (host.Host, error) {
 	return hostDevice, nil
 }
 
-func initDMG(logger *log.Logger, options *RunCmdOptions) (*hardware.DMG, error) {
+func initConsole(logger *log.Logger, options *RunCmdOptions) (hardware.Console, error) {
 	debugger, err := debug.NewDebugger(options.debugger)
 	if err != nil {
-		return nil, fmt.Errorf("unable to initialize Debugger: %w", err)
+		return nil, fmt.Errorf("unable to initialize debugger: %w", err)
 	}
 
 	opts := []hardware.ConsoleOption{
@@ -154,12 +169,35 @@ func initDMG(logger *log.Logger, options *RunCmdOptions) (*hardware.DMG, error) 
 		}
 	}
 
-	dmg, err := hardware.NewDMG(opts...)
-	if err != nil {
-		return nil, fmt.Errorf("unable to initialize DMG: %w", err)
+	var model hardware.ConsoleModel
+	switch options.model {
+	case "auto":
+		ext := filepath.Ext(options.cartPath)
+		switch ext {
+		case ".gb":
+			model = hardware.ConsoleModelDMG
+		case ".gbc":
+			model = hardware.ConsoleModelCGB
+		default:
+			return nil, errors.New("unable to auto-detect model. Please specify with --model/-m")
+		}
+	case "dmg":
+		model = hardware.ConsoleModelDMG
+	case "cgb":
+		model = hardware.ConsoleModelCGB
+	default:
+		return nil, fmt.Errorf("unrecognized model: %s", options.model)
 	}
 
-	return dmg, nil
+	console, err := hardware.NewConsole(
+		model,
+		opts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return console, nil
 }
 
 func loadBootROM(logger *log.Logger, options *RunCmdOptions) (*os.File, error) {
@@ -169,7 +207,12 @@ func loadBootROM(logger *log.Logger, options *RunCmdOptions) (*os.File, error) {
 	var err error
 
 	if bootRomPath == "" {
-		for _, romPath := range DEFAULT_BOOT_ROM_PATHS {
+		lookupPaths := DEFAULT_BOOT_ROM_PATHS
+		if options.model == "cgb" {
+			lookupPaths = DEFAULT_CGB_BOOT_ROM_PATHS
+		}
+
+		for _, romPath := range lookupPaths {
 			if bootRomFile, err = os.Open(romPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 				return nil, err
 			} else if bootRomFile != nil {
@@ -192,7 +235,7 @@ func loadBootROM(logger *log.Logger, options *RunCmdOptions) (*os.File, error) {
 	return bootRomFile, nil
 }
 
-func loadCart(dmg *hardware.DMG, logger *log.Logger, options *RunCmdOptions) error {
+func loadCart(console hardware.Console, logger *log.Logger, options *RunCmdOptions) error {
 	if options.cartPath == "" {
 		return nil
 	}
@@ -203,7 +246,7 @@ func loadCart(dmg *hardware.DMG, logger *log.Logger, options *RunCmdOptions) err
 	}
 	defer cartFile.Close()
 
-	err = dmg.LoadCartridge(cartFile)
+	err = console.LoadCartridge(cartFile)
 	if errors.Is(err, cart.ErrChecksum) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
@@ -213,7 +256,7 @@ func loadCart(dmg *hardware.DMG, logger *log.Logger, options *RunCmdOptions) err
 	return nil
 }
 
-func loadCartSave(dmg *hardware.DMG, logger *log.Logger, options *RunCmdOptions) error {
+func loadCartSave(console hardware.Console, logger *log.Logger, options *RunCmdOptions) error {
 	cartSaveFilePath := getCartSaveFilePath(options)
 
 	cartSaveFile, err := os.Open(cartSaveFilePath)
@@ -224,7 +267,7 @@ func loadCartSave(dmg *hardware.DMG, logger *log.Logger, options *RunCmdOptions)
 	if cartSaveFile != nil {
 		defer cartSaveFile.Close()
 
-		err = dmg.LoadSave(cartSaveFile)
+		err = console.LoadSave(cartSaveFile)
 		if err != nil {
 			switch {
 			case errors.Is(err, mbc.ErrMBC3BadClockBattery):
@@ -240,7 +283,7 @@ func loadCartSave(dmg *hardware.DMG, logger *log.Logger, options *RunCmdOptions)
 	return nil
 }
 
-func saveCart(dmg *hardware.DMG, logger *log.Logger, options *RunCmdOptions) error {
+func saveCart(console hardware.Console, logger *log.Logger, options *RunCmdOptions) error {
 	cartSaveFilePath := getCartSaveFilePath(options)
 
 	cartSaveFile, err := os.OpenFile(cartSaveFilePath, os.O_RDWR|os.O_CREATE, 0o644)
@@ -249,7 +292,7 @@ func saveCart(dmg *hardware.DMG, logger *log.Logger, options *RunCmdOptions) err
 	}
 	defer cartSaveFile.Close()
 
-	err = dmg.Save(cartSaveFile)
+	err = console.Save(cartSaveFile)
 	if err != nil {
 		return fmt.Errorf("unable to write cartridge save file: %w", err)
 	}
@@ -260,36 +303,36 @@ func saveCart(dmg *hardware.DMG, logger *log.Logger, options *RunCmdOptions) err
 }
 
 func runCart(logger *log.Logger, options *RunCmdOptions) error {
-	hostDevice, err := initHost(logger, options)
+	consoleHost, err := initHost(logger, options)
 	if err != nil {
 		return fmt.Errorf("unable to initialize host device: %w", err)
 	}
 
-	dmg, err := initDMG(logger, options)
+	console, err := initConsole(logger, options)
 	if err != nil {
 		return fmt.Errorf("initializing DMG: %w", err)
 	}
 
-	err = loadCart(dmg, logger, options)
+	err = loadCart(console, logger, options)
 	if err != nil {
 		return fmt.Errorf("loading cartridge: %w", err)
 	}
 
-	if dmg.CartridgeHeader().SupportsSaving() {
-		err := loadCartSave(dmg, logger, options)
+	if console.CartridgeHeader().SupportsSaving() {
+		err := loadCartSave(console, logger, options)
 		if err != nil {
 			return fmt.Errorf("loading cartridge save: %w", err)
 		}
 
 		defer func() {
-			err := saveCart(dmg, logger, options)
+			err := saveCart(console, logger, options)
 			if err != nil {
 				logger.Printf("WARN: Error occurred while saving: %s", err.Error())
 			}
 		}()
 	}
 
-	err = hostDevice.Run(dmg)
+	err = consoleHost.Run(console)
 	if err != nil {
 		return fmt.Errorf("running emulation: %w", err)
 	}

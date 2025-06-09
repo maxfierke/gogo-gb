@@ -3,21 +3,52 @@ package cpu
 import (
 	"fmt"
 	"math/bits"
+	"slices"
 
+	gogobits "github.com/maxfierke/gogo-gb/bits"
 	"github.com/maxfierke/gogo-gb/cpu/isa"
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/mem"
 )
+
+const (
+	REG_KEY1 = 0xFF4D
+
+	REG_KEY1_ARMED_BIT         = 0
+	REG_KEY1_CURRENT_SPEED_BIT = 7
+)
+
+const (
+	FeatureDoubleSpeed Feature = "doubleSpeed"
+)
+
+var supportedFeatures = []Feature{
+	FeatureDoubleSpeed,
+}
+
+type Feature string
+
+func (f Feature) Valid() bool {
+	return slices.Contains(supportedFeatures, f)
+}
 
 type CPU struct {
 	Reg Registers
 	PC  *Register[uint16]
 	SP  *Register[uint16]
 
-	ime     bool
-	halted  bool
-	opcodes *isa.Opcodes
+	ime    bool
+	halted bool
+
+	features []Feature
+	opcodes  *isa.Opcodes
+
+	// CGB-only
+	speedswitchArmed bool
+	doubleSpeed      bool
 }
+
+var _ mem.MemHandler = (*CPU)(nil)
 
 func NewCPU() (*CPU, error) {
 	cpu := new(CPU)
@@ -29,7 +60,7 @@ func NewCPU() (*CPU, error) {
 
 	opcodes, err := isa.LoadOpcodes()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("loading opcodes: %w", err)
 	}
 
 	cpu.opcodes = opcodes
@@ -37,8 +68,59 @@ func NewCPU() (*CPU, error) {
 	return cpu, nil
 }
 
+func (cpu *CPU) IsDoubleSpeed() bool {
+	if cpu.HasFeature(FeatureDoubleSpeed) {
+		return cpu.doubleSpeed
+	}
+
+	return false
+}
+
 func (cpu *CPU) IsHalted() bool {
 	return cpu.halted
+}
+
+func (cpu *CPU) EnableFeature(feature Feature) error {
+	if !feature.Valid() {
+		return fmt.Errorf("unrecognized feature: %s", feature)
+	}
+
+	if !cpu.HasFeature(feature) {
+		cpu.features = append(cpu.features, feature)
+	}
+
+	return nil
+}
+
+func (cpu *CPU) HasFeature(feature Feature) bool {
+	return slices.Contains(cpu.features, feature)
+}
+
+func (cpu *CPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
+	if cpu.HasFeature(FeatureDoubleSpeed) && addr == REG_KEY1 {
+		var value byte
+
+		if cpu.doubleSpeed {
+			value |= 1 << REG_KEY1_CURRENT_SPEED_BIT
+		}
+
+		if cpu.speedswitchArmed {
+			value |= 1
+		}
+
+		return mem.ReadReplace(value)
+	}
+
+	return mem.ReadPassthrough()
+}
+
+func (cpu *CPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
+	if cpu.HasFeature(FeatureDoubleSpeed) && addr == REG_KEY1 {
+		cpu.speedswitchArmed = gogobits.Read(value, REG_KEY1_ARMED_BIT) == 1
+		return mem.WriteBlock()
+	}
+
+	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is not allowed for CPU", value, addr))
 }
 
 func (cpu *CPU) Step(mmu *mem.MMU) (uint8, error) {
@@ -999,6 +1081,10 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 			cpu.Reg.A.Write(newValue)
 		case 0x10:
 			// STOP n8
+			if cpu.HasFeature(FeatureDoubleSpeed) && cpu.speedswitchArmed {
+				cpu.doubleSpeed = !cpu.doubleSpeed
+				cpu.speedswitchArmed = false
+			}
 		case 0x11:
 			// LD DE, n16
 			cpu.load16(cpu.Reg.DE, cpu.readNext16(mmu))
