@@ -8,7 +8,7 @@ const (
 	REG_WRAM_SVBK_SEL_MASK = 0x7
 
 	WRAM_BANK_SIZE uint16 = 0x1000
-	WRAM_SIZE             = 0x8000
+	WRAM_SIZE      uint16 = 0x8000
 )
 
 var (
