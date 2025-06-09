@@ -100,7 +100,7 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF68, End: 0xFF6B}, unmapped) // BG/OBJ Palettes
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF6C, End: 0xFF6C}, unmapped) // OBJ Priority Mode
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF70, End: 0xFF70}, unmapped) // WRAM Bank Select
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF70, End: 0xFF70}, cgb.wram) // WRAM Bank Select
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF72, End: 0xFF73}, unmapped) // Unknown, should be R/W on CGB
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF74, End: 0xFF74}, unmapped) // Unknown, should be R/W on CGB
