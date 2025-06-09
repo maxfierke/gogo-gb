@@ -145,6 +145,28 @@ func initHost(logger *log.Logger, options *RunCmdOptions) (host.Host, error) {
 }
 
 func initConsole(logger *log.Logger, options *RunCmdOptions) (hardware.Console, error) {
+	var model hardware.ConsoleModel
+	switch options.model {
+	case "auto":
+		{
+			ext := filepath.Ext(options.cartPath)
+			switch ext {
+			case ".gbc":
+				model = hardware.ConsoleModelCGB
+			case ".gb":
+				model = hardware.ConsoleModelDMG
+			default:
+				return nil, errors.New("unable to auto-detect model. Please specify with --model/-m")
+			}
+		}
+	case "dmg":
+		model = hardware.ConsoleModelDMG
+	case "cgb":
+		model = hardware.ConsoleModelCGB
+	default:
+		return nil, fmt.Errorf("unrecognized model: %s", options.model)
+	}
+
 	debugger, err := debug.NewDebugger(options.debugger)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize debugger: %w", err)
@@ -157,7 +179,7 @@ func initConsole(logger *log.Logger, options *RunCmdOptions) (hardware.Console, 
 	if options.skipBootRom {
 		opts = append(opts, hardware.WithFakeBootROM())
 	} else {
-		bootRomFile, err := loadBootROM(logger, options)
+		bootRomFile, err := loadBootROM(model, logger, options)
 		if err != nil {
 			return nil, fmt.Errorf("unable to load boot ROM: %w", err)
 		}
@@ -167,26 +189,6 @@ func initConsole(logger *log.Logger, options *RunCmdOptions) (hardware.Console, 
 			defer bootRomFile.Close()
 			opts = append(opts, hardware.WithBootROM(bootRomFile))
 		}
-	}
-
-	var model hardware.ConsoleModel
-	switch options.model {
-	case "auto":
-		ext := filepath.Ext(options.cartPath)
-		switch ext {
-		case ".gb":
-			model = hardware.ConsoleModelDMG
-		case ".gbc":
-			model = hardware.ConsoleModelCGB
-		default:
-			return nil, errors.New("unable to auto-detect model. Please specify with --model/-m")
-		}
-	case "dmg":
-		model = hardware.ConsoleModelDMG
-	case "cgb":
-		model = hardware.ConsoleModelCGB
-	default:
-		return nil, fmt.Errorf("unrecognized model: %s", options.model)
 	}
 
 	console, err := hardware.NewConsole(
@@ -200,7 +202,7 @@ func initConsole(logger *log.Logger, options *RunCmdOptions) (hardware.Console, 
 	return console, nil
 }
 
-func loadBootROM(logger *log.Logger, options *RunCmdOptions) (*os.File, error) {
+func loadBootROM(model hardware.ConsoleModel, logger *log.Logger, options *RunCmdOptions) (*os.File, error) {
 	bootRomPath := options.bootRomPath
 
 	var bootRomFile *os.File
@@ -208,7 +210,7 @@ func loadBootROM(logger *log.Logger, options *RunCmdOptions) (*os.File, error) {
 
 	if bootRomPath == "" {
 		lookupPaths := DEFAULT_BOOT_ROM_PATHS
-		if options.model == "cgb" {
+		if model == hardware.ConsoleModelCGB {
 			lookupPaths = DEFAULT_CGB_BOOT_ROM_PATHS
 		}
 
