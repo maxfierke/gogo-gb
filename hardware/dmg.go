@@ -59,7 +59,7 @@ func NewDMG(opts ...ConsoleOption) (*DMG, error) {
 		dma:       devices.NewDMA(),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
-		ppu:       devices.NewPPU(ic),
+		ppu:       devices.NewPPU(ic, false),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 	}
