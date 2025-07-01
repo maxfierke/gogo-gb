@@ -925,11 +925,11 @@ func (ppu *PPU) drawScanline() {
 		return
 	}
 
-	if ppu.lcdCtrl.bgWindowEnabled {
+	if ppu.lcdCtrl.bgWindowEnabled || ppu.color { // TODO: Extract method
 		ppu.drawBgScanline()
 	}
 
-	if ppu.lcdCtrl.bgWindowEnabled && ppu.lcdCtrl.windowEnabled {
+	if (ppu.lcdCtrl.bgWindowEnabled || ppu.color) && ppu.lcdCtrl.windowEnabled { // TODO: Extract method
 		ppu.drawWinScanline()
 	}
 
@@ -1107,11 +1107,11 @@ func (ppu *PPU) drawObjScanline() {
 						// DMG mode: Object has higher priority x coordinate than currently rendered object
 						!hasRenderedObj || (ppu.objectPriority == objectPriorityModeDMG &&
 						hasRenderedObj &&
-						renderedObjX > object.posX)) &&
+						renderedObjX > object.posX)) && // TODO: Extract method
 					// Priority over BG or BG is color 0
 					(!object.attributes.bgPriority ||
 						ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE ||
-						(ppu.color && !ppu.lcdCtrl.bgWindowEnabled)) {
+						(ppu.color && !ppu.lcdCtrl.bgWindowEnabled)) { // TODO: Extract method
 
 					if ppu.color {
 						color := ppu.cgbObjPalettes.palettes[object.attributes.cgbPaletteID][tilePixelValue]
