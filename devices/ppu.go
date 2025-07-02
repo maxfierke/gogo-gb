@@ -540,7 +540,16 @@ func (stat *lcdStatus) Write(ppu *PPU, value uint8) {
 	stat.shouldInterrupt = !prevStatIntLine && nextStatIntLine
 }
 
+type pixelLayer uint8
+
+const (
+	PIXEL_LAYER_BG = iota
+	PIXEL_LAYER_BGP
+	PIXEL_LAYER_OBJ
+)
+
 type scanLine struct {
+	layer   pixelLayer
 	colorID ColorID
 	color   color.Color
 }
@@ -593,9 +602,14 @@ type PPU struct {
 }
 
 func NewPPU(ic *InterruptController, color bool) *PPU {
+	objectPriority := objectPriorityModeDMG
+	if color {
+		objectPriority = objectPriorityModeCGB
+	}
+
 	return &PPU{
 		ic:             ic,
-		objectPriority: objectPriorityModeDMG,
+		objectPriority: objectPriority,
 		color:          color,
 	}
 }
@@ -879,6 +893,11 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		return mem.WriteBlock()
 	}
 
+	if addr == REG_PPU_OPRI {
+		ppu.objectPriority = objectPriorityMode(value & 0x1)
+		return mem.WriteBlock()
+	}
+
 	if addr == REG_PPU_VBK {
 		ppu.curVRAMBank = value & 0b1
 		return mem.WriteBlock()
@@ -987,6 +1006,12 @@ func (ppu *PPU) drawBgScanline() {
 		}
 
 		ppu.scanLines[ppu.curScanLine][lineX].colorID = ColorID(tilePixelValue)
+
+		if bgAttribute.priority {
+			ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BGP
+		} else {
+			ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BG
+		}
 	}
 }
 
@@ -1016,8 +1041,6 @@ func (ppu *PPU) drawWinScanline() {
 			rendered = true
 
 			tileX := (lineX + 7 - uint16(ppu.windowX)) / 8
-			tilePixelX := (lineX + 7 - uint16(ppu.windowX)) % 8
-
 			tileMapIndex := uint16(tileY)*32 + uint16(tileX)
 			tileIndex := ppu.vram[0][tileMapOffset+tileMapIndex]
 
@@ -1027,10 +1050,21 @@ func (ppu *PPU) drawWinScanline() {
 				tileVRAMBank = bgAttribute.vramBank
 			}
 
-			tilePixelValue := ppu.tileset[tileVRAMBank][tileIndex][tilePixelY][tilePixelX]
+			tile := ppu.tileset[tileVRAMBank][tileIndex]
 			if ppu.lcdCtrl.bgWindowTileset == TILESET_1 && tileIndex < 128 {
-				tilePixelValue = ppu.tileset[tileVRAMBank][VRAM_TILESET_SIZE-128+uint16(tileIndex)][tilePixelY][tilePixelX]
+				tile = ppu.tileset[tileVRAMBank][VRAM_TILESET_SIZE-128+uint16(tileIndex)]
 			}
+			tileRow := tile[tilePixelY]
+			if bgAttribute.flipY {
+				tileRow = tile[7-tilePixelY]
+			}
+
+			tilePixelX := (lineX + 7 - uint16(ppu.windowX)) % 8
+			if bgAttribute.flipX {
+				tilePixelX = (7 - lineX + 7 - uint16(ppu.windowX)) % 8
+			}
+
+			tilePixelValue := tileRow[tilePixelX]
 
 			if ppu.color {
 				color := ppu.cgbBGPalettes.palettes[bgAttribute.paletteID][tilePixelValue]
@@ -1041,6 +1075,12 @@ func (ppu *PPU) drawWinScanline() {
 			}
 
 			ppu.scanLines[ppu.curScanLine][lineX].colorID = ColorID(tilePixelValue)
+
+			if bgAttribute.priority {
+				ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BGP
+			} else {
+				ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BG
+			}
 		}
 
 		if rendered {
@@ -1103,15 +1143,15 @@ func (ppu *PPU) drawObjScanline() {
 				if pixelX < FB_WIDTH &&
 					// Skip transparent pixels
 					tilePixelValue != VRAM_TILE_PIXEL_ZERO &&
-					(ppu.objectPriority == objectPriorityModeCGB ||
+					((ppu.objectPriority == objectPriorityModeCGB && !hasRenderedObj) || // CGB mode: Earlier Object hasn't rendered at pixel
 						// DMG mode: Object has higher priority x coordinate than currently rendered object
-						!hasRenderedObj || (ppu.objectPriority == objectPriorityModeDMG &&
-						hasRenderedObj &&
-						renderedObjX > object.posX)) && // TODO: Extract method
-					// Priority over BG or BG is color 0
-					(!object.attributes.bgPriority ||
-						ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE ||
-						(ppu.color && !ppu.lcdCtrl.bgWindowEnabled)) { // TODO: Extract method
+						(ppu.objectPriority == objectPriorityModeDMG &&
+							(!hasRenderedObj || (hasRenderedObj && renderedObjX > object.posX)))) && // TODO: Extract method
+					(ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE || // BG is color 0
+						// CGB: BG master priority isn't set
+						(ppu.objectPriority == objectPriorityModeCGB && !ppu.lcdCtrl.bgWindowEnabled) ||
+						// BG doesn't have priority (CGB) AND OBJ has priority over BG
+						(ppu.scanLines[ppu.curScanLine][pixelX].layer != PIXEL_LAYER_BGP && !object.attributes.bgPriority)) { // TODO: Extract method
 
 					if ppu.color {
 						color := ppu.cgbObjPalettes.palettes[object.attributes.cgbPaletteID][tilePixelValue]
@@ -1122,6 +1162,7 @@ func (ppu *PPU) drawObjScanline() {
 					}
 
 					ppu.scanLines[ppu.curScanLine][pixelX].colorID = ColorID(tilePixelValue)
+					ppu.scanLines[ppu.curScanLine][pixelX].layer = PIXEL_LAYER_OBJ
 					renderedObject = true
 					renderedObjectsX[pixelX] = object.posX
 				}
