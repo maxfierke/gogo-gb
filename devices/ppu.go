@@ -927,10 +927,8 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 		if addr <= VRAM_TILESET_2_END {
 			ppu.writeTile(vramAddr)
-		}
-
-		if addr >= VRAM_TILEMAP_1_START && ppu.curVRAMBank == 1 {
-			ppu.writeBGAttr(vramAddr, value)
+		} else if ppu.curVRAMBank == 1 {
+			ppu.writeBGAttr(addr, value)
 		}
 
 		return mem.WriteBlock()
@@ -1201,8 +1199,11 @@ func (ppu *PPU) writeObj(oamAddr uint8, value byte) {
 	}
 }
 
-func (ppu *PPU) writeBGAttr(vramAddr uint16, value uint8) {
-	attrIndex := vramAddr - (VRAM_TILEMAP_1_START - VRAM_START)
+func (ppu *PPU) writeBGAttr(addr uint16, value uint8) {
+	attrIndex := addr - VRAM_TILEMAP_1_START
+	if addr >= VRAM_TILEMAP_2_START {
+		attrIndex = addr - VRAM_TILEMAP_2_START
+	}
 	ppu.cgbBGAttributes[attrIndex].Write(value)
 }
 
