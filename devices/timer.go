@@ -64,7 +64,6 @@ func (timer *Timer) FreqDivider() uint {
 }
 
 func (timer *Timer) Step(cycles uint8, ic *InterruptController) {
-	// TODO(GBC): Need to take into account CGB double-speed mode
 	timer.divider += cycles
 
 	if !timer.incCounter {

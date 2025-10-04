@@ -236,7 +236,7 @@ func (m *MBC3) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if MBC3_ROM_BANK_00.Contains(addr, false) {
 		return mem.ReadReplace(m.rom[addr])
 	} else if MBC3_ROM_BANKS.Contains(addr, false) {
-		bankByte := readBankAddr(
+		bankByte := mem.ReadBankAddr(
 			m.rom,
 			MBC3_ROM_BANKS,
 			ROM_BANK_SIZE,
@@ -246,7 +246,7 @@ func (m *MBC3) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 		return mem.ReadReplace(bankByte)
 	} else if MBC3_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled && m.ramSelected {
-			bankByte := readBankAddr(
+			bankByte := mem.ReadBankAddr(
 				m.ram,
 				MBC3_RAM_BANKS,
 				RAM_BANK_SIZE,
@@ -306,7 +306,7 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		return mem.WriteBlock()
 	} else if MBC3_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled && m.ramSelected && len(m.ram) > 0 {
-			writeBankAddr(
+			mem.WriteBankAddr(
 				m.ram,
 				MBC3_RAM_BANKS,
 				RAM_BANK_SIZE,
@@ -467,7 +467,7 @@ func NewMBC30(rom []byte, ram []byte, rtcAvailable bool) *MBC30 {
 
 func (m *MBC30) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if MBC30_ROM_BANKS.Contains(addr, false) {
-		bankByte := readBankAddr(
+		bankByte := mem.ReadBankAddr(
 			m.rom,
 			MBC30_ROM_BANKS,
 			ROM_BANK_SIZE,

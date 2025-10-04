@@ -50,12 +50,21 @@ const (
 	REG_PPU_WY      uint16 = 0xFF4A
 	REG_PPU_WX      uint16 = 0xFF4B
 
+	// CGB Registers
+	REG_PPU_VBK       uint16 = 0xFF4F
+	REG_PPU_BCPS_BGPI uint16 = 0xFF68
+	REG_PPU_BCPD_BGPD uint16 = 0xFF69
+	REG_PPU_OCPS_OBPI uint16 = 0xFF6A
+	REG_PPU_OCPD_OBPD uint16 = 0xFF6B
+	REG_PPU_OPRI      uint16 = 0xFF6C
+
 	OAM_START                    uint16 = 0xFE00
 	OAM_END                      uint16 = 0xFE9F
 	OAM_MAX_OBJECTS_PER_SCANLINE        = 10
 	OAM_MAX_OBJECT_COUNT                = 40
 	OAM_SIZE                            = OAM_END - OAM_START + 1
 
+	VRAM_BANKS                  = 2 // Bank 0/1. Bank 1 is CGB only
 	VRAM_START           uint16 = 0x8000
 	VRAM_TILESET_1_START uint16 = VRAM_START
 	VRAM_TILESET_2_START uint16 = 0x8800
@@ -65,6 +74,8 @@ const (
 	VRAM_TILEMAP_1_END   uint16 = 0x9BFF
 	VRAM_TILEMAP_2_START uint16 = 0x9C00
 	VRAM_TILEMAP_2_END   uint16 = 0x9FFF
+	VRAM_TILEMAP_SIZE           = VRAM_TILEMAP_2_END - VRAM_TILEMAP_1_START + 1 // 2K
+	VRAM_BG_ATTR_SIZE           = VRAM_TILEMAP_2_END - VRAM_TILEMAP_1_START + 1 // 2K
 	VRAM_TILESET_SIZE           = 384
 	VRAM_TILE_ROW_MASK   uint16 = 0xFFFE
 	VRAM_END             uint16 = 0x9FFF
@@ -88,35 +99,92 @@ const (
 	COLOR_ID_TRANSPARENT = COLOR_ID_WHITE
 )
 
-type objectData struct {
-	posY      uint8
-	posX      uint8
-	tileIndex uint8
+const (
+	BG_ATTR_BIT_VRAM_BANK   = 3
+	BG_ATTR_BIT_X_FLIP      = 5
+	BG_ATTR_BIT_Y_FLIP      = 6
+	BG_ATTR_BIT_BG_PRIORITY = 7
 
+	BG_ATTR_MASK_PALETTE_ID = 0x7
+)
+
+type bgAttributes struct {
+	priority  bool
+	flipY     bool
+	flipX     bool
+	vramBank  uint8
+	paletteID uint8
+}
+
+func (attrs *bgAttributes) Read() uint8 {
+	var (
+		priority  uint8
+		flipY     uint8
+		flipX     uint8
+		vramBank  uint8
+		paletteID uint8
+	)
+
+	if attrs.priority {
+		priority = 1 << BG_ATTR_BIT_BG_PRIORITY
+	}
+
+	if attrs.flipY {
+		flipY = 1 << BG_ATTR_BIT_Y_FLIP
+	}
+
+	if attrs.flipX {
+		flipX = 1 << BG_ATTR_BIT_X_FLIP
+	}
+
+	vramBank = attrs.vramBank << BG_ATTR_BIT_VRAM_BANK
+	paletteID = attrs.paletteID & BG_ATTR_MASK_PALETTE_ID
+
+	return priority | flipY | flipX | vramBank | paletteID
+}
+
+func (attrs *bgAttributes) Write(value uint8) {
+	attrs.priority = bits.Read(value, BG_ATTR_BIT_BG_PRIORITY) == 1
+	attrs.flipY = bits.Read(value, BG_ATTR_BIT_Y_FLIP) == 1
+	attrs.flipX = bits.Read(value, BG_ATTR_BIT_X_FLIP) == 1
+	attrs.vramBank = bits.Read(value, BG_ATTR_BIT_VRAM_BANK)
+	attrs.paletteID = value & BG_ATTR_MASK_PALETTE_ID
+}
+
+type objectData struct {
+	posY       uint8
+	posX       uint8
+	tileIndex  uint8
 	attributes objectAttributes
 }
 
 const (
-	OAM_ATTR_BIT_PALETTE_ID  = 4
-	OAM_ATTR_BIT_X_FLIP      = 5
-	OAM_ATTR_BIT_Y_FLIP      = 6
-	OAM_ATTR_BIT_BG_PRIORITY = 7
+	OAM_ATTR_BIT_VRAM_BANK      = 3
+	OAM_ATTR_BIT_DMG_PALETTE_ID = 4
+	OAM_ATTR_BIT_X_FLIP         = 5
+	OAM_ATTR_BIT_Y_FLIP         = 6
+	OAM_ATTR_BIT_BG_PRIORITY    = 7
+
+	OAM_ATTR_MASK_CGB_PALETTE_ID = 0x7
 )
 
 type objectAttributes struct {
-	bgPriority bool
-	flipY      bool
-	flipX      bool
-	paletteID  uint8
-	// TODO(gbc): Add GBC palette & bank info
+	bgPriority   bool
+	flipY        bool
+	flipX        bool
+	dmgPaletteID uint8
+	vramBank     uint8
+	cgbPaletteID uint8
 }
 
 func (attrs *objectAttributes) Read() uint8 {
 	var (
-		bgPriority uint8
-		flipY      uint8
-		flipX      uint8
-		paletteID  uint8
+		bgPriority   uint8
+		flipY        uint8
+		flipX        uint8
+		dmgPaletteID uint8
+		vramBank     uint8
+		cgbPaletteID uint8
 	)
 
 	if attrs.bgPriority {
@@ -131,16 +199,20 @@ func (attrs *objectAttributes) Read() uint8 {
 		flipX = 1 << OAM_ATTR_BIT_X_FLIP
 	}
 
-	paletteID = attrs.paletteID << OAM_ATTR_BIT_PALETTE_ID
+	dmgPaletteID = attrs.dmgPaletteID << OAM_ATTR_BIT_DMG_PALETTE_ID
+	vramBank = attrs.vramBank << OAM_ATTR_BIT_VRAM_BANK
+	cgbPaletteID = attrs.cgbPaletteID & OAM_ATTR_MASK_CGB_PALETTE_ID
 
-	return bgPriority | flipY | flipX | paletteID
+	return bgPriority | flipY | flipX | dmgPaletteID | vramBank | cgbPaletteID
 }
 
 func (attrs *objectAttributes) Write(value uint8) {
 	attrs.bgPriority = bits.Read(value, OAM_ATTR_BIT_BG_PRIORITY) == 1
 	attrs.flipY = bits.Read(value, OAM_ATTR_BIT_Y_FLIP) == 1
 	attrs.flipX = bits.Read(value, OAM_ATTR_BIT_X_FLIP) == 1
-	attrs.paletteID = bits.Read(value, OAM_ATTR_BIT_PALETTE_ID)
+	attrs.dmgPaletteID = bits.Read(value, OAM_ATTR_BIT_DMG_PALETTE_ID)
+	attrs.vramBank = bits.Read(value, OAM_ATTR_BIT_VRAM_BANK)
+	attrs.cgbPaletteID = value & OAM_ATTR_MASK_CGB_PALETTE_ID
 }
 
 type objPalette [4]uint8
@@ -158,6 +230,13 @@ func (pal *objPalette) Write(value uint8) {
 	pal[3] = (value & 0b1100_0000) >> 6
 }
 
+type objectPriorityMode uint8
+
+const (
+	objectPriorityModeCGB objectPriorityMode = iota // objectPriorityModeCGB prioritizes by OAM location
+	objectPriorityModeDMG                           // objectPriorityModeDMG prioritizes by x-coordinate
+)
+
 type bgPalette [4]uint8
 
 func (pal *bgPalette) Read() uint8 {
@@ -172,6 +251,99 @@ func (pal *bgPalette) Write(value uint8) {
 	pal[1] = (value & 0b0000_1100) >> 2
 	pal[2] = (value & 0b0011_0000) >> 4
 	pal[3] = (value & 0b1100_0000) >> 6
+}
+
+type cgbPalette [4]rgb555
+
+type rgb555 struct {
+	R uint8
+	G uint8
+	B uint8
+}
+
+func NewRGB555(r, g, b uint8) rgb555 {
+	return rgb555{
+		R: r & 0x1F,
+		G: g & 0x1F,
+		B: b & 0x1F,
+	}
+}
+
+func (c rgb555) RGBA() (r, g, b, a uint32) {
+	color := color.RGBA{
+		R: c.R << 3,
+		G: c.G << 3,
+		B: c.B << 3,
+		A: 255,
+	}
+	color.R |= color.R >> 2
+	color.G |= color.G >> 2
+	color.B |= color.B >> 2
+	return color.RGBA()
+}
+
+const (
+	REG_BCPS_OCPS_BIT_AUTO_INCREMENT = 7
+
+	REG_BCPS_OCPS_ADDR_MASK = 0x3F
+)
+
+type cgbPalettes struct {
+	palettes   [8]cgbPalette
+	paletteRAM [64]byte
+
+	autoIncrement bool
+	addr          uint8
+}
+
+func (cgbp *cgbPalettes) Read() uint8 {
+	var (
+		autoIncrement uint8
+		addr          uint8
+	)
+
+	if cgbp.autoIncrement {
+		autoIncrement = 1 << REG_BCPS_OCPS_BIT_AUTO_INCREMENT
+	}
+
+	addr = cgbp.addr & REG_BCPS_OCPS_ADDR_MASK
+
+	return (autoIncrement | addr)
+}
+
+func (cgbp *cgbPalettes) Write(value byte) {
+	cgbp.autoIncrement = bits.Read(value, REG_BCPS_OCPS_BIT_AUTO_INCREMENT) == 1
+	cgbp.addr = value & REG_BCPS_OCPS_ADDR_MASK
+}
+
+func (cgbp *cgbPalettes) ReadPalette() byte {
+	return cgbp.paletteRAM[cgbp.addr]
+}
+
+func (cgbp *cgbPalettes) WritePalette(value byte) {
+	cgbp.paletteRAM[cgbp.addr] = value
+
+	index := cgbp.addr / 8
+	colorIndex := cgbp.addr % 8
+	currentColor := cgbp.palettes[index][colorIndex/2]
+
+	if colorIndex%2 == 0 {
+		cgbp.palettes[index][colorIndex/2] = NewRGB555(
+			value,
+			(currentColor.G&0b11000)|(value>>5),
+			currentColor.B,
+		)
+	} else {
+		cgbp.palettes[index][colorIndex/2] = NewRGB555(
+			currentColor.R,
+			(currentColor.G&0b111)|((value&0x3)<<3),
+			(value >> 2),
+		)
+	}
+
+	if cgbp.autoIncrement {
+		cgbp.addr = (cgbp.addr + 1) % 64
+	}
 }
 
 const (
@@ -368,9 +540,18 @@ func (stat *lcdStatus) Write(ppu *PPU, value uint8) {
 	stat.shouldInterrupt = !prevStatIntLine && nextStatIntLine
 }
 
+type pixelLayer uint8
+
+const (
+	PIXEL_LAYER_BG = iota
+	PIXEL_LAYER_BGP
+	PIXEL_LAYER_OBJ
+)
+
 type scanLine struct {
+	layer   pixelLayer
 	colorID ColorID
-	color   uint8
+	color   color.Color
 }
 
 type PPUMode uint8
@@ -396,41 +577,60 @@ type PPU struct {
 	windowY           uint8 // WY
 	curWindowLine     uint8 // Internal counter for window rendering
 
+	// Monochrome palettes (DMG)
 	bgPalette   bgPalette
 	objPalettes [2]objPalette
 
-	oam        [OAM_SIZE]byte
-	objectData [OAM_MAX_OBJECT_COUNT]objectData
-	scanLines  [FB_HEIGHT][FB_WIDTH]scanLine
-	vram       [VRAM_SIZE]byte
-	tileset    [VRAM_TILESET_SIZE]Tile
+	// Color palettes (CGB)
+	cgbBGAttributes [VRAM_BG_ATTR_SIZE]bgAttributes
+	cgbBGPalettes   cgbPalettes
+	cgbObjPalettes  cgbPalettes
+
+	oam            [OAM_SIZE]byte
+	objectData     [OAM_MAX_OBJECT_COUNT]objectData
+	objectPriority objectPriorityMode
+
+	scanLines   [FB_HEIGHT][FB_WIDTH]scanLine
+	vram        [VRAM_BANKS][VRAM_SIZE]byte
+	curVRAMBank uint8
+	tileset     [VRAM_BANKS][VRAM_TILESET_SIZE]Tile
 
 	clock uint
 
-	ic *InterruptController
+	ic    *InterruptController
+	color bool
 }
 
-func NewPPU(ic *InterruptController) *PPU {
+func NewPPU(ic *InterruptController, color bool) *PPU {
+	objectPriority := objectPriorityModeDMG
+	if color {
+		objectPriority = objectPriorityModeCGB
+	}
+
 	return &PPU{
-		ic: ic,
+		ic:             ic,
+		objectPriority: objectPriority,
+		color:          color,
 	}
 }
 
 var grayScales = []color.Color{
 	color.White,
-	color.RGBA{R: 170, G: 170, B: 170},
-	color.RGBA{R: 85, G: 85, B: 85},
+	color.GrayModel.Convert(color.RGBA{R: 170, G: 170, B: 170}),
+	color.GrayModel.Convert(color.RGBA{R: 85, G: 85, B: 85}),
 	color.Black,
 }
 
 func (ppu *PPU) Draw() image.Image {
-	fbImage := image.NewGray(
+	fbImage := image.NewRGBA(
 		image.Rect(0, 0, FB_WIDTH, FB_HEIGHT),
 	)
 
 	for y := range FB_HEIGHT {
 		for x, scanLine := range ppu.scanLines[y] {
-			fbImage.Set(x, y, grayScales[scanLine.color])
+			if scanLine.color != nil {
+				fbImage.Set(x, y, scanLine.color)
+			}
 		}
 	}
 
@@ -543,6 +743,38 @@ func (ppu *PPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 		return mem.ReadReplace(ppu.windowX)
 	}
 
+	if addr == REG_PPU_VBK {
+		return mem.ReadReplace(0xFE | ppu.curVRAMBank)
+	}
+
+	if addr == REG_PPU_BCPS_BGPI {
+		return mem.ReadReplace(ppu.cgbBGPalettes.Read())
+	}
+
+	if addr == REG_PPU_BCPD_BGPD {
+		if ppu.Mode == PPU_MODE_VRAM {
+			return mem.ReadReplace(0xFF)
+		}
+
+		return mem.ReadReplace(ppu.cgbBGPalettes.ReadPalette())
+	}
+
+	if addr == REG_PPU_OCPS_OBPI {
+		return mem.ReadReplace(ppu.cgbObjPalettes.Read())
+	}
+
+	if addr == REG_PPU_OCPD_OBPD {
+		if ppu.Mode == PPU_MODE_VRAM {
+			return mem.ReadReplace(0xFF)
+		}
+
+		return mem.ReadReplace(ppu.cgbObjPalettes.ReadPalette())
+	}
+
+	if addr == REG_PPU_OPRI {
+		return mem.ReadReplace(byte(ppu.objectPriority))
+	}
+
 	if addr >= OAM_START && addr <= OAM_END {
 		oamAddr := addr - OAM_START
 
@@ -560,7 +792,7 @@ func (ppu *PPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 			return mem.ReadReplace(0xFF)
 		}
 
-		return mem.ReadReplace(ppu.vram[vramAddr])
+		return mem.ReadReplace(ppu.vram[ppu.curVRAMBank][vramAddr])
 	}
 
 	panic(fmt.Sprintf("Attempting to read @ 0x%04X, which is out-of-bounds for PPU", addr))
@@ -627,6 +859,50 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		return mem.WriteBlock()
 	}
 
+	if addr == REG_PPU_BCPS_BGPI {
+		ppu.cgbBGPalettes.Write(value)
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_PPU_BCPD_BGPD {
+		if ppu.Mode == PPU_MODE_VRAM {
+			if ppu.cgbBGPalettes.autoIncrement {
+				ppu.cgbBGPalettes.addr = (ppu.cgbBGPalettes.addr + 1) % 64
+			}
+		} else {
+			ppu.cgbBGPalettes.WritePalette(value)
+		}
+
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_PPU_OCPS_OBPI {
+		ppu.cgbObjPalettes.Write(value)
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_PPU_OCPD_OBPD {
+		if ppu.Mode == PPU_MODE_VRAM {
+			if ppu.cgbObjPalettes.autoIncrement {
+				ppu.cgbObjPalettes.addr = (ppu.cgbObjPalettes.addr + 1) % 64
+			}
+		} else {
+			ppu.cgbObjPalettes.WritePalette(value)
+		}
+
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_PPU_OPRI {
+		ppu.objectPriority = objectPriorityMode(value & 0x1)
+		return mem.WriteBlock()
+	}
+
+	if addr == REG_PPU_VBK {
+		ppu.curVRAMBank = value & 0b1
+		return mem.WriteBlock()
+	}
+
 	if addr >= OAM_START && addr <= OAM_END {
 		oamAddr := uint8(addr - OAM_START)
 
@@ -647,10 +923,12 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 			return mem.WriteBlock()
 		}
 
-		ppu.vram[vramAddr] = value
+		ppu.vram[ppu.curVRAMBank][vramAddr] = value
 
 		if addr <= VRAM_TILESET_2_END {
 			ppu.writeTile(vramAddr)
+		} else if ppu.curVRAMBank == 1 {
+			ppu.writeBGAttr(addr, value)
 		}
 
 		return mem.WriteBlock()
@@ -664,11 +942,11 @@ func (ppu *PPU) drawScanline() {
 		return
 	}
 
-	if ppu.lcdCtrl.bgWindowEnabled {
+	if ppu.lcdCtrl.bgWindowEnabled || ppu.color { // TODO: Extract method
 		ppu.drawBgScanline()
 	}
 
-	if ppu.lcdCtrl.bgWindowEnabled && ppu.lcdCtrl.windowEnabled {
+	if (ppu.lcdCtrl.bgWindowEnabled || ppu.color) && ppu.lcdCtrl.windowEnabled { // TODO: Extract method
 		ppu.drawWinScanline()
 	}
 
@@ -685,24 +963,53 @@ func (ppu *PPU) drawBgScanline() {
 		bgMapAddr = VRAM_TILEMAP_2_START
 	}
 
-	tileMapBegin := bgMapAddr - VRAM_START
-	tileMapOffset := tileMapBegin + uint16(tileY)*32
+	tileMapOffset := bgMapAddr - VRAM_START
 
 	tilePixelY := (ppu.curScanLine + ppu.scrollBackgroundY) % 8
 
 	for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
 		tileX := (lineX + uint16(ppu.scrollBackgroundX)) % 256
-		tilePixelX := tileX % 8
-		tileIndex := ppu.vram[tileMapOffset+uint16(tileX/8)]
 
-		tilePixelValue := ppu.tileset[tileIndex][tilePixelY][tilePixelX]
-		if ppu.lcdCtrl.bgWindowTileset == TILESET_1 && tileIndex < 128 {
-			tilePixelValue = ppu.tileset[VRAM_TILESET_SIZE-128+uint16(tileIndex)][tilePixelY][tilePixelX]
+		tileMapIndex := uint16(tileY)*32 + uint16(tileX/8)
+		tileIndex := ppu.vram[0][tileMapOffset+tileMapIndex]
+
+		var tileVRAMBank uint8
+		bgAttribute := ppu.cgbBGAttributes[tileMapIndex]
+		if ppu.color {
+			tileVRAMBank = bgAttribute.vramBank
 		}
 
-		color := ppu.bgPalette[tilePixelValue]
+		tile := ppu.tileset[tileVRAMBank][tileIndex]
+		if ppu.lcdCtrl.bgWindowTileset == TILESET_1 && tileIndex < 128 {
+			tile = ppu.tileset[tileVRAMBank][VRAM_TILESET_SIZE-128+uint16(tileIndex)]
+		}
+		tileRow := tile[tilePixelY]
+		if bgAttribute.flipY {
+			tileRow = tile[7-tilePixelY]
+		}
+
+		tilePixelX := tileX % 8
+		if bgAttribute.flipX {
+			tilePixelX = 7 - tilePixelX
+		}
+
+		tilePixelValue := tileRow[tilePixelX]
+
+		if ppu.color {
+			color := ppu.cgbBGPalettes.palettes[bgAttribute.paletteID][tilePixelValue]
+			ppu.scanLines[ppu.curScanLine][lineX].color = color
+		} else {
+			color := ppu.bgPalette[tilePixelValue]
+			ppu.scanLines[ppu.curScanLine][lineX].color = grayScales[color]
+		}
+
 		ppu.scanLines[ppu.curScanLine][lineX].colorID = ColorID(tilePixelValue)
-		ppu.scanLines[ppu.curScanLine][lineX].color = color
+
+		if bgAttribute.priority {
+			ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BGP
+		} else {
+			ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BG
+		}
 	}
 }
 
@@ -720,8 +1027,7 @@ func (ppu *PPU) drawWinScanline() {
 		tileY := ppu.curWindowLine / 8
 		tilePixelY := ppu.curWindowLine % 8
 
-		tileMapBegin := windowMapAddr - VRAM_START
-		tileMapOffset := tileMapBegin + uint16(tileY)*32
+		tileMapOffset := windowMapAddr - VRAM_START
 
 		rendered := false
 
@@ -733,18 +1039,46 @@ func (ppu *PPU) drawWinScanline() {
 			rendered = true
 
 			tileX := (lineX + 7 - uint16(ppu.windowX)) / 8
-			tilePixelX := (lineX + 7 - uint16(ppu.windowX)) % 8
+			tileMapIndex := uint16(tileY)*32 + uint16(tileX)
+			tileIndex := ppu.vram[0][tileMapOffset+tileMapIndex]
 
-			tileIndex := ppu.vram[tileMapOffset+uint16(tileX)]
-
-			tilePixelValue := ppu.tileset[tileIndex][tilePixelY][tilePixelX]
-			if ppu.lcdCtrl.bgWindowTileset == TILESET_1 && tileIndex < 128 {
-				tilePixelValue = ppu.tileset[VRAM_TILESET_SIZE-128+uint16(tileIndex)][tilePixelY][tilePixelX]
+			bgAttribute := ppu.cgbBGAttributes[tileMapIndex]
+			var tileVRAMBank uint8
+			if ppu.color {
+				tileVRAMBank = bgAttribute.vramBank
 			}
 
-			color := ppu.bgPalette[tilePixelValue]
+			tile := ppu.tileset[tileVRAMBank][tileIndex]
+			if ppu.lcdCtrl.bgWindowTileset == TILESET_1 && tileIndex < 128 {
+				tile = ppu.tileset[tileVRAMBank][VRAM_TILESET_SIZE-128+uint16(tileIndex)]
+			}
+			tileRow := tile[tilePixelY]
+			if bgAttribute.flipY {
+				tileRow = tile[7-tilePixelY]
+			}
+
+			tilePixelX := (lineX + 7 - uint16(ppu.windowX)) % 8
+			if bgAttribute.flipX {
+				tilePixelX = (7 - lineX + 7 - uint16(ppu.windowX)) % 8
+			}
+
+			tilePixelValue := tileRow[tilePixelX]
+
+			if ppu.color {
+				color := ppu.cgbBGPalettes.palettes[bgAttribute.paletteID][tilePixelValue]
+				ppu.scanLines[ppu.curScanLine][lineX].color = color
+			} else {
+				color := ppu.bgPalette[tilePixelValue]
+				ppu.scanLines[ppu.curScanLine][lineX].color = grayScales[color]
+			}
+
 			ppu.scanLines[ppu.curScanLine][lineX].colorID = ColorID(tilePixelValue)
-			ppu.scanLines[ppu.curScanLine][lineX].color = color
+
+			if bgAttribute.priority {
+				ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BGP
+			} else {
+				ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BG
+			}
 		}
 
 		if rendered {
@@ -780,7 +1114,12 @@ func (ppu *PPU) drawObjScanline() {
 				}
 			}
 
-			tile := ppu.tileset[tileIndex]
+			var tileVRAMBank uint8
+			if ppu.color {
+				tileVRAMBank = object.attributes.vramBank
+			}
+
+			tile := ppu.tileset[tileVRAMBank][tileIndex]
 			tilePixelY := objPixelY % 8
 			tileRow := tile[tilePixelY]
 			if object.attributes.flipY {
@@ -802,15 +1141,26 @@ func (ppu *PPU) drawObjScanline() {
 				if pixelX < FB_WIDTH &&
 					// Skip transparent pixels
 					tilePixelValue != VRAM_TILE_PIXEL_ZERO &&
-					// Object is higher priority than currently rendered object
-					// TODO(GBC): Doesn't apply to CGB
-					(!hasRenderedObj || (hasRenderedObj && renderedObjX > object.posX)) &&
-					// Priority over BG or BG is color 0
-					(!object.attributes.bgPriority || ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE) {
+					((ppu.objectPriority == objectPriorityModeCGB && !hasRenderedObj) || // CGB mode: Earlier Object hasn't rendered at pixel
+						// DMG mode: Object has higher priority x coordinate than currently rendered object
+						(ppu.objectPriority == objectPriorityModeDMG &&
+							(!hasRenderedObj || (hasRenderedObj && renderedObjX > object.posX)))) && // TODO: Extract method
+					(ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE || // BG is color 0
+						// CGB: BG master priority isn't set
+						(ppu.objectPriority == objectPriorityModeCGB && !ppu.lcdCtrl.bgWindowEnabled) ||
+						// BG doesn't have priority (CGB) AND OBJ has priority over BG
+						(ppu.scanLines[ppu.curScanLine][pixelX].layer != PIXEL_LAYER_BGP && !object.attributes.bgPriority)) { // TODO: Extract method
 
-					color := ppu.objPalettes[object.attributes.paletteID][tilePixelValue]
+					if ppu.color {
+						color := ppu.cgbObjPalettes.palettes[object.attributes.cgbPaletteID][tilePixelValue]
+						ppu.scanLines[ppu.curScanLine][pixelX].color = color
+					} else {
+						color := ppu.objPalettes[object.attributes.dmgPaletteID][tilePixelValue]
+						ppu.scanLines[ppu.curScanLine][pixelX].color = grayScales[color]
+					}
+
 					ppu.scanLines[ppu.curScanLine][pixelX].colorID = ColorID(tilePixelValue)
-					ppu.scanLines[ppu.curScanLine][pixelX].color = color
+					ppu.scanLines[ppu.curScanLine][pixelX].layer = PIXEL_LAYER_OBJ
 					renderedObject = true
 					renderedObjectsX[pixelX] = object.posX
 				}
@@ -849,29 +1199,37 @@ func (ppu *PPU) writeObj(oamAddr uint8, value byte) {
 	}
 }
 
+func (ppu *PPU) writeBGAttr(addr uint16, value uint8) {
+	attrIndex := addr - VRAM_TILEMAP_1_START
+	if addr >= VRAM_TILEMAP_2_START {
+		attrIndex = addr - VRAM_TILEMAP_2_START
+	}
+	ppu.cgbBGAttributes[attrIndex].Write(value)
+}
+
 func (ppu *PPU) writeTile(vramAddr uint16) {
 	// https://rylev.github.io/DMG-01/public/book/graphics/tile_ram.html
 	rowAddr := vramAddr & VRAM_TILE_ROW_MASK
 
-	tileRowTop := ppu.vram[rowAddr]
-	tileRowBottom := ppu.vram[rowAddr+1]
+	tileRowTop := ppu.vram[ppu.curVRAMBank][rowAddr]
+	tileRowBottom := ppu.vram[ppu.curVRAMBank][rowAddr+1]
 
 	tileIdx := vramAddr / 16
 	rowIdx := (vramAddr % 16) / 2
 
-	for pixelIdx := range ppu.tileset[tileIdx][rowIdx] {
+	for pixelIdx := range ppu.tileset[ppu.curVRAMBank][tileIdx][rowIdx] {
 		pixelMask := byte(1 << (7 - pixelIdx))
 		lsb := tileRowTop & pixelMask
 		msb := tileRowBottom & pixelMask
 
 		if lsb == 0 && msb == 0 {
-			ppu.tileset[tileIdx][rowIdx][pixelIdx] = VRAM_TILE_PIXEL_ZERO
+			ppu.tileset[ppu.curVRAMBank][tileIdx][rowIdx][pixelIdx] = VRAM_TILE_PIXEL_ZERO
 		} else if lsb != 0 && msb == 0 {
-			ppu.tileset[tileIdx][rowIdx][pixelIdx] = VRAM_TILE_PIXEL_ONE
+			ppu.tileset[ppu.curVRAMBank][tileIdx][rowIdx][pixelIdx] = VRAM_TILE_PIXEL_ONE
 		} else if lsb == 0 && msb != 0 {
-			ppu.tileset[tileIdx][rowIdx][pixelIdx] = VRAM_TILE_PIXEL_TWO
+			ppu.tileset[ppu.curVRAMBank][tileIdx][rowIdx][pixelIdx] = VRAM_TILE_PIXEL_TWO
 		} else {
-			ppu.tileset[tileIdx][rowIdx][pixelIdx] = VRAM_TILE_PIXEL_THREE
+			ppu.tileset[ppu.curVRAMBank][tileIdx][rowIdx][pixelIdx] = VRAM_TILE_PIXEL_THREE
 		}
 	}
 }

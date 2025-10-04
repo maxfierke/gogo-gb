@@ -53,7 +53,7 @@ func (m *MBC5) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if MBC5_ROM_BANK_00.Contains(addr, false) {
 		return mem.ReadReplace(m.rom[addr])
 	} else if MBC5_ROM_BANKS.Contains(addr, false) {
-		bankByte := readBankAddr(
+		bankByte := mem.ReadBankAddr(
 			m.rom,
 			MBC5_ROM_BANKS,
 			ROM_BANK_SIZE,
@@ -63,7 +63,7 @@ func (m *MBC5) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 		return mem.ReadReplace(bankByte)
 	} else if MBC5_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled {
-			bankByte := readBankAddr(
+			bankByte := mem.ReadBankAddr(
 				m.ram,
 				MBC5_RAM_BANKS,
 				RAM_BANK_SIZE,
@@ -102,7 +102,7 @@ func (m *MBC5) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		return mem.WriteBlock()
 	} else if MBC5_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled && len(m.ram) > 0 {
-			writeBankAddr(
+			mem.WriteBankAddr(
 				m.ram,
 				MBC5_RAM_BANKS,
 				RAM_BANK_SIZE,
