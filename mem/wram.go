@@ -30,6 +30,10 @@ func NewWRAM() *WRAM {
 }
 
 func (w *WRAM) OnRead(mmu *MMU, addr uint16) MemRead {
+	if addr == REG_WRAM_SVBK {
+		return ReadReplace(max(w.curBank, 1) & REG_WRAM_SVBK_SEL_MASK)
+	}
+
 	if WRAM_BANK_00.Contains(addr, false) {
 		bankByte := ReadBankAddr(
 			w.wram,
