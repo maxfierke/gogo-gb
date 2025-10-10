@@ -23,6 +23,7 @@ type CGB struct {
 	mmu       *mem.MMU
 	cartridge *cart.Cartridge
 	dma       *devices.DMA
+	hdma      *devices.HDMA
 	ic        *devices.InterruptController
 	joypad    *devices.Joypad
 	ppu       *devices.PPU
@@ -62,9 +63,10 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 		cartridge: cart.NewCartridge(),
 		debugger:  debug.NewNullDebugger(),
 		dma:       devices.NewDMA(),
+		hdma:      devices.NewHDMA(),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
-		ppu:       devices.NewPPU(ic, true),
+		ppu:       devices.NewPPU(ic),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 		wram:      mem.NewWRAM(),
@@ -76,6 +78,9 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 			return nil, err
 		}
 	}
+
+	cgb.ppu.EnableColor()
+	cgb.ppu.ConnectHDMA(cgb.hdma)
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, cgb.cartridge) // MBCs ROM Banks
 	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, cgb.cartridge) // MBCs RAM Banks
@@ -93,8 +98,9 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF46, End: 0xFF46}, cgb.dma)    // DMA
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF47, End: 0xFF4B}, cgb.ppu)    // PPU registers
 
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF4C, End: 0xFF4C}, cgb.ppu)  // DMG Mode (during Boot ROM)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF4F, End: 0xFF4F}, cgb.ppu)  // VRAM Bank Select
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF51, End: 0xFF55}, unmapped) // VRAM DMA
+	mmu.AddHandler(mem.MemRegion{Start: 0xFF51, End: 0xFF55}, cgb.hdma) // VRAM DMA
 
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF56, End: 0xFF56}, unmapped) // IR Port
 
@@ -202,20 +208,29 @@ func (cgb *CGB) Step() (uint8, error) {
 	cgb.debugger.OnDecode(cgb.cpu, cgb.mmu)
 
 	var cycles uint8
+	var err error
 
 	haltedPriorToExecute := cgb.cpu.IsHalted()
 
-	cycles, err := cgb.cpu.Step(cgb.mmu)
-	if err != nil {
-		return 0, fmt.Errorf("unexpected error while executing instruction: %w", err)
-	}
+	if cgb.hdma.IsActive(devices.HDMA_MODE_GENERAL) {
+		cgb.hdma.Step(cgb.mmu)
+		cycles = 32
+		if cgb.cpu.IsDoubleSpeed() {
+			cycles *= 2
+		}
+	} else {
+		cycles, err = cgb.cpu.Step(cgb.mmu)
+		if err != nil {
+			return 0, fmt.Errorf("unexpected error while executing instruction: %w", err)
+		}
 
-	// We're checking the halted state from _before_ the current instruction was
-	// executed, because we want to trigger the OnExecute for the HALT instruction
-	// itself, but not while halted, since the CPU isn't really executing during
-	// this time.
-	if !haltedPriorToExecute {
-		cgb.debugger.OnExecute(cgb.cpu, cgb.mmu)
+		// We're checking the halted state from _before_ the current instruction was
+		// executed, because we want to trigger the OnExecute for the HALT instruction
+		// itself, but not while halted, since the CPU isn't really executing during
+		// this time.
+		if !haltedPriorToExecute {
+			cgb.debugger.OnExecute(cgb.cpu, cgb.mmu)
+		}
 	}
 
 	hasInterrupt, intCycles := cgb.cpu.PollInterrupts(cgb.mmu, cgb.ic)
@@ -226,7 +241,7 @@ func (cgb *CGB) Step() (uint8, error) {
 
 	cgb.cartridge.Step(cycles)
 	cgb.dma.Step(cgb.mmu, cycles)
-	cgb.ppu.Step(cycles)
+	cgb.ppu.Step(cgb.mmu, cycles)
 	cgb.timer.Step(cycles, cgb.ic)
 	cgb.serial.Step(cycles, cgb.ic)
 

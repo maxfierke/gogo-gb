@@ -59,7 +59,7 @@ func NewDMG(opts ...ConsoleOption) (*DMG, error) {
 		dma:       devices.NewDMA(),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
-		ppu:       devices.NewPPU(ic, false),
+		ppu:       devices.NewPPU(ic),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 	}
@@ -200,7 +200,7 @@ func (dmg *DMG) Step() (uint8, error) {
 
 	dmg.cartridge.Step(cycles)
 	dmg.dma.Step(dmg.mmu, cycles)
-	dmg.ppu.Step(cycles)
+	dmg.ppu.Step(dmg.mmu, cycles)
 	dmg.timer.Step(cycles, dmg.ic)
 	dmg.serial.Step(cycles, dmg.ic)
 

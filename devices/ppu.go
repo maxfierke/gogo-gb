@@ -597,20 +597,17 @@ type PPU struct {
 
 	clock uint
 
-	ic    *InterruptController
-	color bool
+	ic *InterruptController
+
+	color                   bool
+	dmgCompatibilityEnabled bool
+	hdma                    *HDMA
 }
 
-func NewPPU(ic *InterruptController, color bool) *PPU {
-	objectPriority := objectPriorityModeDMG
-	if color {
-		objectPriority = objectPriorityModeCGB
-	}
-
+func NewPPU(ic *InterruptController) *PPU {
 	return &PPU{
 		ic:             ic,
-		objectPriority: objectPriority,
-		color:          color,
+		objectPriority: objectPriorityModeDMG,
 	}
 }
 
@@ -637,11 +634,28 @@ func (ppu *PPU) Draw() image.Image {
 	return fbImage
 }
 
+func (ppu *PPU) ConnectHDMA(hdma *HDMA) {
+	ppu.hdma = hdma
+}
+
+func (ppu *PPU) EnableColor() {
+	ppu.color = true
+	ppu.objectPriority = objectPriorityModeCGB
+}
+
+func (ppu *PPU) IsColorEnabled() bool {
+	return ppu.color && !ppu.dmgCompatibilityEnabled
+}
+
 func (ppu *PPU) IsCurrentLineEqualToCompare() bool {
 	return ppu.curScanLine == ppu.cmpScanLine
 }
 
-func (ppu *PPU) Step(cycles uint8) {
+func (ppu *PPU) SetDMGCompatibilityEnabled(enabled bool) {
+	ppu.dmgCompatibilityEnabled = enabled
+}
+
+func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 	if !ppu.lcdCtrl.enabled {
 		return
 	}
@@ -660,6 +674,10 @@ func (ppu *PPU) Step(cycles uint8) {
 				ppu.ic.RequestVBlank()
 				ppu.requestLCD()
 			} else {
+				if ppu.hdma != nil {
+					ppu.hdma.Step(mmu)
+				}
+
 				ppu.Mode = PPU_MODE_OAM
 				ppu.requestLCD()
 			}
@@ -898,6 +916,13 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		return mem.WriteBlock()
 	}
 
+	if addr == REG_BOOTROM_KEY0 && !ppu.dmgCompatibilityEnabled {
+		// TODO: This should only be set by the bootrom,
+		// so this probably doesn't belong here
+		ppu.SetDMGCompatibilityEnabled(bits.Read(value, REG_BOOTROM_KEY0_CPU_MODE_BIT) == 1)
+		return mem.WriteBlock()
+	}
+
 	if addr == REG_PPU_VBK {
 		ppu.curVRAMBank = value & 0b1
 		return mem.WriteBlock()
@@ -942,11 +967,11 @@ func (ppu *PPU) drawScanline() {
 		return
 	}
 
-	if ppu.lcdCtrl.bgWindowEnabled || ppu.color { // TODO: Extract method
+	if ppu.lcdCtrl.bgWindowEnabled || ppu.IsColorEnabled() { // TODO: Extract method
 		ppu.drawBgScanline()
 	}
 
-	if (ppu.lcdCtrl.bgWindowEnabled || ppu.color) && ppu.lcdCtrl.windowEnabled { // TODO: Extract method
+	if (ppu.lcdCtrl.bgWindowEnabled || ppu.IsColorEnabled()) && ppu.lcdCtrl.windowEnabled { // TODO: Extract method
 		ppu.drawWinScanline()
 	}
 
@@ -975,7 +1000,7 @@ func (ppu *PPU) drawBgScanline() {
 
 		var tileVRAMBank uint8
 		bgAttribute := ppu.cgbBGAttributes[tileMapIndex]
-		if ppu.color {
+		if ppu.IsColorEnabled() {
 			tileVRAMBank = bgAttribute.vramBank
 		}
 
@@ -995,7 +1020,7 @@ func (ppu *PPU) drawBgScanline() {
 
 		tilePixelValue := tileRow[tilePixelX]
 
-		if ppu.color {
+		if ppu.IsColorEnabled() {
 			color := ppu.cgbBGPalettes.palettes[bgAttribute.paletteID][tilePixelValue]
 			ppu.scanLines[ppu.curScanLine][lineX].color = color
 		} else {
@@ -1005,7 +1030,7 @@ func (ppu *PPU) drawBgScanline() {
 
 		ppu.scanLines[ppu.curScanLine][lineX].colorID = ColorID(tilePixelValue)
 
-		if bgAttribute.priority {
+		if bgAttribute.priority && ppu.IsColorEnabled() {
 			ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BGP
 		} else {
 			ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BG
@@ -1044,7 +1069,7 @@ func (ppu *PPU) drawWinScanline() {
 
 			bgAttribute := ppu.cgbBGAttributes[tileMapIndex]
 			var tileVRAMBank uint8
-			if ppu.color {
+			if ppu.IsColorEnabled() {
 				tileVRAMBank = bgAttribute.vramBank
 			}
 
@@ -1064,7 +1089,7 @@ func (ppu *PPU) drawWinScanline() {
 
 			tilePixelValue := tileRow[tilePixelX]
 
-			if ppu.color {
+			if ppu.IsColorEnabled() {
 				color := ppu.cgbBGPalettes.palettes[bgAttribute.paletteID][tilePixelValue]
 				ppu.scanLines[ppu.curScanLine][lineX].color = color
 			} else {
@@ -1074,7 +1099,7 @@ func (ppu *PPU) drawWinScanline() {
 
 			ppu.scanLines[ppu.curScanLine][lineX].colorID = ColorID(tilePixelValue)
 
-			if bgAttribute.priority {
+			if bgAttribute.priority && ppu.IsColorEnabled() {
 				ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BGP
 			} else {
 				ppu.scanLines[ppu.curScanLine][lineX].layer = PIXEL_LAYER_BG
@@ -1115,7 +1140,7 @@ func (ppu *PPU) drawObjScanline() {
 			}
 
 			var tileVRAMBank uint8
-			if ppu.color {
+			if ppu.IsColorEnabled() {
 				tileVRAMBank = object.attributes.vramBank
 			}
 
@@ -1141,17 +1166,17 @@ func (ppu *PPU) drawObjScanline() {
 				if pixelX < FB_WIDTH &&
 					// Skip transparent pixels
 					tilePixelValue != VRAM_TILE_PIXEL_ZERO &&
-					((ppu.objectPriority == objectPriorityModeCGB && !hasRenderedObj) || // CGB mode: Earlier Object hasn't rendered at pixel
+					((ppu.objectPriority == objectPriorityModeCGB && !ppu.dmgCompatibilityEnabled && !hasRenderedObj) || // CGB mode: Earlier Object hasn't rendered at pixel
 						// DMG mode: Object has higher priority x coordinate than currently rendered object
 						(ppu.objectPriority == objectPriorityModeDMG &&
 							(!hasRenderedObj || (hasRenderedObj && renderedObjX > object.posX)))) && // TODO: Extract method
 					(ppu.scanLines[ppu.curScanLine][pixelX].colorID == COLOR_ID_WHITE || // BG is color 0
 						// CGB: BG master priority isn't set
-						(ppu.objectPriority == objectPriorityModeCGB && !ppu.lcdCtrl.bgWindowEnabled) ||
+						(ppu.objectPriority == objectPriorityModeCGB && !ppu.dmgCompatibilityEnabled && !ppu.lcdCtrl.bgWindowEnabled) ||
 						// BG doesn't have priority (CGB) AND OBJ has priority over BG
 						(ppu.scanLines[ppu.curScanLine][pixelX].layer != PIXEL_LAYER_BGP && !object.attributes.bgPriority)) { // TODO: Extract method
 
-					if ppu.color {
+					if ppu.IsColorEnabled() {
 						color := ppu.cgbObjPalettes.palettes[object.attributes.cgbPaletteID][tilePixelValue]
 						ppu.scanLines[ppu.curScanLine][pixelX].color = color
 					} else {
