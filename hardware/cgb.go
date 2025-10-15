@@ -214,10 +214,6 @@ func (cgb *CGB) Step() (uint8, error) {
 
 	if cgb.hdma.IsActive(devices.HDMA_MODE_GENERAL) {
 		cgb.hdma.Step(cgb.mmu)
-		cycles = 32
-		if cgb.cpu.IsDoubleSpeed() {
-			cycles *= 2
-		}
 	} else {
 		cycles, err = cgb.cpu.Step(cgb.mmu)
 		if err != nil {
