@@ -3,7 +3,11 @@ a gameboy emulator for funsies
 
 ## Current status
 
-Games are playable at 60 FPS. CPU cycle accuracy, but memory timings not correct. No audio.
+- Games are playable.
+- CPU cycle accuracy, but memory timings not correct.
+- Scanline rendering, so some games/homebrew using mid-scanline effects may look funky/broken.
+  - This most visibly affects color games changing palettes mid-scanline.
+- No audio.
 
 ## Usage
 
@@ -40,15 +44,15 @@ Use "gogo-gb [command] --help" for more information about a command.
 - [X] Pass Blargg's `instr_timing.gb` ROM (manually verified)
 - [X] Implement a basic interactive debugger
 - [X] Implement LCD
-- [X] Implement PPU, VRAM, OAM, etc.
+- [X] Implement (scanline) PPU, VRAM, OAM, etc.
 - [X] Implement Joypad
 - [X] Implement SRAM save & restore
-- [X] Achieve ~60 FPS
 - [X] Implement `watch` in debugger for memory & register changes
 - [X] Implement RTC for MBC3
 - [X] Pass `dmg-acid2` test ROM
 - [X] Pass `cgb-acid2` test ROM
-- [ ] Implement GBC
+- [X] Implement GBC
+- [ ] FIFO-based rendering PPU (currently scanline)
 - [ ] Implement PPU registers debugging
 - [ ] Implement Sound/APU
 
@@ -58,7 +62,6 @@ Just being realistic about my likelihood of getting to these:
 
 - [ ] Pass Blargg's `mem_timing` ROMs (manually verified)
 - [ ] Pass Blargg's `mem_timing-2` ROMs (manually verified)
-- [ ] FIFO-based rendering PPU (currently scanline)
 - [ ] Implement emulation for every known DMG bug
 - [ ] Implement SGB mode
 - [ ] Implement MBC2
