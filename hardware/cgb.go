@@ -11,6 +11,7 @@ import (
 	"github.com/maxfierke/gogo-gb/debug"
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/mem"
+	"github.com/maxfierke/gogo-gb/ppu"
 )
 
 const (
@@ -22,11 +23,11 @@ type CGB struct {
 	cpu       *cpu.CPU
 	mmu       *mem.MMU
 	cartridge *cart.Cartridge
-	dma       *devices.DMA
-	hdma      *devices.HDMA
+	dma       *ppu.DMA
+	hdma      *ppu.HDMA
 	ic        *devices.InterruptController
 	joypad    *devices.Joypad
-	ppu       *devices.PPU
+	ppu       *ppu.PPU
 	serial    *devices.SerialPort
 	timer     *devices.Timer
 	wram      *mem.WRAM
@@ -62,11 +63,11 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 		mmu:       mmu,
 		cartridge: cart.NewCartridge(),
 		debugger:  debug.NewNullDebugger(),
-		dma:       devices.NewDMA(),
-		hdma:      devices.NewHDMA(),
+		dma:       ppu.NewDMA(),
+		hdma:      ppu.NewHDMA(),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
-		ppu:       devices.NewPPU(ic),
+		ppu:       ppu.NewPPU(ic),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 		wram:      mem.NewWRAM(),
@@ -212,7 +213,7 @@ func (cgb *CGB) Step() (uint8, error) {
 
 	haltedPriorToExecute := cgb.cpu.IsHalted()
 
-	if cgb.hdma.IsActive(devices.HDMA_MODE_GENERAL) {
+	if cgb.hdma.IsActive(ppu.HDMA_MODE_GENERAL) {
 		cgb.hdma.Step(cgb.mmu)
 	} else {
 		cycles, err = cgb.cpu.Step(cgb.mmu)

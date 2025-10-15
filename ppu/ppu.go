@@ -1,4 +1,4 @@
-package devices
+package ppu
 
 import (
 	"fmt"
@@ -37,6 +37,9 @@ const (
 
 	VBLANK_PERIOD_BEGIN = 144
 	VBLANK_PERIOD_END   = 153
+
+	REG_BOOTROM_KEY0              = 0xFF4C
+	REG_BOOTROM_KEY0_CPU_MODE_BIT = 2
 
 	REG_PPU_LCDC    uint16 = 0xFF40
 	REG_PPU_LCDSTAT uint16 = 0xFF41
@@ -563,6 +566,11 @@ const (
 	PPU_MODE_VRAM
 )
 
+type InterruptRequester interface {
+	RequestLCD()
+	RequestVBlank()
+}
+
 type PPU struct {
 	Mode PPUMode
 
@@ -597,14 +605,14 @@ type PPU struct {
 
 	clock uint
 
-	ic *InterruptController
+	ic InterruptRequester
 
 	color                   bool
 	dmgCompatibilityEnabled bool
 	hdma                    *HDMA
 }
 
-func NewPPU(ic *InterruptController) *PPU {
+func NewPPU(ic InterruptRequester) *PPU {
 	return &PPU{
 		ic:             ic,
 		objectPriority: objectPriorityModeDMG,
