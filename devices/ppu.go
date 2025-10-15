@@ -1084,7 +1084,7 @@ func (ppu *PPU) drawWinScanline() {
 
 			tilePixelX := (lineX + 7 - uint16(ppu.windowX)) % 8
 			if bgAttribute.flipX {
-				tilePixelX = (7 - lineX + 7 - uint16(ppu.windowX)) % 8
+				tilePixelX = 7 - tilePixelX
 			}
 
 			tilePixelValue := tileRow[tilePixelX]
