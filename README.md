@@ -1,5 +1,5 @@
 # gogo-gb
-a gameboy emulator for funsies
+a gameboy (color) emulator for funsies
 
 ## Current status
 
