@@ -11,6 +11,8 @@ import (
 	"github.com/maxfierke/gogo-gb/debug"
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/mem"
+	"github.com/maxfierke/gogo-gb/ppu"
+	"github.com/maxfierke/gogo-gb/ppu/rendering"
 )
 
 const (
@@ -24,10 +26,10 @@ type DMG struct {
 	cpu       *cpu.CPU
 	mmu       *mem.MMU
 	cartridge *cart.Cartridge
-	dma       *devices.DMA
+	dma       *ppu.DMA
 	ic        *devices.InterruptController
 	joypad    *devices.Joypad
-	ppu       *devices.PPU
+	ppu       *ppu.PPU
 	serial    *devices.SerialPort
 	timer     *devices.Timer
 
@@ -56,10 +58,10 @@ func NewDMG(opts ...ConsoleOption) (*DMG, error) {
 		mmu:       mmu,
 		cartridge: cart.NewCartridge(),
 		debugger:  debug.NewNullDebugger(),
-		dma:       devices.NewDMA(),
+		dma:       ppu.NewDMA(),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
-		ppu:       devices.NewPPU(ic),
+		ppu:       ppu.NewPPU(ic, rendering.Scanline),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 	}
