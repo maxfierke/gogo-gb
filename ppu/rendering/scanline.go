@@ -1,11 +1,37 @@
 package rendering
 
-import "github.com/maxfierke/gogo-gb/ppu"
+import (
+	"image"
+	"image/color"
+
+	"github.com/maxfierke/gogo-gb/ppu"
+)
+
+const (
+	FB_WIDTH  = 160
+	FB_HEIGHT = 144
+)
+
+type RenderedPixel struct {
+	Layer   PixelLayer
+	ColorID ppu.ColorID
+	Color   color.Color
+}
+
+type PixelLayer uint8
+
+const (
+	PIXEL_LAYER_BG  PixelLayer = iota // Background/window layer
+	PIXEL_LAYER_BGP                   // Background/window layer w/ priority over objects
+	PIXEL_LAYER_OBJ                   // Object layer
+)
 
 type ScanlineRenderer struct {
 	ppu  *ppu.PPU
 	oam  *ppu.OAM
 	vram *ppu.VRAM
+
+	framebuf [FB_HEIGHT][FB_WIDTH]RenderedPixel
 }
 
 var _ ppu.Renderer = (*ScanlineRenderer)(nil)
@@ -18,8 +44,24 @@ func Scanline(ppu *ppu.PPU, oam *ppu.OAM, vram *ppu.VRAM) ppu.Renderer {
 	}
 }
 
+func (r *ScanlineRenderer) DrawImage() image.Image {
+	fbImage := image.NewRGBA(
+		image.Rect(0, 0, FB_WIDTH, FB_HEIGHT),
+	)
+
+	for y := range FB_HEIGHT {
+		for x, pixel := range r.framebuf[y] {
+			if pixel.Color != nil {
+				fbImage.Set(x, y, pixel.Color)
+			}
+		}
+	}
+
+	return fbImage
+}
+
 func (r *ScanlineRenderer) DrawPixels() {
-	if !r.ppu.IsLCDEnabled() || r.ppu.CurrentScanline() >= ppu.FB_HEIGHT {
+	if !r.ppu.IsLCDEnabled() || r.ppu.CurrentScanline() >= FB_HEIGHT {
 		return
 	}
 
@@ -44,7 +86,7 @@ func (r *ScanlineRenderer) drawBgScanline() {
 	tileY := (currentScanLine + scrollBackgroundY) / 8
 	tilePixelY := (currentScanLine + scrollBackgroundY) % 8
 
-	for lineX := uint16(0); lineX < ppu.FB_WIDTH; lineX++ {
+	for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
 		scrollAdjustedLineX := (lineX + uint16(scrollBackgroundX)) % 256
 		tileX := uint8(scrollAdjustedLineX / 8)
 
@@ -83,12 +125,12 @@ func (r *ScanlineRenderer) drawBgScanline() {
 		tilePixelValue := tileRow[tilePixelX]
 		pixelColorID := ppu.ColorID(tilePixelValue)
 		color := r.ppu.GetBGPaletteColor(pixelColorID, bgAttributes.PaletteID)
-		pixelLayer := ppu.PIXEL_LAYER_BG
+		pixelLayer := PIXEL_LAYER_BG
 		if bgAttributes.Priority && r.ppu.IsColorEnabled() {
-			pixelLayer = ppu.PIXEL_LAYER_BGP
+			pixelLayer = PIXEL_LAYER_BGP
 		}
 
-		r.ppu.WritePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
+		r.WritePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
 	}
 }
 
@@ -98,6 +140,7 @@ func (r *ScanlineRenderer) drawWinScanline() {
 	windowY := r.ppu.WindowY()
 
 	if currentScanLine >= windowY {
+		// TODO: do this in PPU instead
 		if currentScanLine == windowY {
 			r.ppu.ResetWindow()
 		}
@@ -108,7 +151,7 @@ func (r *ScanlineRenderer) drawWinScanline() {
 
 		rendered := false
 
-		for lineX := uint16(0); lineX < ppu.FB_WIDTH; lineX++ {
+		for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
 			if (lineX + 7) < uint16(windowX) {
 				continue
 			}
@@ -152,14 +195,15 @@ func (r *ScanlineRenderer) drawWinScanline() {
 			tilePixelValue := tileRow[tilePixelX]
 			pixelColorID := ppu.ColorID(tilePixelValue)
 			color := r.ppu.GetBGPaletteColor(pixelColorID, bgAttributes.PaletteID)
-			pixelLayer := ppu.PIXEL_LAYER_BG
+			pixelLayer := PIXEL_LAYER_BG
 			if bgAttributes.Priority && r.ppu.IsColorEnabled() {
-				pixelLayer = ppu.PIXEL_LAYER_BGP
+				pixelLayer = PIXEL_LAYER_BGP
 			}
 
-			r.ppu.WritePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
+			r.WritePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
 		}
 
+		// TODO: Do this in PPU
 		if rendered {
 			r.ppu.IncrementWindowLine()
 		}
@@ -208,7 +252,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 
 				pixelX := object.PosX + x
 
-				if pixelX >= ppu.FB_WIDTH {
+				if pixelX >= FB_WIDTH {
 					// Skip pixels outside of rendering area
 					continue
 				}
@@ -217,7 +261,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 
 				renderedObjX, hasRenderedObj := renderedObjectsX[pixelX]
 
-				currentPixel := r.ppu.ReadPixel(pixelX, currentScanLine)
+				currentPixel := r.ReadPixel(pixelX, currentScanLine)
 
 				if tilePixelValue != ppu.VRAM_TILE_PIXEL_ZERO && // Skip transparent pixels
 					((objectPriorityMode == ppu.ObjectPriorityModeCGB && r.ppu.IsColorEnabled() && !hasRenderedObj) || // CGB mode: Earlier Object hasn't rendered at pixel
@@ -228,13 +272,13 @@ func (r *ScanlineRenderer) drawObjScanline() {
 						// CGB: BG master priority isn't set
 						objectPriorityMode == ppu.ObjectPriorityModeCGB && !r.ppu.IsMasterBGPriorityEnabled() ||
 						// BG doesn't have priority (CGB) AND OBJ has priority over BG
-						(currentPixel.Layer != ppu.PIXEL_LAYER_BGP && !object.Attributes.BGPriority)) { // TODO: Extract method
+						(currentPixel.Layer != PIXEL_LAYER_BGP && !object.Attributes.BGPriority)) { // TODO: Extract method
 
 					pixelColorID := ppu.ColorID(tilePixelValue)
 					color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
-					pixelLayer := ppu.PIXEL_LAYER_OBJ
+					pixelLayer := PIXEL_LAYER_OBJ
 
-					r.ppu.WritePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
+					r.WritePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
 
 					renderedObject = true
 					renderedObjectsX[pixelX] = object.PosX
@@ -246,4 +290,14 @@ func (r *ScanlineRenderer) drawObjScanline() {
 			}
 		}
 	}
+}
+
+func (r *ScanlineRenderer) ReadPixel(x, y uint8) RenderedPixel {
+	return r.framebuf[y][x]
+}
+
+func (r *ScanlineRenderer) WritePixel(x, y uint8, colorID ppu.ColorID, color color.Color, layer PixelLayer) {
+	r.framebuf[y][x].Color = color
+	r.framebuf[y][x].ColorID = colorID
+	r.framebuf[y][x].Layer = layer
 }

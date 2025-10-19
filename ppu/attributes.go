@@ -131,6 +131,10 @@ type OAM struct {
 	objectData [OAM_MAX_OBJECT_COUNT]ObjectData
 }
 
+func NewOAM() *OAM {
+	return &OAM{}
+}
+
 func (o *OAM) Objects() []ObjectData {
 	return o.objectData[:]
 }

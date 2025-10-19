@@ -32,9 +32,6 @@ const (
 	// This is probably a bug of some kind, but not one I feel like fixing right now.
 	CLK_MODE3_PERIOD_LEN = 174
 
-	FB_WIDTH  = 160
-	FB_HEIGHT = 144
-
 	VBLANK_PERIOD_BEGIN = 144
 	VBLANK_PERIOD_END   = 153
 
@@ -90,20 +87,6 @@ const (
 	TILESET_2 tileSetArea = 1 // 0x8000–0x8FFF
 )
 
-type PixelLayer uint8
-
-const (
-	PIXEL_LAYER_BG PixelLayer = iota
-	PIXEL_LAYER_BGP
-	PIXEL_LAYER_OBJ
-)
-
-type RenderedPixel struct {
-	Layer   PixelLayer
-	ColorID ColorID
-	Color   color.Color
-}
-
 type PPUMode uint8
 
 const (
@@ -121,6 +104,7 @@ type InterruptRequester interface {
 type RendererConstructor func(ppu *PPU, oam *OAM, vram *VRAM) Renderer
 
 type Renderer interface {
+	DrawImage() image.Image
 	DrawPixels()
 }
 
@@ -151,8 +135,6 @@ type PPU struct {
 
 	vram *VRAM
 
-	scanLines [FB_HEIGHT][FB_WIDTH]RenderedPixel
-
 	clock uint
 
 	ic       InterruptRequester
@@ -167,7 +149,7 @@ func NewPPU(ic InterruptRequester, renderer RendererConstructor) *PPU {
 	ppu := &PPU{
 		ic:             ic,
 		objectPriority: ObjectPriorityModeDMG,
-		oam:            &OAM{},
+		oam:            NewOAM(),
 		vram:           NewVRAM(),
 	}
 
@@ -184,19 +166,7 @@ var grayScales = []color.Color{
 }
 
 func (ppu *PPU) Draw() image.Image {
-	fbImage := image.NewRGBA(
-		image.Rect(0, 0, FB_WIDTH, FB_HEIGHT),
-	)
-
-	for y := range FB_HEIGHT {
-		for x, scanLine := range ppu.scanLines[y] {
-			if scanLine.Color != nil {
-				fbImage.Set(x, y, scanLine.Color)
-			}
-		}
-	}
-
-	return fbImage
+	return ppu.renderer.DrawImage()
 }
 
 func (ppu *PPU) ConnectHDMA(hdma *HDMA) {
@@ -606,16 +576,6 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for PPU", value, addr))
-}
-
-func (ppu *PPU) ReadPixel(x, y uint8) RenderedPixel {
-	return ppu.scanLines[y][x]
-}
-
-func (ppu *PPU) WritePixel(x, y uint8, colorID ColorID, color color.Color, layer PixelLayer) {
-	ppu.scanLines[y][x].Color = color
-	ppu.scanLines[y][x].ColorID = colorID
-	ppu.scanLines[y][x].Layer = layer
 }
 
 func (ppu *PPU) requestLCD() {
