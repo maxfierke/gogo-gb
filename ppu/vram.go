@@ -92,8 +92,23 @@ func (v *VRAM) GetBGTile(bank uint8, tilesetArea tileSetArea, tileIndex uint8) T
 	return tile
 }
 
-func (v *VRAM) GetObjTile(bank uint8, tileIndex uint8) Tile {
-	return v.tileset[bank][tileIndex]
+func (v *VRAM) GetObjTile(object objectData, objSize objectSize, tileY uint8, colorEnabled bool) Tile {
+	tileIndex := object.tileIndex
+	if objSize == OBJ_SIZE_8x16 {
+		// Ignore bit 0 for 8x16
+		tileIndex &= 0xFE
+
+		if (!object.attributes.flipY && tileY > 7) || (object.attributes.flipY && tileY <= 7) {
+			tileIndex += 1
+		}
+	}
+
+	var tileVRAMBank uint8
+	if colorEnabled {
+		tileVRAMBank = object.attributes.vramBank
+	}
+
+	return v.tileset[tileVRAMBank][tileIndex]
 }
 
 func (v *VRAM) writeBGAttr(vramAddr uint16, value uint8) {

@@ -680,22 +680,14 @@ func (ppu *PPU) drawObjScanline() {
 
 		if object.posY <= ppu.curScanLine && (object.posY+objHeight) > ppu.curScanLine {
 			objPixelY := ppu.curScanLine - object.posY
-			tileIndex := object.tileIndex
-			if objHeight == 16 {
-				// Ignore bit 0 for 8x16
-				tileIndex &= 0xFE
 
-				if (!object.attributes.flipY && objPixelY > 7) || (object.attributes.flipY && objPixelY <= 7) {
-					tileIndex += 1
-				}
-			}
+			tile := ppu.vram.GetObjTile(
+				object,
+				ppu.lcdCtrl.objectSize,
+				objPixelY,
+				ppu.IsColorEnabled(),
+			)
 
-			var tileVRAMBank uint8
-			if ppu.IsColorEnabled() {
-				tileVRAMBank = object.attributes.vramBank
-			}
-
-			tile := ppu.vram.GetObjTile(tileVRAMBank, tileIndex)
 			tilePixelY := objPixelY % 8
 			tileRow := tile[tilePixelY]
 			if object.attributes.flipY {
