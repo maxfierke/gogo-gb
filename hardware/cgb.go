@@ -12,6 +12,7 @@ import (
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/mem"
 	"github.com/maxfierke/gogo-gb/ppu"
+	"github.com/maxfierke/gogo-gb/ppu/rendering"
 )
 
 const (
@@ -67,7 +68,7 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 		hdma:      ppu.NewHDMA(),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
-		ppu:       ppu.NewPPU(ic),
+		ppu:       ppu.NewPPU(ic, rendering.Scanline),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 		wram:      mem.NewWRAM(),

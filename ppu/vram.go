@@ -34,7 +34,7 @@ const (
 type VRAM struct {
 	CurrentBank uint8
 
-	cgbBGAttributes [VRAM_BG_ATTR_SIZE]bgAttributes
+	cgbBGAttributes [VRAM_BG_ATTR_SIZE]BGAttributes
 	vram            [VRAM_BANKS][VRAM_SIZE]byte
 	tileset         [VRAM_BANKS][VRAM_TILESET_SIZE]Tile
 }
@@ -78,7 +78,7 @@ func (v *VRAM) GetBGTileIndex(tilemapArea tileMapArea, tileX, tileY uint8) uint8
 	return tileIndex
 }
 
-func (v *VRAM) GetBGTileAttributes(tileX, tileY uint8) bgAttributes {
+func (v *VRAM) GetBGTileAttributes(tileX, tileY uint8) BGAttributes {
 	tileMapIndex := uint16(tileY)*32 + uint16(tileX)
 	return v.cgbBGAttributes[tileMapIndex]
 }
@@ -92,20 +92,20 @@ func (v *VRAM) GetBGTile(bank uint8, tilesetArea tileSetArea, tileIndex uint8) T
 	return tile
 }
 
-func (v *VRAM) GetObjTile(object objectData, objSize objectSize, tileY uint8, colorEnabled bool) Tile {
-	tileIndex := object.tileIndex
+func (v *VRAM) GetObjTile(object ObjectData, objSize objectSize, tileY uint8, colorEnabled bool) Tile {
+	tileIndex := object.TileIndex
 	if objSize == OBJ_SIZE_8x16 {
 		// Ignore bit 0 for 8x16
 		tileIndex &= 0xFE
 
-		if (!object.attributes.flipY && tileY > 7) || (object.attributes.flipY && tileY <= 7) {
+		if (!object.Attributes.FlipY && tileY > 7) || (object.Attributes.FlipY && tileY <= 7) {
 			tileIndex += 1
 		}
 	}
 
 	var tileVRAMBank uint8
 	if colorEnabled {
-		tileVRAMBank = object.attributes.vramBank
+		tileVRAMBank = object.Attributes.VRAMBank
 	}
 
 	return v.tileset[tileVRAMBank][tileIndex]
