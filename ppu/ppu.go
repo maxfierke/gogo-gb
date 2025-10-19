@@ -10,12 +10,10 @@ import (
 )
 
 const (
-	// CLK_MODE0_PERIOD_LEN is the dot length of Mode 0 (HBlank).
-	// 204 dots is the ceiling, but 200 dots was chosen for compatibility with
-	// orangeglo's LED Screen Timer test ROM. Mode 0 and Mode 3 just need to add
-	// up to 376.
-	// This is probably a bug of some kind, but not one I feel like fixing right now.
-	CLK_MODE0_PERIOD_LEN = 200
+	// CLK_MODE0_MODE3_PERIODS_LEN is the fixed length of mode 0 and mode 3. The
+	// length of mode 3 fluxutates, and the length of mode 0 is adjusted
+	// accordingly to hit 376 dots total between the two.
+	CLK_MODE0_MODE3_PERIODS_LEN = 376
 
 	// CLK_MODE1_PERIOD_LEN is the dot length of a line in Mode 1 (VBlank)
 	// There are 10 lines in Mode 1, for a total of 4560 dots.
@@ -105,7 +103,7 @@ type RendererConstructor func(ppu *PPU, oam *OAM, vram *VRAM) Renderer
 
 type Renderer interface {
 	DrawImage() image.Image
-	DrawPixels()
+	Step(dots uint8) uint8
 }
 
 type PPU struct {
@@ -135,7 +133,9 @@ type PPU struct {
 
 	vram *VRAM
 
-	clock uint
+	clock          uint
+	mode3Cycles    uint8
+	pixelsRendered uint8
 
 	ic       InterruptRequester
 	renderer Renderer
@@ -147,6 +147,7 @@ type PPU struct {
 
 func NewPPU(ic InterruptRequester, renderer RendererConstructor) *PPU {
 	ppu := &PPU{
+		Mode:           PPU_MODE_OAM,
 		ic:             ic,
 		objectPriority: ObjectPriorityModeDMG,
 		oam:            NewOAM(),
@@ -287,8 +288,8 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 
 	switch ppu.Mode {
 	case PPU_MODE_HBLANK:
-		if ppu.clock >= CLK_MODE0_PERIOD_LEN {
-			ppu.clock = ppu.clock % CLK_MODE0_PERIOD_LEN
+		if ppu.clock >= (CLK_MODE0_MODE3_PERIODS_LEN - uint(ppu.mode3Cycles)) {
+			ppu.clock = ppu.clock % (CLK_MODE0_MODE3_PERIODS_LEN - uint(ppu.mode3Cycles))
 			ppu.curScanLine += 1
 
 			if ppu.curScanLine == VBLANK_PERIOD_BEGIN {
@@ -328,12 +329,15 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 		if ppu.clock >= CLK_MODE2_PERIOD_LEN {
 			ppu.clock = ppu.clock % CLK_MODE2_PERIOD_LEN
 			ppu.Mode = PPU_MODE_VRAM
+			ppu.mode3Cycles = 0
 		}
 	case PPU_MODE_VRAM:
-		if ppu.clock >= CLK_MODE3_PERIOD_LEN {
-			ppu.clock = ppu.clock % CLK_MODE3_PERIOD_LEN
+		ppu.mode3Cycles += cycles
+		ppu.pixelsRendered += ppu.renderer.Step(ppu.mode3Cycles)
+		if ppu.pixelsRendered == 160 {
+			ppu.clock = ppu.clock % uint(ppu.mode3Cycles)
+			ppu.pixelsRendered = 0
 			ppu.Mode = PPU_MODE_HBLANK
-			ppu.renderer.DrawPixels()
 			ppu.requestLCD()
 		}
 	}

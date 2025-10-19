@@ -10,6 +10,13 @@ import (
 const (
 	FB_WIDTH  = 160
 	FB_HEIGHT = 144
+
+	// CLK_MODE3_PERIOD_LEN is the dot length of Mode 3 (VRAM / drawing).
+	// 172 dots is the floor, but 174 dots was chosen for compatibility with
+	// orangeglo's LED Screen Timer test ROM. Mode 0 and Mode 3 just need to add
+	// up to 376.
+	// This is probably a bug of some kind, but not one I feel like fixing right now.
+	SCANLINE_CLK_MODE3_PERIOD_LEN = 174
 )
 
 type RenderedPixel struct {
@@ -60,9 +67,13 @@ func (r *ScanlineRenderer) DrawImage() image.Image {
 	return fbImage
 }
 
-func (r *ScanlineRenderer) DrawPixels() {
+func (r *ScanlineRenderer) Step(cycles uint8) uint8 {
 	if !r.ppu.IsLCDEnabled() || r.ppu.CurrentScanline() >= FB_HEIGHT {
-		return
+		return 0
+	}
+
+	if cycles < SCANLINE_CLK_MODE3_PERIOD_LEN {
+		return 0
 	}
 
 	if r.ppu.IsBackgroundEnabled() {
@@ -76,6 +87,8 @@ func (r *ScanlineRenderer) DrawPixels() {
 	if r.ppu.IsObjectEnabled() {
 		r.drawObjScanline()
 	}
+
+	return 160
 }
 
 func (r *ScanlineRenderer) drawBgScanline() {
