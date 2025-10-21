@@ -286,6 +286,8 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 
 	ppu.clock += uint(cycles)
 
+	previousStatusEnabled := ppu.lcdStatus.InterruptEnabled(ppu)
+
 	switch ppu.Mode {
 	case PPU_MODE_HBLANK:
 		if ppu.clock >= (CLK_MODE0_MODE3_PERIODS_LEN - uint(ppu.mode3Cycles)) {
@@ -296,18 +298,14 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 				ppu.Mode = PPU_MODE_VBLANK
 				ppu.curWindowLine = 0
 				ppu.ic.RequestVBlank()
-				ppu.requestLCD()
+				ppu.requestLCD(previousStatusEnabled)
 			} else {
 				if ppu.hdma != nil {
 					ppu.hdma.Step(mmu)
 				}
 
 				ppu.Mode = PPU_MODE_OAM
-				ppu.requestLCD()
-			}
-
-			if ppu.IsCurrentLineEqualToCompare() {
-				ppu.ic.RequestLCD()
+				ppu.requestLCD(previousStatusEnabled)
 			}
 		}
 	case PPU_MODE_VBLANK:
@@ -318,11 +316,7 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 			if ppu.curScanLine == VBLANK_PERIOD_END {
 				ppu.Mode = PPU_MODE_OAM
 				ppu.curScanLine = 0
-				ppu.requestLCD()
-			}
-
-			if ppu.IsCurrentLineEqualToCompare() {
-				ppu.ic.RequestLCD()
+				ppu.requestLCD(previousStatusEnabled)
 			}
 		}
 	case PPU_MODE_OAM:
@@ -338,7 +332,7 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 			ppu.clock = ppu.clock % uint(ppu.mode3Cycles)
 			ppu.pixelsRendered = 0
 			ppu.Mode = PPU_MODE_HBLANK
-			ppu.requestLCD()
+			ppu.requestLCD(previousStatusEnabled)
 		}
 	}
 }
@@ -450,11 +444,9 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	if addr == REG_PPU_LCDSTAT {
+		previousStatusEnabled := ppu.lcdStatus.InterruptEnabled(ppu)
 		ppu.lcdStatus.Write(ppu, value)
-
-		if ppu.lcdStatus.ShouldInterrupt() {
-			ppu.ic.RequestLCD()
-		}
+		ppu.requestLCD(previousStatusEnabled)
 
 		return mem.WriteBlock()
 	}
@@ -582,8 +574,8 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for PPU", value, addr))
 }
 
-func (ppu *PPU) requestLCD() {
-	if ppu.lcdStatus.ModeInterruptEnabled(ppu) && ppu.lcdStatus.ShouldInterrupt() {
+func (ppu *PPU) requestLCD(previousStatusEnabled bool) {
+	if !previousStatusEnabled && ppu.lcdStatus.InterruptEnabled(ppu) {
 		ppu.ic.RequestLCD()
 	}
 }
