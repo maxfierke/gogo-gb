@@ -98,18 +98,20 @@ func (r *ScanlineRenderer) drawBgScanline() {
 
 	tileY := (currentScanLine + scrollBackgroundY) / 8
 	tilePixelY := (currentScanLine + scrollBackgroundY) % 8
+	tileMap := r.ppu.GetBGTilemap()
 
 	for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
 		scrollAdjustedLineX := (lineX + uint16(scrollBackgroundX)) % 256
 		tileX := uint8(scrollAdjustedLineX / 8)
 
 		tileIndex := r.vram.GetBGTileIndex(
-			r.ppu.GetBGTilemap(),
+			tileMap,
 			uint8(tileX),
 			tileY,
 		)
 
 		bgAttributes := r.vram.GetBGTileAttributes(
+			tileMap,
 			tileX,
 			tileY,
 		)
@@ -159,6 +161,7 @@ func (r *ScanlineRenderer) drawWinScanline() {
 		}
 
 		currentWindowLine := r.ppu.CurrentWindowLine()
+		tileMap := r.ppu.GetWindowTilemap()
 		tileY := currentWindowLine / 8
 		tilePixelY := currentWindowLine % 8
 
@@ -175,11 +178,12 @@ func (r *ScanlineRenderer) drawWinScanline() {
 			tileX := uint8(windowAdjustedLineX / 8)
 
 			tileIndex := r.vram.GetBGTileIndex(
-				r.ppu.GetWindowTilemap(),
+				tileMap,
 				uint8(tileX),
 				tileY,
 			)
 			bgAttributes := r.vram.GetBGTileAttributes(
+				tileMap,
 				tileX,
 				tileY,
 			)

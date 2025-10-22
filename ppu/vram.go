@@ -78,9 +78,14 @@ func (v *VRAM) GetBGTileIndex(tilemapArea tileMapArea, tileX, tileY uint8) uint8
 	return tileIndex
 }
 
-func (v *VRAM) GetBGTileAttributes(tileX, tileY uint8) BGAttributes {
+func (v *VRAM) GetBGTileAttributes(tilemapArea tileMapArea, tileX, tileY uint8) BGAttributes {
+	var tileMapOffset uint16
+	if tilemapArea == TILEMAP_AREA2 {
+		tileMapOffset = 1024
+	}
+
 	tileMapIndex := uint16(tileY)*32 + uint16(tileX)
-	return v.cgbBGAttributes[tileMapIndex]
+	return v.cgbBGAttributes[tileMapOffset+tileMapIndex]
 }
 
 func (v *VRAM) GetBGTile(bank uint8, tilesetArea tileSetArea, tileIndex uint8) Tile {
