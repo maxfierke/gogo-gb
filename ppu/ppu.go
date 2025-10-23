@@ -103,6 +103,7 @@ type RendererConstructor func(ppu *PPU, oam *OAM, vram *VRAM) Renderer
 
 type Renderer interface {
 	DrawImage() image.Image
+	Reset()
 	Step(dots uint8) uint8
 }
 
@@ -154,7 +155,7 @@ func NewPPU(ic InterruptRequester, renderer RendererConstructor) *PPU {
 		vram:           NewVRAM(),
 	}
 
-	ppu.renderer = renderer(ppu, ppu.oam, ppu.vram)
+	ppu.SetRenderer(renderer)
 
 	return ppu
 }
@@ -279,6 +280,10 @@ func (ppu *PPU) SetDMGCompatibilityEnabled(enabled bool) {
 	ppu.dmgCompatibilityEnabled = enabled
 }
 
+func (ppu *PPU) SetRenderer(renderer RendererConstructor) {
+	ppu.renderer = renderer(ppu, ppu.oam, ppu.vram)
+}
+
 func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 	if !ppu.lcdCtrl.enabled {
 		return
@@ -331,6 +336,7 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 		if ppu.pixelsRendered == 160 {
 			ppu.clock = ppu.clock % uint(ppu.mode3Cycles)
 			ppu.pixelsRendered = 0
+			ppu.renderer.Reset()
 			ppu.Mode = PPU_MODE_HBLANK
 			ppu.requestLCD(previousStatusEnabled)
 		}

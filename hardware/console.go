@@ -10,6 +10,7 @@ import (
 	"github.com/maxfierke/gogo-gb/debug"
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/mem"
+	"github.com/maxfierke/gogo-gb/ppu"
 )
 
 type Console interface {
@@ -24,6 +25,7 @@ type Console interface {
 	Save(w io.Writer) error
 	LoadSave(r io.Reader) error
 	Step() (uint8, error)
+	SetRenderer(renderer ppu.RendererConstructor)
 	ReceiveInputs(inputs devices.JoypadInputs)
 }
 
@@ -75,6 +77,13 @@ func WithFakeBootROM() ConsoleOption {
 		}
 
 		return errors.New("WithFakeBootROM is only supported for DMG")
+	}
+}
+
+func WithRenderer(renderer ppu.RendererConstructor) ConsoleOption {
+	return func(console Console, mmu *mem.MMU) error {
+		console.SetRenderer(renderer)
+		return nil
 	}
 }
 
