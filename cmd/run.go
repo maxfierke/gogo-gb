@@ -222,6 +222,8 @@ func initConsole(cartridge *cart.Cartridge, logger *log.Logger, options *RunCmdO
 		switch options.renderer {
 		case "scanline":
 			renderer = rendering.Scanline
+		case "fifo":
+			renderer = rendering.FIFO
 		default:
 			return nil, fmt.Errorf("unrecognized renderer: %s", options.renderer)
 		}

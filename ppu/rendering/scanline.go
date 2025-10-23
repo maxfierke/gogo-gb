@@ -21,9 +21,10 @@ const (
 )
 
 type RenderedPixel struct {
-	Layer   PixelLayer
-	ColorID ppu.ColorID
-	Color   color.RGBA
+	Layer     PixelLayer
+	ColorID   ppu.ColorID
+	PaletteID uint8
+	Color     color.RGBA
 }
 
 type PixelLayer uint8
@@ -62,6 +63,9 @@ func (r *ScanlineRenderer) DrawImage() image.Image {
 	}
 
 	return r.fbImage
+}
+
+func (r *ScanlineRenderer) Reset() {
 }
 
 func (r *ScanlineRenderer) Step(cycles uint8) uint8 {
