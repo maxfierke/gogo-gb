@@ -33,7 +33,7 @@ var (
 
 func NewUIHost() *UI {
 	return &UI{
-		fbChan:      make(chan image.Image),
+		fbChan:      make(chan image.Image, 1),
 		frameChan:   make(chan struct{}),
 		inputChan:   make(chan devices.JoypadInputs),
 		logger:      log.Default(),
