@@ -150,7 +150,7 @@ func NewPPU(ic InterruptRequester, oam *OAM, vram *VRAM, renderer RendererConstr
 		vram:           vram,
 	}
 
-	ppu.renderer = renderer(ppu, ppu.oam, ppu.vram)
+	ppu.SetRenderer(renderer)
 
 	return ppu
 }
@@ -273,6 +273,10 @@ func (ppu *PPU) SetDMGCompatibilityEnabled(enabled bool) {
 
 func (ppu *PPU) OnHBlank(onHBlank func()) {
 	ppu.onHBlank = onHBlank
+}
+
+func (ppu *PPU) SetRenderer(renderer RendererConstructor) {
+	ppu.renderer = renderer(ppu, ppu.oam, ppu.vram)
 }
 
 func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
