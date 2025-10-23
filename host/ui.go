@@ -4,6 +4,7 @@ import (
 	"errors"
 	"image"
 	"log"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/maxfierke/gogo-gb/devices"
@@ -32,7 +33,7 @@ var (
 
 func NewUIHost() *UI {
 	return &UI{
-		fbChan:      make(chan image.Image),
+		fbChan:      make(chan image.Image, 1),
 		frameChan:   make(chan struct{}),
 		inputChan:   make(chan devices.JoypadInputs),
 		logger:      log.Default(),
@@ -132,14 +133,20 @@ func (ui *UI) Draw(screen *ebiten.Image) {
 				}
 			}
 		}
-		screen.DrawImage(ui.framebufferImage, &ebiten.DrawImageOptions{})
+		scale := math.Ceil(ebiten.Monitor().DeviceScaleFactor())
+		op := &ebiten.DrawImageOptions{
+			Filter: ebiten.FilterPixelated,
+		}
+		op.GeoM.Scale(scale, scale)
+		screen.DrawImage(ui.framebufferImage, op)
 	default:
 		// do nothing
 	}
 }
 
 func (ui *UI) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
-	return FB_WIDTH, FB_HEIGHT
+	scale := math.Ceil(ebiten.Monitor().DeviceScaleFactor())
+	return int(FB_WIDTH * scale), int(FB_HEIGHT * scale)
 }
 
 func (ui *UI) Run(console hardware.Console) error {

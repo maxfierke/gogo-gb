@@ -10,6 +10,13 @@ import (
 const (
 	FB_WIDTH  = 160
 	FB_HEIGHT = 144
+
+	// CLK_MODE3_PERIOD_LEN is the dot length of Mode 3 (VRAM / drawing).
+	// 172 dots is the floor, but 174 dots was chosen for compatibility with
+	// orangeglo's LED Screen Timer test ROM. Mode 0 and Mode 3 just need to add
+	// up to 376.
+	// This is probably a bug of some kind, but not one I feel like fixing right now.
+	SCANLINE_CLK_MODE3_PERIOD_LEN = 174
 )
 
 type RenderedPixel struct {
@@ -60,9 +67,13 @@ func (r *ScanlineRenderer) DrawImage() image.Image {
 	return fbImage
 }
 
-func (r *ScanlineRenderer) DrawPixels() {
+func (r *ScanlineRenderer) Step(cycles uint8) uint8 {
 	if !r.ppu.IsLCDEnabled() || r.ppu.CurrentScanline() >= FB_HEIGHT {
-		return
+		return 0
+	}
+
+	if cycles < SCANLINE_CLK_MODE3_PERIOD_LEN {
+		return 0
 	}
 
 	if r.ppu.IsBackgroundEnabled() {
@@ -76,6 +87,8 @@ func (r *ScanlineRenderer) DrawPixels() {
 	if r.ppu.IsObjectEnabled() {
 		r.drawObjScanline()
 	}
+
+	return 160
 }
 
 func (r *ScanlineRenderer) drawBgScanline() {
@@ -85,18 +98,20 @@ func (r *ScanlineRenderer) drawBgScanline() {
 
 	tileY := (currentScanLine + scrollBackgroundY) / 8
 	tilePixelY := (currentScanLine + scrollBackgroundY) % 8
+	tileMap := r.ppu.GetBGTilemap()
 
 	for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
 		scrollAdjustedLineX := (lineX + uint16(scrollBackgroundX)) % 256
 		tileX := uint8(scrollAdjustedLineX / 8)
 
 		tileIndex := r.vram.GetBGTileIndex(
-			r.ppu.GetBGTilemap(),
+			tileMap,
 			uint8(tileX),
 			tileY,
 		)
 
 		bgAttributes := r.vram.GetBGTileAttributes(
+			tileMap,
 			tileX,
 			tileY,
 		)
@@ -130,7 +145,7 @@ func (r *ScanlineRenderer) drawBgScanline() {
 			pixelLayer = PIXEL_LAYER_BGP
 		}
 
-		r.WritePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
+		r.writePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
 	}
 }
 
@@ -146,6 +161,7 @@ func (r *ScanlineRenderer) drawWinScanline() {
 		}
 
 		currentWindowLine := r.ppu.CurrentWindowLine()
+		tileMap := r.ppu.GetWindowTilemap()
 		tileY := currentWindowLine / 8
 		tilePixelY := currentWindowLine % 8
 
@@ -162,11 +178,12 @@ func (r *ScanlineRenderer) drawWinScanline() {
 			tileX := uint8(windowAdjustedLineX / 8)
 
 			tileIndex := r.vram.GetBGTileIndex(
-				r.ppu.GetWindowTilemap(),
+				tileMap,
 				uint8(tileX),
 				tileY,
 			)
 			bgAttributes := r.vram.GetBGTileAttributes(
+				tileMap,
 				tileX,
 				tileY,
 			)
@@ -200,7 +217,7 @@ func (r *ScanlineRenderer) drawWinScanline() {
 				pixelLayer = PIXEL_LAYER_BGP
 			}
 
-			r.WritePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
+			r.writePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
 		}
 
 		// TODO: Do this in PPU
@@ -261,7 +278,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 
 				renderedObjX, hasRenderedObj := renderedObjectsX[pixelX]
 
-				currentPixel := r.ReadPixel(pixelX, currentScanLine)
+				currentPixel := r.readPixel(pixelX, currentScanLine)
 
 				if tilePixelValue != ppu.VRAM_TILE_PIXEL_ZERO && // Skip transparent pixels
 					((objectPriorityMode == ppu.ObjectPriorityModeCGB && r.ppu.IsColorEnabled() && !hasRenderedObj) || // CGB mode: Earlier Object hasn't rendered at pixel
@@ -278,7 +295,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 					color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
 					pixelLayer := PIXEL_LAYER_OBJ
 
-					r.WritePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
+					r.writePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
 
 					renderedObject = true
 					renderedObjectsX[pixelX] = object.PosX
@@ -292,11 +309,11 @@ func (r *ScanlineRenderer) drawObjScanline() {
 	}
 }
 
-func (r *ScanlineRenderer) ReadPixel(x, y uint8) RenderedPixel {
+func (r *ScanlineRenderer) readPixel(x, y uint8) RenderedPixel {
 	return r.framebuf[y][x]
 }
 
-func (r *ScanlineRenderer) WritePixel(x, y uint8, colorID ppu.ColorID, color color.Color, layer PixelLayer) {
+func (r *ScanlineRenderer) writePixel(x, y uint8, colorID ppu.ColorID, color color.Color, layer PixelLayer) {
 	r.framebuf[y][x].Color = color
 	r.framebuf[y][x].ColorID = colorID
 	r.framebuf[y][x].Layer = layer

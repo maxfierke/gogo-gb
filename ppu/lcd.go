@@ -97,8 +97,6 @@ type lcdStatus struct {
 	mode1IntSel bool
 	mode2IntSel bool
 	lycIntSel   bool
-
-	shouldInterrupt bool
 }
 
 func (stat *lcdStatus) Read(ppu *PPU) uint8 {
@@ -139,11 +137,11 @@ func (stat *lcdStatus) Read(ppu *PPU) uint8 {
 		uint8(ppu.Mode))
 }
 
-func (stat *lcdStatus) ShouldInterrupt() bool {
-	return stat.shouldInterrupt
-}
+func (stat *lcdStatus) InterruptEnabled(ppu *PPU) bool {
+	if stat.lycIntSel && ppu.IsCurrentLineEqualToCompare() {
+		return true
+	}
 
-func (stat *lcdStatus) ModeInterruptEnabled(ppu *PPU) bool {
 	switch ppu.Mode {
 	case PPU_MODE_HBLANK:
 		return stat.mode0IntSel
@@ -156,21 +154,9 @@ func (stat *lcdStatus) ModeInterruptEnabled(ppu *PPU) bool {
 	}
 }
 
-func (stat *lcdStatus) statIntLine(ppu *PPU) bool {
-	return (stat.lycIntSel && ppu.IsCurrentLineEqualToCompare()) ||
-		stat.mode0IntSel ||
-		stat.mode1IntSel ||
-		stat.mode2IntSel
-}
-
 func (stat *lcdStatus) Write(ppu *PPU, value uint8) {
-	prevStatIntLine := stat.statIntLine(ppu)
-
 	stat.mode0IntSel = bits.Read(value, LCD_STAT_BIT_MODE_0_INT_SEL) == 1
 	stat.mode1IntSel = bits.Read(value, LCD_STAT_BIT_MODE_1_INT_SEL) == 1
 	stat.mode2IntSel = bits.Read(value, LCD_STAT_BIT_MODE_2_INT_SEL) == 1
 	stat.lycIntSel = bits.Read(value, LCD_STAT_BIT_LYC_INT_SEL) == 1
-
-	nextStatIntLine := stat.statIntLine(ppu)
-	stat.shouldInterrupt = !prevStatIntLine && nextStatIntLine
 }
