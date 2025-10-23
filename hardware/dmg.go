@@ -152,6 +152,10 @@ func (dmg *DMG) Draw() image.Image {
 	return dmg.ppu.Draw()
 }
 
+func (dmg *DMG) SetRenderer(renderer ppu.RendererConstructor) {
+	dmg.ppu.SetRenderer(renderer)
+}
+
 func (dmg *DMG) LoadSave(r io.Reader) error {
 	err := dmg.cartridge.LoadSave(r)
 	if err != nil {

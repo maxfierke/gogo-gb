@@ -184,6 +184,10 @@ func (cgb *CGB) Draw() image.Image {
 	return cgb.ppu.Draw()
 }
 
+func (cgb *CGB) SetRenderer(renderer ppu.RendererConstructor) {
+	cgb.ppu.SetRenderer(renderer)
+}
+
 func (cgb *CGB) LoadSave(r io.Reader) error {
 	err := cgb.cartridge.LoadSave(r)
 	if err != nil {

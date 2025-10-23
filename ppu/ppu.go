@@ -154,7 +154,7 @@ func NewPPU(ic InterruptRequester, renderer RendererConstructor) *PPU {
 		vram:           NewVRAM(),
 	}
 
-	ppu.renderer = renderer(ppu, ppu.oam, ppu.vram)
+	ppu.SetRenderer(renderer)
 
 	return ppu
 }
@@ -277,6 +277,10 @@ func (ppu *PPU) WindowY() uint8 {
 
 func (ppu *PPU) SetDMGCompatibilityEnabled(enabled bool) {
 	ppu.dmgCompatibilityEnabled = enabled
+}
+
+func (ppu *PPU) SetRenderer(renderer RendererConstructor) {
+	ppu.renderer = renderer(ppu, ppu.oam, ppu.vram)
 }
 
 func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {

@@ -14,6 +14,8 @@ import (
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/hardware"
 	"github.com/maxfierke/gogo-gb/host"
+	"github.com/maxfierke/gogo-gb/ppu"
+	"github.com/maxfierke/gogo-gb/ppu/rendering"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +26,7 @@ type RunCmdOptions struct {
 	debugger     string
 	headless     bool
 	model        string
+	renderer     string
 	serialPort   string
 	skipBootRom  bool
 }
@@ -66,6 +69,7 @@ func init() {
 
 	runCmd.Flags().StringVarP(&runCmdOptions.debugger, "debugger", "d", "", "Specify debugger to use (\"gameboy-doctor\", \"interactive\")")
 	runCmd.Flags().StringVarP(&runCmdOptions.model, "model", "m", "auto", "Specify model to use (\"auto\", \"dmg\", \"cgb\")")
+	runCmd.Flags().StringVar(&runCmdOptions.renderer, "renderer", "", "Specify renderer to use (\"scanline\")")
 	runCmd.Flags().StringVarP(&runCmdOptions.serialPort, "serial-port", "p", "", "Path to serial port IO (could be a file, UNIX socket, etc.)")
 	runCmd.Flags().BoolVar(&runCmdOptions.skipBootRom, "skip-bootrom", false, "Skip loading a boot ROM")
 	runCmd.Flags().BoolVar(&runCmdOptions.headless, "headless", false, "Launch without UI")
@@ -174,6 +178,18 @@ func initConsole(logger *log.Logger, options *RunCmdOptions) (hardware.Console, 
 
 	opts := []hardware.ConsoleOption{
 		hardware.WithDebugger(debugger),
+	}
+
+	if options.renderer != "" {
+		var renderer ppu.RendererConstructor
+		switch options.renderer {
+		case "scanline":
+			renderer = rendering.Scanline
+		default:
+			return nil, fmt.Errorf("unrecognized renderer: %s", options.renderer)
+		}
+
+		opts = append(opts, hardware.WithRenderer(renderer))
 	}
 
 	if options.skipBootRom {
