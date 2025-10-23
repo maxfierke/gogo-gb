@@ -81,7 +81,7 @@ func (v *VRAM) GetBGTileIndex(tilemapArea tileMapArea, tileX, tileY uint8) uint8
 func (v *VRAM) GetBGTileAttributes(tilemapArea tileMapArea, tileX, tileY uint8) BGAttributes {
 	var tileMapOffset uint16
 	if tilemapArea == TILEMAP_AREA2 {
-		tileMapOffset = 1024
+		tileMapOffset = VRAM_BG_ATTR_SIZE / 2
 	}
 
 	tileMapIndex := uint16(tileY)*32 + uint16(tileX)
@@ -119,7 +119,7 @@ func (v *VRAM) GetObjTile(object ObjectData, objSize objectSize, tileY uint8, co
 func (v *VRAM) writeBGAttr(vramAddr uint16, value uint8) {
 	attrIndex := vramAddr - (VRAM_TILEMAP_1_START - VRAM_START)
 	if vramAddr >= (VRAM_TILEMAP_2_START - VRAM_START) {
-		attrIndex = vramAddr - (VRAM_TILEMAP_2_START - VRAM_START)
+		attrIndex = vramAddr - (VRAM_TILEMAP_2_START - VRAM_START) + (VRAM_BG_ATTR_SIZE / 2)
 	}
 	v.cgbBGAttributes[attrIndex].Write(value)
 }
