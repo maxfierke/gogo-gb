@@ -185,6 +185,8 @@ func initConsole(logger *log.Logger, options *RunCmdOptions) (hardware.Console, 
 		switch options.renderer {
 		case "scanline":
 			renderer = rendering.Scanline
+		case "fifo":
+			renderer = rendering.FIFO
 		default:
 			return nil, fmt.Errorf("unrecognized renderer: %s", options.renderer)
 		}

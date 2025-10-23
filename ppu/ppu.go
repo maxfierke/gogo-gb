@@ -103,6 +103,7 @@ type RendererConstructor func(ppu *PPU, oam *OAM, vram *VRAM) Renderer
 
 type Renderer interface {
 	DrawImage() image.Image
+	Reset()
 	Step(dots uint8) uint8
 }
 
@@ -335,6 +336,7 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 		if ppu.pixelsRendered == 160 {
 			ppu.clock = ppu.clock % uint(ppu.mode3Cycles)
 			ppu.pixelsRendered = 0
+			ppu.renderer.Reset()
 			ppu.Mode = PPU_MODE_HBLANK
 			ppu.requestLCD(previousStatusEnabled)
 		}
