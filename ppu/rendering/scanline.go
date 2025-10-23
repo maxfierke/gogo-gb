@@ -145,7 +145,7 @@ func (r *ScanlineRenderer) drawBgScanline() {
 			pixelLayer = PIXEL_LAYER_BGP
 		}
 
-		r.WritePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
+		r.writePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
 	}
 }
 
@@ -217,7 +217,7 @@ func (r *ScanlineRenderer) drawWinScanline() {
 				pixelLayer = PIXEL_LAYER_BGP
 			}
 
-			r.WritePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
+			r.writePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
 		}
 
 		// TODO: Do this in PPU
@@ -278,7 +278,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 
 				renderedObjX, hasRenderedObj := renderedObjectsX[pixelX]
 
-				currentPixel := r.ReadPixel(pixelX, currentScanLine)
+				currentPixel := r.readPixel(pixelX, currentScanLine)
 
 				if tilePixelValue != ppu.VRAM_TILE_PIXEL_ZERO && // Skip transparent pixels
 					((objectPriorityMode == ppu.ObjectPriorityModeCGB && r.ppu.IsColorEnabled() && !hasRenderedObj) || // CGB mode: Earlier Object hasn't rendered at pixel
@@ -295,7 +295,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 					color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
 					pixelLayer := PIXEL_LAYER_OBJ
 
-					r.WritePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
+					r.writePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
 
 					renderedObject = true
 					renderedObjectsX[pixelX] = object.PosX
@@ -309,11 +309,11 @@ func (r *ScanlineRenderer) drawObjScanline() {
 	}
 }
 
-func (r *ScanlineRenderer) ReadPixel(x, y uint8) RenderedPixel {
+func (r *ScanlineRenderer) readPixel(x, y uint8) RenderedPixel {
 	return r.framebuf[y][x]
 }
 
-func (r *ScanlineRenderer) WritePixel(x, y uint8, colorID ppu.ColorID, color color.Color, layer PixelLayer) {
+func (r *ScanlineRenderer) writePixel(x, y uint8, colorID ppu.ColorID, color color.Color, layer PixelLayer) {
 	r.framebuf[y][x].Color = color
 	r.framebuf[y][x].ColorID = colorID
 	r.framebuf[y][x].Layer = layer
