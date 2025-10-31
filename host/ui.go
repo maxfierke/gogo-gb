@@ -165,7 +165,7 @@ func (ui *UI) Run(console hardware.Console) error {
 	go func() {
 		ui.Log("starting console main loop")
 		if err := hardware.Run(console, ui); err != nil {
-			ui.LogErr("unexpected error occurred during runtime: %w", err)
+			ui.LogErr("unexpected error occurred during runtime: %v", err)
 			return
 		}
 	}()

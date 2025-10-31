@@ -37,6 +37,7 @@ Use "gogo-gb [command] --help" for more information about a command.
 
 - [X] Pass all of Blargg's `cpu_instrs` ROMs (verified via `gameboy-doctor`)
 - [X] Implement MBC1
+- [X] Implement MBC2
 - [X] Implement MBC5
 - [X] Implement MBC3 (w/o RTC)
 - [X] Implement serial port (w/ option to log to console)
@@ -64,7 +65,6 @@ Just being realistic about my likelihood of getting to these:
 - [ ] Pass Blargg's `mem_timing-2` ROMs (manually verified)
 - [ ] Implement emulation for every known DMG bug
 - [ ] Implement SGB mode
-- [ ] Implement MBC2
 - [ ] Implement MBC6
 - [ ] Implement MBC7
 - [ ] Implement MBC1M, MMM01, other multicarts, or Hudson carts

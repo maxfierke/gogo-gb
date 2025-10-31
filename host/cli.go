@@ -84,7 +84,7 @@ func (h *CLIHost) Run(console hardware.Console) error {
 
 	go func() {
 		if err := hardware.Run(console, h); err != nil {
-			h.LogErr("unexpected error occurred during runtime: %w", err)
+			h.LogErr("unexpected error occurred during runtime: %v", err)
 			done <- err
 			return
 		}
