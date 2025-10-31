@@ -241,7 +241,7 @@ func (hdr Header) RamSizeBytes() uint {
 }
 
 func (hdr Header) SupportsSaving() bool {
-	return hdr.RamSizeBytes() > 0
+	return hdr.RamSizeBytes() > 0 || hdr.CartType == CART_TYPE_MBC2_BAT
 }
 
 func (hdr Header) DebugPrint(w io.Writer) {
