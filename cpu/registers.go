@@ -77,11 +77,13 @@ func (reg *Register[T]) Write(value T) {
 
 func (reg *Register[T]) Inc(value T) T {
 	reg.value += value
+
 	return reg.value
 }
 
 func (reg *Register[T]) Dec(value T) T {
 	reg.value -= value
+
 	return reg.value
 }
 
@@ -113,12 +115,14 @@ func (reg *CompoundRegister) Write(value uint16) {
 func (reg *CompoundRegister) Inc(value uint16) uint16 {
 	newValue := reg.Read() + value
 	reg.Write(newValue)
+
 	return newValue
 }
 
 func (reg *CompoundRegister) Dec(value uint16) uint16 {
 	newValue := reg.Read() - value
 	reg.Write(newValue)
+
 	return newValue
 }
 

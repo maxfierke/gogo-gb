@@ -136,12 +136,6 @@ func (cgb *CGB) AttachDebugger(debugger debug.Debugger) {
 	cgb.debugger = debugger
 }
 
-func (cgb *CGB) detachDebugger() {
-	// Remove any existing handlers
-	cgb.mmu.RemoveHandler(cgb.debuggerHandler)
-	cgb.debugger = debug.NewNullDebugger()
-}
-
 func (cgb *CGB) SetupDebugger() {
 	cgb.debugger.Setup(cgb.cpu, cgb.mmu, cgb.cartridge)
 }
@@ -244,4 +238,10 @@ func (cgb *CGB) Step() (uint8, error) {
 	cgb.serial.Step(cycles, cgb.ic)
 
 	return cycles, nil
+}
+
+func (cgb *CGB) detachDebugger() {
+	// Remove any existing handlers
+	cgb.mmu.RemoveHandler(cgb.debuggerHandler)
+	cgb.debugger = debug.NewNullDebugger()
 }

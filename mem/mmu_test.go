@@ -51,8 +51,8 @@ func TestMmuBasicReads(t *testing.T) {
 	ram[0x101] = 0xEE
 	ram[0x102] = 0xFF
 
-	assert.EqualValues(mmu.Read8(0x100), byte(0xC0))
-	assert.EqualValues(mmu.Read16(0x101), 0xFFEE)
+	assert.Equal(byte(0xC0), mmu.Read8(0x100))
+	assert.Equal(uint16(0xFFEE), mmu.Read16(0x101))
 }
 
 func TestMmuBasicWrites(t *testing.T) {
@@ -64,9 +64,9 @@ func TestMmuBasicWrites(t *testing.T) {
 	mmu.Write8(0x100, 0xC0)
 	mmu.Write16(0x101, 0xFFEE)
 
-	assert.Equal(ram[0x100], byte(0xC0))
-	assert.Equal(ram[0x101], byte(0xEE))
-	assert.Equal(ram[0x102], byte(0xFF))
+	assert.Equal(byte(0xC0), ram[0x100])
+	assert.Equal(byte(0xEE), ram[0x101])
+	assert.Equal(byte(0xFF), ram[0x102])
 }
 
 func TestMmuReadHandlerReplacement(t *testing.T) {
@@ -80,8 +80,8 @@ func TestMmuReadHandlerReplacement(t *testing.T) {
 	ram[0x103] = 0x11
 	ram[0x201] = 0x22
 
-	assert.Equal(mmu.Read8(0x103), handlerReadReplaceValue)
-	assert.Equal(mmu.Read8(0x201), byte(0x22))
+	assert.Equal(handlerReadReplaceValue, mmu.Read8(0x103))
+	assert.Equal(byte(0x22), mmu.Read8(0x201))
 }
 
 func TestMmuReadHandlerPassthrough(t *testing.T) {
@@ -95,8 +95,8 @@ func TestMmuReadHandlerPassthrough(t *testing.T) {
 	ram[0x103] = 0x11
 	ram[0x201] = 0x22
 
-	assert.Equal(mmu.Read8(0x103), byte(0x11))
-	assert.Equal(mmu.Read8(0x201), byte(0x22))
+	assert.Equal(byte(0x11), mmu.Read8(0x103))
+	assert.Equal(byte(0x22), mmu.Read8(0x201))
 }
 
 func TestMmuWriteHandlerReplacement(t *testing.T) {
@@ -110,8 +110,8 @@ func TestMmuWriteHandlerReplacement(t *testing.T) {
 	mmu.Write8(0x103, 0x11)
 	mmu.Write8(0x201, 0x22)
 
-	assert.Equal(ram[0x103], handlerWriteReplaceValue)
-	assert.Equal(ram[0x201], byte(0x22))
+	assert.Equal(handlerWriteReplaceValue, ram[0x103])
+	assert.Equal(byte(0x22), ram[0x201])
 }
 
 func TestMmuWriteHandlerPassthrough(t *testing.T) {
@@ -125,8 +125,8 @@ func TestMmuWriteHandlerPassthrough(t *testing.T) {
 	mmu.Write8(0x103, 0x11)
 	mmu.Write8(0x201, 0x22)
 
-	assert.Equal(ram[0x103], byte(0x11))
-	assert.Equal(ram[0x201], byte(0x22))
+	assert.Equal(byte(0x11), ram[0x103])
+	assert.Equal(byte(0x22), ram[0x201])
 }
 
 func TestMmuWriteHandlerBlock(t *testing.T) {
@@ -140,6 +140,6 @@ func TestMmuWriteHandlerBlock(t *testing.T) {
 	mmu.Write8(0x103, 0x11)
 	mmu.Write8(0x201, 0x22)
 
-	assert.Equal(ram[0x103], byte(0x00))
-	assert.Equal(ram[0x201], byte(0x22))
+	assert.Equal(byte(0x00), ram[0x103])
+	assert.Equal(byte(0x22), ram[0x201])
 }

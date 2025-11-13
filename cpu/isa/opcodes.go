@@ -30,14 +30,15 @@ func (operand *Operand) String() string {
 	name := operand.Name
 
 	if operand.Increment {
-		name = fmt.Sprintf("%s+", name)
+		name = name + "+"
 	} else if operand.Decrement {
-		name = fmt.Sprintf("%s-", name)
+		name = name + "-"
 	}
 
 	if !operand.Immediate {
 		return fmt.Sprintf("(%s)", name)
 	}
+
 	return name
 }
 

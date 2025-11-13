@@ -146,6 +146,7 @@ func (ui *UI) Draw(screen *ebiten.Image) {
 
 func (ui *UI) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
 	scale := math.Ceil(ebiten.Monitor().DeviceScaleFactor())
+
 	return int(FB_WIDTH * scale), int(FB_HEIGHT * scale)
 }
 
@@ -166,6 +167,7 @@ func (ui *UI) Run(console hardware.Console) error {
 		ui.Log("starting console main loop")
 		if err := hardware.Run(console, ui); err != nil {
 			ui.LogErr("unexpected error occurred during runtime: %v", err)
+
 			return
 		}
 	}()
@@ -174,5 +176,6 @@ func (ui *UI) Run(console hardware.Console) error {
 	defer close(ui.frameChan)
 
 	ui.Log("handing over main thread to ebiten for rendering")
+
 	return ebiten.RunGame(ui)
 }

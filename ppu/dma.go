@@ -21,6 +21,14 @@ type DMA struct {
 	pendingDMA []*dmaRequest
 }
 
+var _ mem.MemHandler = (*DMA)(nil)
+
+func NewDMA() *DMA {
+	return &DMA{
+		pendingDMA: make([]*dmaRequest, 0, 160),
+	}
+}
+
 func (d *DMA) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if addr == REG_DMA_OAM {
 		return mem.ReadPassthrough()
@@ -34,7 +42,7 @@ func (d *DMA) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		if !d.enabled {
 			srcAddrStart := uint16(value) << 8
 
-			for oamAddr := uint8(0); oamAddr < 160; oamAddr++ {
+			for oamAddr := range uint8(160) {
 				srcAddr := srcAddrStart + uint16(oamAddr)
 				copiedValue := mmu.Read8(srcAddr)
 
@@ -53,14 +61,6 @@ func (d *DMA) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for DMA", value, addr))
-}
-
-var _ mem.MemHandler = (*DMA)(nil)
-
-func NewDMA() *DMA {
-	return &DMA{
-		pendingDMA: make([]*dmaRequest, 0, 160),
-	}
 }
 
 func (d *DMA) Step(mmu *mem.MMU, cycles uint8) {

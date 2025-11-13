@@ -123,6 +123,7 @@ func (sp *SerialPort) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrit
 	switch addr {
 	case REG_SERIAL_SB:
 		sp.buf = value
+
 		return mem.WriteBlock()
 	case REG_SERIAL_SC:
 		sp.ctrl.Write(value)

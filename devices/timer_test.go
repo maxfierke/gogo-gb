@@ -35,7 +35,7 @@ func TestTimerTIMA(t *testing.T) {
 	assert.True(timer.incCounter)
 	assert.Equal(TimerClockSelector(TIMER_CLK_SEL_CPU_DIV_256), timer.freqSel)
 
-	for i := 0; i < 255; i++ {
+	for range 255 {
 		timer.Step(1, ic)
 	}
 	assert.Equal(uint8(0), timer.counter)
@@ -53,7 +53,7 @@ func TestTimerTIMA(t *testing.T) {
 	assert.True(timer.incCounter)
 	assert.Equal(TimerClockSelector(TIMER_CLK_SEL_CPU_DIV_1024), timer.freqSel)
 
-	for i := 0; i < 4096; i++ {
+	for range 4096 {
 		timer.Step(1, ic)
 	}
 	assert.Equal(uint8(4), timer.counter)
@@ -79,7 +79,7 @@ func TestTimerTIMA(t *testing.T) {
 	assert.True(timer.incCounter)
 	assert.Equal(TimerClockSelector(TIMER_CLK_SEL_CPU_DIV_64), timer.freqSel)
 
-	for i := 0; i < 256; i++ {
+	for range 256 {
 		timer.Step(1, ic)
 	}
 	assert.Equal(uint8(4), timer.counter)
@@ -99,7 +99,7 @@ func TestTimerInterrupt(t *testing.T) {
 	assert.True(timer.incCounter)
 	assert.Equal(TimerClockSelector(TIMER_CLK_SEL_CPU_DIV_16), timer.freqSel)
 
-	for i := 0; i < 255; i++ {
+	for range 255 {
 		timer.Step(16, ic)
 	}
 	assert.Equal(uint8(0xFF), timer.counter)

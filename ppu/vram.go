@@ -85,6 +85,7 @@ func (v *VRAM) GetBGTileAttributes(tilemapArea tileMapArea, tileX, tileY uint8) 
 	}
 
 	tileMapIndex := uint16(tileY)*32 + uint16(tileX)
+
 	return v.cgbBGAttributes[tileMapOffset+tileMapIndex]
 }
 

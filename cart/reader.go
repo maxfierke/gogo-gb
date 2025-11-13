@@ -23,6 +23,8 @@ type Reader struct {
 	headerBuf [HEADER_END + 1]byte
 }
 
+var _ io.Reader = (*Reader)(nil)
+
 // NewReader creates a new Reader reading the given reader.
 // If r does not also implement io.ByteReader,
 // the decoder may read more data than necessary from r.
@@ -38,7 +40,13 @@ func NewReader(r io.Reader) (*Reader, error) {
 	} else if err != nil {
 		return nil, err
 	}
+
 	return cartReader, nil
+}
+
+// Read implements io.Reader, reading cartridge ROM bytes from its underlying Reader.
+func (cr *Reader) Read(p []byte) (n int, err error) {
+	return cr.r.Read(p)
 }
 
 // Reset discards the Reader cr's state and makes it equivalent to the
@@ -52,6 +60,7 @@ func (cr *Reader) Reset(r io.Reader) error {
 		cr.r = bufio.NewReader(r)
 	}
 	cr.Header, cr.err = cr.readHeader()
+
 	return cr.err
 }
 
@@ -75,9 +84,4 @@ func (cr *Reader) readHeader() (hdr Header, err error) {
 	}
 
 	return hdr, nil
-}
-
-// Read implements io.Reader, reading cartridge ROM bytes from its underlying Reader.
-func (cr *Reader) Read(p []byte) (n int, err error) {
-	return cr.r.Read(p)
 }

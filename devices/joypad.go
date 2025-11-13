@@ -62,65 +62,65 @@ func (j *Joypad) ReceiveInputs(inputs JoypadInputs) {
 }
 
 func (j *Joypad) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	if addr == REG_JOYP {
-		j.inputStateMu.Lock()
-		defer j.inputStateMu.Unlock()
-
-		var (
-			readButtons uint8
-			readDPad    uint8
-			startDown   uint8
-			selectUp    uint8
-			bLeft       uint8
-			aRight      uint8
-		)
-
-		if j.readButtons {
-			readButtons = 1 << REG_JOYP_BIT_BUTTONS_SEL
-		}
-
-		if j.readDPad {
-			readDPad = 1 << REG_JOYP_BIT_DPAD_SEL
-		}
-
-		if j.inputState.Start && j.readButtons {
-			startDown = 1 << REG_JOYP_BIT_START_DOWN
-		}
-
-		if j.inputState.Down && j.readDPad {
-			startDown |= 1 << REG_JOYP_BIT_START_DOWN
-		}
-
-		if j.inputState.Select && j.readButtons {
-			selectUp = 1 << REG_JOYP_BIT_SELECT_UP
-		}
-
-		if j.inputState.Up && j.readDPad {
-			selectUp |= 1 << REG_JOYP_BIT_SELECT_UP
-		}
-
-		if j.inputState.B && j.readButtons {
-			bLeft = 1 << REG_JOYP_BIT_B_LEFT
-		}
-
-		if j.inputState.Left && j.readDPad {
-			bLeft |= 1 << REG_JOYP_BIT_B_LEFT
-		}
-
-		if j.inputState.A && j.readButtons {
-			aRight = 1 << REG_JOYP_BIT_A_RIGHT
-		}
-
-		if j.inputState.Right && j.readDPad {
-			aRight |= 1 << REG_JOYP_BIT_A_RIGHT
-		}
-
-		readByte := (readButtons | readDPad | startDown | selectUp | bLeft | aRight) ^ 0xFF
-
-		return mem.ReadReplace(readByte)
+	if addr != REG_JOYP {
+		return mem.ReadPassthrough()
 	}
 
-	return mem.ReadPassthrough()
+	j.inputStateMu.Lock()
+	defer j.inputStateMu.Unlock()
+
+	var (
+		readButtons uint8
+		readDPad    uint8
+		startDown   uint8
+		selectUp    uint8
+		bLeft       uint8
+		aRight      uint8
+	)
+
+	if j.readButtons {
+		readButtons = 1 << REG_JOYP_BIT_BUTTONS_SEL
+	}
+
+	if j.readDPad {
+		readDPad = 1 << REG_JOYP_BIT_DPAD_SEL
+	}
+
+	if j.inputState.Start && j.readButtons {
+		startDown = 1 << REG_JOYP_BIT_START_DOWN
+	}
+
+	if j.inputState.Down && j.readDPad {
+		startDown |= 1 << REG_JOYP_BIT_START_DOWN
+	}
+
+	if j.inputState.Select && j.readButtons {
+		selectUp = 1 << REG_JOYP_BIT_SELECT_UP
+	}
+
+	if j.inputState.Up && j.readDPad {
+		selectUp |= 1 << REG_JOYP_BIT_SELECT_UP
+	}
+
+	if j.inputState.B && j.readButtons {
+		bLeft = 1 << REG_JOYP_BIT_B_LEFT
+	}
+
+	if j.inputState.Left && j.readDPad {
+		bLeft |= 1 << REG_JOYP_BIT_B_LEFT
+	}
+
+	if j.inputState.A && j.readButtons {
+		aRight = 1 << REG_JOYP_BIT_A_RIGHT
+	}
+
+	if j.inputState.Right && j.readDPad {
+		aRight |= 1 << REG_JOYP_BIT_A_RIGHT
+	}
+
+	readByte := (readButtons | readDPad | startDown | selectUp | bLeft | aRight) ^ 0xFF
+
+	return mem.ReadReplace(readByte)
 }
 
 func (j *Joypad) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {

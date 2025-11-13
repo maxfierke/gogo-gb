@@ -61,6 +61,7 @@ func (br *DMGBootROM) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 func (br *DMGBootROM) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	if addr == REG_BOOTROM_EN && br.enabled {
 		br.enabled = value == 0x00
+
 		return mem.WriteBlock()
 	} else if br.enabled {
 		panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is not allowed for boot ROM", value, addr))
@@ -115,9 +116,11 @@ func (br *CGBBootROM) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 func (br *CGBBootROM) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	if addr == REG_BOOTROM_EN && br.enabled {
 		br.enabled = value == 0x00
+
 		return mem.WriteBlock()
 	} else if addr == REG_BOOTROM_KEY0 && br.enabled {
 		br.dmgModeEnabled = bits.Read(value, REG_BOOTROM_KEY0_CPU_MODE_BIT) == 1
+
 		return mem.WriteBlock()
 	} else if br.enabled {
 		panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is not allowed for boot ROM", value, addr))

@@ -108,12 +108,6 @@ func (dmg *DMG) AttachDebugger(debugger debug.Debugger) {
 	dmg.debugger = debugger
 }
 
-func (dmg *DMG) detachDebugger() {
-	// Remove any existing handlers
-	dmg.mmu.RemoveHandler(dmg.debuggerHandler)
-	dmg.debugger = debug.NewNullDebugger()
-}
-
 func (dmg *DMG) SetupDebugger() {
 	dmg.debugger.Setup(dmg.cpu, dmg.mmu, dmg.cartridge)
 }
@@ -207,4 +201,10 @@ func (dmg *DMG) Step() (uint8, error) {
 	dmg.serial.Step(cycles, dmg.ic)
 
 	return cycles, nil
+}
+
+func (dmg *DMG) detachDebugger() {
+	// Remove any existing handlers
+	dmg.mmu.RemoveHandler(dmg.debuggerHandler)
+	dmg.debugger = debug.NewNullDebugger()
 }

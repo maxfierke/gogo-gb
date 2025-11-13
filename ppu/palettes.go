@@ -73,6 +73,7 @@ func (c rgb555) RGBA() (r, g, b, a uint32) {
 	color.R |= color.R >> 2
 	color.G |= color.G >> 2
 	color.B |= color.B >> 2
+
 	return color.RGBA()
 }
 

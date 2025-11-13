@@ -52,7 +52,9 @@ func (m *MBC5) Step(cycles uint8) {}
 func (m *MBC5) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if MBC5_ROM_BANK_00.Contains(addr, false) {
 		return mem.ReadReplace(m.rom[addr])
-	} else if MBC5_ROM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC5_ROM_BANKS.Contains(addr, false) {
 		bankByte := mem.ReadBankAddr(
 			m.rom,
 			MBC5_ROM_BANKS,
@@ -60,8 +62,11 @@ func (m *MBC5) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 			m.curRomBank,
 			addr,
 		)
+
 		return mem.ReadReplace(bankByte)
-	} else if MBC5_RAM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC5_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled {
 			bankByte := mem.ReadBankAddr(
 				m.ram,
@@ -70,11 +75,12 @@ func (m *MBC5) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 				uint16(m.curRamBank),
 				addr,
 			)
+
 			return mem.ReadReplace(bankByte)
-		} else {
-			// Docs say this is usually 0xFF, but not guaranteed. Randomness needed?
-			return mem.ReadReplace(0xFF)
 		}
+
+		// Docs say this is usually 0xFF, but not guaranteed. Randomness needed?
+		return mem.ReadReplace(0xFF)
 	}
 
 	return mem.ReadPassthrough()
@@ -90,17 +96,28 @@ func (m *MBC5) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		}
 
 		return mem.WriteBlock()
-	} else if MBC5_REG_LSB_ROM_BANK.Contains(addr, false) {
+	}
+
+	if MBC5_REG_LSB_ROM_BANK.Contains(addr, false) {
 		m.curRomBank = (m.curRomBank & MBC5_REG_LSB_ROM_BANK_SEL_MASK) | uint16(value)
+
 		return mem.WriteBlock()
-	} else if MBC5_REG_MSB_ROM_BANK.Contains(addr, false) {
+	}
+
+	if MBC5_REG_MSB_ROM_BANK.Contains(addr, false) {
 		msb := uint16(value) & 0x1 << 8
 		m.curRomBank = (m.curRomBank & MBC5_REG_MSB_ROM_BANK_SEL_MASK) | msb
+
 		return mem.WriteBlock()
-	} else if MBC5_REG_RAM_BANK.Contains(addr, false) {
+	}
+
+	if MBC5_REG_RAM_BANK.Contains(addr, false) {
 		m.curRamBank = value & MBC5_REG_RAM_BANK_SEL_MASK
+
 		return mem.WriteBlock()
-	} else if MBC5_RAM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC5_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled && len(m.ram) > 0 {
 			mem.WriteBankAddr(
 				m.ram,
@@ -111,8 +128,11 @@ func (m *MBC5) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 				value,
 			)
 		}
+
 		return mem.WriteBlock()
-	} else if MBC5_ROM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC5_ROM_BANKS.Contains(addr, false) {
 		return mem.WriteBlock()
 	}
 

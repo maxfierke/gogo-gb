@@ -57,6 +57,7 @@ func (m *MBC2) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 			uint16(romBank),
 			addr,
 		)
+
 		return mem.ReadReplace(bankByte)
 	} else if MBC2_RAM_BANK.Contains(addr, false) {
 		if m.ramEnabled {
@@ -67,6 +68,7 @@ func (m *MBC2) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 				0,
 				(addr & MBC2_RAM_ADDR_MASK),
 			)
+
 			return mem.ReadReplace(bankByte & 0xF)
 		} else {
 			return mem.ReadReplace(0xFF)

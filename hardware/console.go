@@ -47,7 +47,7 @@ func WithBootROM(r io.Reader) ConsoleOption {
 		case *CGB:
 			bootROM = devices.NewCGBBootROM()
 		default:
-			return fmt.Errorf("unrecognized console")
+			return errors.New("unrecognized console")
 		}
 
 		err := bootROM.LoadROM(r)
@@ -63,6 +63,7 @@ func WithBootROM(r io.Reader) ConsoleOption {
 func WithDebugger(debugger debug.Debugger) ConsoleOption {
 	return func(console Console, mmu *mem.MMU) error {
 		console.AttachDebugger(debugger)
+
 		return nil
 	}
 }
@@ -71,6 +72,7 @@ func WithFakeBootROM() ConsoleOption {
 	return func(console Console, mmu *mem.MMU) error {
 		if dmg, isDMG := console.(*DMG); isDMG {
 			dmg.cpu.ResetToBootROM()
+
 			return nil
 		}
 

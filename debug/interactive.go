@@ -63,6 +63,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 			addr, err := parseAddr(c.Args[0])
 			if err != nil {
 				c.Err(fmt.Errorf("parsing addr: %w", err))
+
 				return
 			}
 
@@ -81,6 +82,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 			cart, err := getCartridge(c)
 			if err != nil {
 				c.Err(fmt.Errorf("accessing cartridge: %w", err))
+
 				return
 			}
 
@@ -117,6 +119,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Func: func(c *ishell.Context) {
 			if len(c.Args) == 0 {
 				c.Err(errors.New("must provide an address"))
+
 				return
 			}
 
@@ -126,6 +129,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				cpu, err := getCPU(c)
 				if err != nil {
 					c.Err(fmt.Errorf("accessing cpu: %w", err))
+
 					return
 				}
 
@@ -143,12 +147,14 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				addr, err := parseAddr(c.Args[0])
 				if err != nil {
 					c.Err(fmt.Errorf("parsing addr: %w", err))
+
 					return
 				}
 
 				mmu, err := getMMU(c)
 				if err != nil {
 					c.Err(fmt.Errorf("accessing mmu: %w", err))
+
 					return
 				}
 
@@ -166,63 +172,81 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Aliases: []string{"d", "di", "dis"},
 		Help:    "Disassemble at address",
 		Func: func(c *ishell.Context) {
-			var addr uint16
-
 			cpu, err := getCPU(c)
 			if err != nil {
 				c.Err(fmt.Errorf("accessing cpu: %w", err))
+
 				return
 			}
 
 			mmu, err := getMMU(c)
 			if err != nil {
 				c.Err(fmt.Errorf("accessing mmu: %w", err))
+
 				return
 			}
 
+			var startAddr, endAddr uint16
+
 			if len(c.Args) == 0 {
-				addr = cpu.PC.Read()
+				addr := cpu.PC.Read()
+				startAddr = addr
+				endAddr = addr
 			} else {
-				addr, err = parseAddr(c.Args[0])
+				startAddr, err = parseAddr(c.Args[0])
 				if err != nil {
 					c.Err(fmt.Errorf("parsing addr: %w", err))
+
+					return
+				}
+				endAddr = startAddr
+			}
+
+			if len(c.Args) == 2 {
+				endAddr, err = parseAddr(c.Args[1])
+				if err != nil {
+					c.Err(fmt.Errorf("parsing addr: %w", err))
+
 					return
 				}
 			}
 
-			inst, err := cpu.FetchAndDecode(mmu, addr)
-			if err != nil {
-				c.Err(fmt.Errorf("disassembling: %w", err))
-				return
-			}
+			for addr := startAddr; addr <= endAddr; addr++ {
+				inst, err := cpu.FetchAndDecode(mmu, addr)
+				if err != nil {
+					c.Err(fmt.Errorf("disassembling: %w", err))
 
-			operands := make([]string, 0, len(inst.Opcode.Operands))
-
-			operandOffset := 1
-			for _, operand := range inst.Opcode.Operands {
-				switch {
-				case operand.Bytes == 1 && operand.Immediate:
-					operands = append(operands, fmt.Sprintf("$%02X", mmu.Read8(addr+1)))
-				case operand.Bytes == 1 && !operand.Immediate:
-					operands = append(operands, fmt.Sprintf("($%02X)", mmu.Read8(addr+1)))
-				case operand.Bytes == 2 && operand.Immediate:
-					operands = append(operands, fmt.Sprintf("$%04X", mmu.Read16(addr+1)))
-				case operand.Bytes == 2 && !operand.Immediate:
-					operands = append(operands, fmt.Sprintf("($%04X)", mmu.Read16(addr+1)))
-				default:
-					operands = append(operands, operand.String())
+					return
 				}
 
-				operandOffset += operand.Bytes
-			}
+				operands := make([]string, 0, len(inst.Opcode.Operands))
 
-			c.Printf(
-				"0x%04X    0x%02X %s %s\n",
-				inst.Addr,
-				inst.Opcode.Addr,
-				inst.Opcode.Mnemonic,
-				strings.Join(operands, ", "),
-			)
+				operandOffset := 1
+				for _, operand := range inst.Opcode.Operands {
+					switch {
+					case operand.Bytes == 1 && operand.Immediate:
+						operands = append(operands, fmt.Sprintf("$%02X", mmu.Read8(addr+1)))
+					case operand.Bytes == 1 && !operand.Immediate:
+						operands = append(operands, fmt.Sprintf("($%02X)", mmu.Read8(addr+1)))
+					case operand.Bytes == 2 && operand.Immediate:
+						operands = append(operands, fmt.Sprintf("$%04X", mmu.Read16(addr+1)))
+					case operand.Bytes == 2 && !operand.Immediate:
+						operands = append(operands, fmt.Sprintf("($%04X)", mmu.Read16(addr+1)))
+					default:
+						operands = append(operands, operand.String())
+					}
+
+					operandOffset += operand.Bytes
+				}
+
+				c.Printf(
+					"0x%04X    0x%02X %s %s\n",
+					inst.Addr,
+					inst.Opcode.Addr,
+					inst.Opcode.Mnemonic,
+					strings.Join(operands, ", "),
+				)
+			}
 		},
 	})
 
@@ -234,12 +258,14 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 			cpu, err := getCPU(c)
 			if err != nil {
 				c.Err(fmt.Errorf("accessing cpu: %w", err))
+
 				return
 			}
 
 			mmu, err := getMMU(c)
 			if err != nil {
 				c.Err(fmt.Errorf("accessing mmu: %w", err))
+
 				return
 			}
 
@@ -266,12 +292,14 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Func: func(c *ishell.Context) {
 			if len(c.Args) == 0 {
 				c.Err(errors.New("must provide an address"))
+
 				return
 			}
 
 			addr, err := parseAddr(c.Args[0])
 			if err != nil {
 				c.Err(fmt.Errorf("parsing addr: %w", err))
+
 				return
 			}
 
@@ -290,6 +318,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 			cpu, err := getCPU(c)
 			if err != nil {
 				c.Err(fmt.Errorf("accessing cpu: %w", err))
+
 				return
 			}
 
@@ -304,12 +333,14 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Func: func(c *ishell.Context) {
 			if len(c.Args) == 0 {
 				c.Err(errors.New("must provide an address"))
+
 				return
 			}
 
 			addr, err := parseAddr(c.Args[0])
 			if err != nil {
 				c.Err(fmt.Errorf("parsing addr: %w", err))
+
 				return
 			}
 
@@ -332,6 +363,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 			addr, err := parseAddr(c.Args[0])
 			if err != nil {
 				c.Err(fmt.Errorf("parsing addr: %w", err))
+
 				return
 			}
 
@@ -421,6 +453,7 @@ func (i *InteractiveDebugger) stopStepping() {
 func (i *InteractiveDebugger) isStepping() bool {
 	i.steppingMu.Lock()
 	defer i.steppingMu.Unlock()
+
 	return i.stepping
 }
 
@@ -478,6 +511,7 @@ func parseAddr(addrString string) (uint16, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return uint16(parsedAddr), nil
 }
 
@@ -486,6 +520,7 @@ func getCartridge(c *ishell.Context) (*cart.Cartridge, error) {
 	if !ok {
 		return nil, ErrConsoleNotAttached
 	}
+
 	return cart, nil
 }
 
@@ -494,6 +529,7 @@ func getCPU(c *ishell.Context) (*cpu.CPU, error) {
 	if !ok {
 		return nil, ErrConsoleNotAttached
 	}
+
 	return cpu, nil
 }
 

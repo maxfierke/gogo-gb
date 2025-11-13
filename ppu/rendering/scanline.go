@@ -100,7 +100,7 @@ func (r *ScanlineRenderer) drawBgScanline() {
 	tilePixelY := (currentScanLine + scrollBackgroundY) % 8
 	tileMap := r.ppu.GetBGTilemap()
 
-	for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
+	for lineX := range uint16(FB_WIDTH) {
 		scrollAdjustedLineX := (lineX + uint16(scrollBackgroundX)) % 256
 		tileX := uint8(scrollAdjustedLineX / 8)
 
@@ -167,7 +167,7 @@ func (r *ScanlineRenderer) drawWinScanline() {
 
 		rendered := false
 
-		for lineX := uint16(0); lineX < FB_WIDTH; lineX++ {
+		for lineX := range uint16(FB_WIDTH) {
 			if (lineX + 7) < uint16(windowX) {
 				continue
 			}
@@ -261,7 +261,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 			}
 
 			renderedObject := false
-			for x := uint8(0); x < 8; x++ {
+			for x := range uint8(8) {
 				tilePixelX := x
 				if object.Attributes.FlipX {
 					tilePixelX = 7 - x

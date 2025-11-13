@@ -7,6 +7,8 @@ import (
 )
 
 func assertRegEquals[T Registerable](t *testing.T, actual T, expected T) {
+	t.Helper()
+
 	assert.Equalf(t, expected, actual, "Expected 0x%X, but got 0x%x", expected, actual)
 }
 

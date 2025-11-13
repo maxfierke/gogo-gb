@@ -229,6 +229,7 @@ func loadBootROM(model hardware.ConsoleModel, logger *log.Logger, options *RunCm
 	if bootRomFile == nil {
 		// Bail out if no boot ROM loaded
 		logger.Printf("WARN: No boot ROM provided. Some emulation functionality may be incorrect")
+
 		return nil, nil
 	}
 

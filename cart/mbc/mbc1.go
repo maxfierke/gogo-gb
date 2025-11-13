@@ -53,7 +53,9 @@ func (m *MBC1) Step(cycles uint8) {}
 func (m *MBC1) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if MBC1_ROM_BANK_X0.Contains(addr, false) {
 		return mem.ReadReplace(m.rom[addr])
-	} else if MBC1_ROM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC1_ROM_BANKS.Contains(addr, false) {
 		// see https://gbdev.io/pandocs/MBC1.html#00003fff--rom-bank-x0-read-only
 		romBank := max(m.curRomBank, 1)
 		if romBank == 0x20 || romBank == 0x40 || romBank == 0x60 {
@@ -67,8 +69,11 @@ func (m *MBC1) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 			romBank,
 			addr,
 		)
+
 		return mem.ReadReplace(bankByte)
-	} else if MBC1_RAM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC1_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled {
 			bankByte := mem.ReadBankAddr(
 				m.ram,
@@ -77,6 +82,7 @@ func (m *MBC1) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 				uint16(m.curRamBank),
 				addr,
 			)
+
 			return mem.ReadReplace(bankByte)
 		} else {
 			// Docs say this is usually 0xFF, but not guaranteed. Randomness needed?
@@ -96,19 +102,27 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		}
 
 		return mem.WriteBlock()
-	} else if MBC1_REG_ROM_BANK.Contains(addr, false) {
+	}
+
+	if MBC1_REG_ROM_BANK.Contains(addr, false) {
 		m.curRomBank = (m.curRomBank & ^MBC1_REG_ROM_BANK_SEL_MASK) |
 			(uint16(value) & MBC1_REG_ROM_BANK_SEL_MASK)
+
 		return mem.WriteBlock()
-	} else if MBC1_REG_RAM_BANK_OR_MSB_ROM_BANK.Contains(addr, false) {
+	}
+
+	if MBC1_REG_RAM_BANK_OR_MSB_ROM_BANK.Contains(addr, false) {
 		if m.ramSelected {
 			m.curRamBank = value & 0x3
 		} else {
 			msb := (uint16(value) & 0x3) << 5
 			m.curRomBank = (m.curRomBank & MBC1_REG_MSB_ROM_BANK_SEL_MASK) | msb
 		}
+
 		return mem.WriteBlock()
-	} else if MBC1_REG_BANK_MODE_SEL.Contains(addr, false) {
+	}
+
+	if MBC1_REG_BANK_MODE_SEL.Contains(addr, false) {
 		switch value {
 		case 0x00:
 			m.ramSelected = false
@@ -117,7 +131,9 @@ func (m *MBC1) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		}
 
 		return mem.WriteBlock()
-	} else if MBC1_RAM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC1_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled && len(m.ram) > 0 {
 			mem.WriteBankAddr(
 				m.ram,

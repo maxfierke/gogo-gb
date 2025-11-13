@@ -196,6 +196,7 @@ func (mmu *MMU) Write8(addr uint16, value byte) {
 
 			if !memwrite.passthrough {
 				mmu.ram[addr] = memwrite.replacement
+
 				return
 			}
 		}

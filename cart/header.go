@@ -130,21 +130,25 @@ func (hdr Header) CartTypeName() string {
 		if hdr.IsMBC30() {
 			return "MBC30+TIMER+RAM+BATTERY"
 		}
+
 		return "MBC3+TIMER+RAM+BATTERY"
 	case CART_TYPE_MBC3:
 		if hdr.IsMBC30() {
 			return "MBC30"
 		}
+
 		return "MBC3"
 	case CART_TYPE_MBC3_RAM:
 		if hdr.IsMBC30() {
 			return "MBC30+RAM"
 		}
+
 		return "MBC3+RAM"
 	case CART_TYPE_MBC3_RAM_BAT:
 		if hdr.IsMBC30() {
 			return "MBC30+RAM+BATTERY"
 		}
+
 		return "MBC3+RAM+BATTERY"
 	case CART_TYPE_MBC5:
 		return "MBC5"

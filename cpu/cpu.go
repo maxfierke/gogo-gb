@@ -117,6 +117,7 @@ func (cpu *CPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 func (cpu *CPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	if cpu.HasFeature(FeatureDoubleSpeed) && addr == REG_KEY1 {
 		cpu.speedswitchArmed = gogobits.Read(value, REG_KEY1_ARMED_BIT) == 1
+
 		return mem.WriteBlock()
 	}
 
@@ -1698,6 +1699,7 @@ func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cyc
 		case 0xD9:
 			// RETI
 			cpu.ime = true
+
 			return cpu.ret(mmu, opcode, true)
 		case 0xDA:
 			// JP C, a16
@@ -2052,6 +2054,7 @@ func (cpu *CPU) call(mmu *mem.MMU, opcode *isa.Opcode, shouldJump bool) (nextPC 
 
 	if shouldJump {
 		cpu.push(mmu, nextPC)
+
 		return mmu.Read16(cpu.PC.Read() + 1), uint8(opcode.Cycles[0]), nil
 	}
 
@@ -2087,6 +2090,7 @@ func (cpu *CPU) jumpRel(mmu *mem.MMU, opcode *isa.Opcode, shouldJump bool) (next
 
 	if shouldJump {
 		nextPcDiff := int8(cpu.readNext8(mmu))
+
 		return nextPC + uint16(nextPcDiff), uint8(opcode.Cycles[0]), nil
 	} else {
 		return nextPC, uint8(opcode.Cycles[1]), nil
@@ -2096,6 +2100,7 @@ func (cpu *CPU) jumpRel(mmu *mem.MMU, opcode *isa.Opcode, shouldJump bool) (next
 func (cpu *CPU) pop(mmu *mem.MMU) uint16 {
 	value := mmu.Read16(cpu.SP.Read())
 	cpu.SP.Inc(2)
+
 	return value
 }
 
@@ -2134,6 +2139,7 @@ func (cpu *CPU) rotl(value byte, zero bool, throughCarry bool) byte {
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.HalfCarry = false
 	cpu.Reg.F.Carry = (value & 0x80) != 0x0
+
 	return newValue
 }
 
@@ -2151,11 +2157,13 @@ func (cpu *CPU) rotr(value byte, zero bool, throughCarry bool) byte {
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.HalfCarry = false
 	cpu.Reg.F.Carry = (value & 0x1) != 0x0
+
 	return newValue
 }
 
 func (cpu *CPU) rst(mmu *mem.MMU, opcode *isa.Opcode, value byte) (nextPC uint16, cycles uint8, err error) {
 	cpu.push(mmu, cpu.PC.Read()+1)
+
 	return uint16(value), uint8(opcode.Cycles[0]), nil
 }
 
@@ -2165,6 +2173,7 @@ func (cpu *CPU) sla(value byte) byte {
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.HalfCarry = false
 	cpu.Reg.F.Carry = (value & 0x80) == 0x80
+
 	return newValue
 }
 
@@ -2175,6 +2184,7 @@ func (cpu *CPU) sra(value byte) byte {
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.HalfCarry = false
 	cpu.Reg.F.Carry = (value & 0x1) == 0x1
+
 	return newValue
 }
 
@@ -2184,6 +2194,7 @@ func (cpu *CPU) srl(value byte) byte {
 	cpu.Reg.F.Subtract = false
 	cpu.Reg.F.HalfCarry = false
 	cpu.Reg.F.Carry = (value & 0x1) == 0x1
+
 	return newValue
 }
 
@@ -2226,21 +2237,25 @@ func (cpu *CPU) resetBit(bit uint8, reg RWByte) {
 // Did the aVal carry over from the lower 4 bits to the upper 4 bits?
 func isHalfCarry8(aVal uint8, bVal uint8, carry uint8) bool {
 	fourBitMask := uint(0xF)
+
 	return ((uint(aVal) & fourBitMask) + (uint(bVal) & fourBitMask) + uint(carry)) > fourBitMask
 }
 
 func isCarry8(aVal uint8, bVal uint8, carry uint8) bool {
 	byteMask := uint(0xFF)
+
 	return ((uint(aVal) & byteMask) + (uint(bVal) & byteMask) + uint(carry)) > byteMask
 }
 
 // Did the aVal carry over from the lower 4 bits of the top byte in the word to the upper 4 bits?
 func isHalfCarry16(aVal uint16, bVal uint16) bool {
 	twelveBitMask := uint(0xFFF)
+
 	return ((uint(aVal) & twelveBitMask) + (uint(bVal) & twelveBitMask)) > twelveBitMask
 }
 
 func isCarry16(aVal uint16, bVal uint16) bool {
 	wordMask := uint(0xFFFF)
+
 	return ((uint(aVal) & wordMask) + (uint(bVal) & wordMask)) > wordMask
 }

@@ -182,9 +182,11 @@ func (ic *InterruptController) OnWrite(mmu *mem.MMU, addr uint16, value byte) me
 	switch addr {
 	case REG_IE:
 		ic.enabled.Write(value)
+
 		return mem.WriteBlock()
 	case REG_IF:
 		ic.requested.Write(value)
+
 		return mem.WriteBlock()
 	default:
 		panic(fmt.Sprintf("Attempting to write 0x%02X @ 0x%04X, which is out-of-bounds for interrupts", value, addr))

@@ -440,6 +440,7 @@ func (ppu *PPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	if addr == REG_PPU_LCDC {
 		ppu.lcdCtrl.Write(value)
+
 		return mem.WriteBlock()
 	}
 
@@ -453,11 +454,13 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 	if addr == REG_PPU_SCX {
 		ppu.scrollBackgroundX = value
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_PPU_SCY {
 		ppu.scrollBackgroundY = value
+
 		return mem.WriteBlock()
 	}
 
@@ -468,36 +471,43 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 	if addr == REG_PPU_LYC {
 		ppu.cmpScanLine = value
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_PPU_BGP {
 		ppu.bgPalette.Write(value)
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_PPU_OBP0 {
 		ppu.objPalettes[0].Write(value)
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_PPU_OBP1 {
 		ppu.objPalettes[1].Write(value)
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_PPU_WY {
 		ppu.windowY = value
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_PPU_WX {
 		ppu.windowX = value
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_PPU_BCPS_BGPI {
 		ppu.cgbBGPalettes.Write(value)
+
 		return mem.WriteBlock()
 	}
 
@@ -515,6 +525,7 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 	if addr == REG_PPU_OCPS_OBPI {
 		ppu.cgbObjPalettes.Write(value)
+
 		return mem.WriteBlock()
 	}
 
@@ -532,6 +543,7 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 	if addr == REG_PPU_OPRI {
 		ppu.objectPriority = ObjectPriorityMode(value & 0x1)
+
 		return mem.WriteBlock()
 	}
 
@@ -539,11 +551,13 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		// TODO: This should only be set by the bootrom,
 		// so this probably doesn't belong here
 		ppu.SetDMGCompatibilityEnabled(bits.Read(value, REG_BOOTROM_KEY0_CPU_MODE_BIT) == 1)
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_PPU_VBK {
 		ppu.vram.SetCurrentBank(value & 0b1)
+
 		return mem.WriteBlock()
 	}
 

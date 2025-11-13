@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func makeRom(banks int) []byte {
@@ -278,6 +279,7 @@ func TestMBC3RTCRegs_advanceTime(t *testing.T) {
 
 func TestMBC3_Save_LoadSave_rtc(t *testing.T) {
 	assert := assert.New(t)
+	require := require.New(t)
 
 	mbc3 := NewMBC3(makeRom(8), makeRam(4), true)
 
@@ -307,11 +309,11 @@ func TestMBC3_Save_LoadSave_rtc(t *testing.T) {
 	var saveFile bytes.Buffer
 
 	err := mbc3.Save(&saveFile)
-	assert.NoError(err)
+	require.NoError(err)
 
 	mbc3 = NewMBC3(makeRom(8), makeRam(4), true)
 	err = mbc3.LoadSave(&saveFile)
-	assert.NoError(err)
+	require.NoError(err)
 
 	rtcDiff := time.Since(currentRtcTimestamp)
 

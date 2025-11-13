@@ -5,6 +5,7 @@ func ReadBankAddr(memory []byte, banksRegion MemRegion, bankSize uint16, current
 	bankSlotAddr := uint(addr) - uint(banksRegion.Start)
 	memoryAddrMask := uint(len(memory) - 1)
 	memoryAddr := (bankBaseAddr + bankSlotAddr) & memoryAddrMask
+
 	return memory[memoryAddr]
 }
 

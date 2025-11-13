@@ -126,50 +126,52 @@ func (regs *mbc3RTCRegs) writeReg(reg mbc3RTCReg, value byte) {
 func (regs *mbc3RTCRegs) advanceTime(now time.Time) {
 	rtcDiff := now.Sub(regs.Timestamp).Truncate(time.Second)
 
-	if rtcDiff.Seconds() > 0.0 && !regs.Halt {
-		deltaDays := uint32(rtcDiff.Hours()) / 24
-		if deltaDays > 0 {
-			rtcDiff = rtcDiff - (24 * time.Hour * time.Duration(deltaDays))
-		}
-
-		deltaHours := uint(rtcDiff.Hours())
-		rtcDiff = rtcDiff - (time.Hour * time.Duration(deltaHours))
-
-		deltaMinutes := uint(rtcDiff.Minutes())
-		rtcDiff = rtcDiff - (time.Minute * time.Duration(deltaMinutes))
-
-		deltaSeconds := uint(rtcDiff.Seconds())
-
-		newSeconds := uint(regs.Seconds) + deltaSeconds
-		if newSeconds >= 60 {
-			deltaMinutes += newSeconds / 60
-			newSeconds = newSeconds % 60
-		}
-
-		newMinutes := uint(regs.Minutes) + deltaMinutes
-		if newMinutes >= 60 {
-			deltaHours += newMinutes / 60
-			newMinutes = newMinutes % 60
-		}
-
-		newHours := uint(regs.Hours) + deltaHours
-		if newHours >= 24 {
-			deltaDays += uint32(newHours / 24)
-			newHours = newHours % 24
-		}
-
-		newDays := regs.Days + deltaDays
-		if newDays >= 512 {
-			newDays = newDays % 512
-			regs.DaysOverflow = true
-		}
-
-		regs.Days = newDays
-		regs.Hours = uint8(newHours)
-		regs.Minutes = uint8(newMinutes)
-		regs.Seconds = uint8(newSeconds)
-		regs.Timestamp = now
+	if rtcDiff.Seconds() <= 0.0 || regs.Halt {
+		return
 	}
+
+	deltaDays := uint32(rtcDiff.Hours()) / 24
+	if deltaDays > 0 {
+		rtcDiff = rtcDiff - (24 * time.Hour * time.Duration(deltaDays))
+	}
+
+	deltaHours := uint(rtcDiff.Hours())
+	rtcDiff = rtcDiff - (time.Hour * time.Duration(deltaHours))
+
+	deltaMinutes := uint(rtcDiff.Minutes())
+	rtcDiff = rtcDiff - (time.Minute * time.Duration(deltaMinutes))
+
+	deltaSeconds := uint(rtcDiff.Seconds())
+
+	newSeconds := uint(regs.Seconds) + deltaSeconds
+	if newSeconds >= 60 {
+		deltaMinutes += newSeconds / 60
+		newSeconds = newSeconds % 60
+	}
+
+	newMinutes := uint(regs.Minutes) + deltaMinutes
+	if newMinutes >= 60 {
+		deltaHours += newMinutes / 60
+		newMinutes = newMinutes % 60
+	}
+
+	newHours := uint(regs.Hours) + deltaHours
+	if newHours >= 24 {
+		deltaDays += uint32(newHours / 24)
+		newHours = newHours % 24
+	}
+
+	newDays := regs.Days + deltaDays
+	if newDays >= 512 {
+		newDays = newDays % 512
+		regs.DaysOverflow = true
+	}
+
+	regs.Days = newDays
+	regs.Hours = uint8(newHours)
+	regs.Minutes = uint8(newMinutes)
+	regs.Seconds = uint8(newSeconds)
+	regs.Timestamp = now
 }
 
 type MBC3 struct {
@@ -235,7 +237,9 @@ func (m *MBC3) Step(cycles uint8) {
 func (m *MBC3) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if MBC3_ROM_BANK_00.Contains(addr, false) {
 		return mem.ReadReplace(m.rom[addr])
-	} else if MBC3_ROM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC3_ROM_BANKS.Contains(addr, false) {
 		bankByte := mem.ReadBankAddr(
 			m.rom,
 			MBC3_ROM_BANKS,
@@ -243,8 +247,11 @@ func (m *MBC3) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 			m.curRomBank,
 			addr,
 		)
+
 		return mem.ReadReplace(bankByte)
-	} else if MBC3_RAM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC3_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled && m.ramSelected {
 			bankByte := mem.ReadBankAddr(
 				m.ram,
@@ -253,14 +260,18 @@ func (m *MBC3) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 				uint16(m.curRamBank),
 				addr,
 			)
+
 			return mem.ReadReplace(bankByte)
-		} else if m.rtcEnabled && m.rtcRegSelected != MBC3_RTC_REG_NONE {
-			value := m.rtc.readReg(m.rtcRegSelected)
-			return mem.ReadReplace(value)
-		} else {
-			// Docs say this is usually 0xFF, but not guaranteed. Randomness needed?
-			return mem.ReadReplace(0xFF)
 		}
+
+		if m.rtcEnabled && m.rtcRegSelected != MBC3_RTC_REG_NONE {
+			value := m.rtc.readReg(m.rtcRegSelected)
+
+			return mem.ReadReplace(value)
+		}
+
+		// Docs say this is usually 0xFF, but not guaranteed. Randomness needed?
+		return mem.ReadReplace(0xFF)
 	}
 
 	return mem.ReadPassthrough()
@@ -277,13 +288,18 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		}
 
 		return mem.WriteBlock()
-	} else if MBC3_REG_ROM_BANK.Contains(addr, false) {
+	}
+
+	if MBC3_REG_ROM_BANK.Contains(addr, false) {
 		m.curRomBank = uint16(value) & MBC3_REG_ROM_BANK_SEL_MASK
 		if m.curRomBank == 0 {
 			m.curRomBank = 1
 		}
+
 		return mem.WriteBlock()
-	} else if MBC3_REG_RAM_BANK_OR_RTC_REG_SEL.Contains(addr, false) {
+	}
+
+	if MBC3_REG_RAM_BANK_OR_RTC_REG_SEL.Contains(addr, false) {
 		if value <= 0x3 {
 			m.curRamBank = value & 0x3
 			m.ramSelected = true
@@ -292,8 +308,11 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 			m.ramSelected = false
 			m.rtcRegSelected = mbc3RTCReg(value)
 		}
+
 		return mem.WriteBlock()
-	} else if MBC3_REG_RTC_LATCH_DATA.Contains(addr, false) {
+	}
+
+	if MBC3_REG_RTC_LATCH_DATA.Contains(addr, false) {
 		if value == 0x00 && !m.rtcLatchRequested {
 			m.rtcLatchRequested = true
 		} else if value == 0x01 && m.rtcLatchRequested {
@@ -304,7 +323,9 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		}
 
 		return mem.WriteBlock()
-	} else if MBC3_RAM_BANKS.Contains(addr, false) {
+	}
+
+	if MBC3_RAM_BANKS.Contains(addr, false) {
 		if m.ramEnabled && m.ramSelected && len(m.ram) > 0 {
 			mem.WriteBankAddr(
 				m.ram,
@@ -317,6 +338,7 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		} else if m.rtcEnabled && m.rtcRegSelected != MBC3_RTC_REG_NONE {
 			m.rtc.writeReg(m.rtcRegSelected, value)
 		}
+
 		return mem.WriteBlock()
 	}
 
@@ -474,6 +496,7 @@ func (m *MBC30) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 			m.curRomBank,
 			addr,
 		)
+
 		return mem.ReadReplace(bankByte)
 	}
 
@@ -486,6 +509,7 @@ func (m *MBC30) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		if m.curRomBank == 0 {
 			m.curRomBank = 1
 		}
+
 		return mem.WriteBlock()
 	}
 
@@ -493,6 +517,7 @@ func (m *MBC30) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		m.curRamBank = value & 0x7
 		m.ramSelected = true
 		m.rtcRegSelected = MBC3_RTC_REG_NONE
+
 		return mem.WriteBlock()
 	}
 

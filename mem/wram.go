@@ -42,6 +42,7 @@ func (w *WRAM) OnRead(mmu *MMU, addr uint16) MemRead {
 			0,
 			addr,
 		)
+
 		return ReadReplace(bankByte)
 	} else if WRAM_BANKS.Contains(addr, false) {
 		bankByte := ReadBankAddr(
@@ -51,6 +52,7 @@ func (w *WRAM) OnRead(mmu *MMU, addr uint16) MemRead {
 			max(uint16(w.curBank), 1),
 			addr,
 		)
+
 		return ReadReplace(bankByte)
 	}
 
@@ -60,6 +62,7 @@ func (w *WRAM) OnRead(mmu *MMU, addr uint16) MemRead {
 func (w *WRAM) OnWrite(mmu *MMU, addr uint16, value byte) MemWrite {
 	if addr == REG_WRAM_SVBK {
 		w.curBank = value & REG_WRAM_SVBK_SEL_MASK
+
 		return WriteBlock()
 	}
 
@@ -72,6 +75,7 @@ func (w *WRAM) OnWrite(mmu *MMU, addr uint16, value byte) MemWrite {
 			addr,
 			value,
 		)
+
 		return WriteBlock()
 	}
 
@@ -84,6 +88,7 @@ func (w *WRAM) OnWrite(mmu *MMU, addr uint16, value byte) MemWrite {
 			addr,
 			value,
 		)
+
 		return WriteBlock()
 	}
 

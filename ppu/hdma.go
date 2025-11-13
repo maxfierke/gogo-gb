@@ -52,7 +52,7 @@ func (d *HDMA) Step(mmu *mem.MMU) {
 		return
 	}
 
-	for i := uint16(0); i < bytesInBlock; i++ {
+	for i := range uint16(bytesInBlock) {
 		destAddr := d.destAddr + i
 		srcAddr := d.srcAddr + i
 		value := mmu.Read8(srcAddr)
@@ -100,23 +100,27 @@ func (d *HDMA) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 	if addr == REG_HDMA_SRC_HIGH {
 		d.srcAddr = (d.srcAddr & 0xFF) | uint16(value)<<8
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_HDMA_SRC_LOW {
 		d.srcAddr = (d.srcAddr & 0xFF00) | uint16(value&0xF0)
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_HDMA_DST_HIGH {
 		d.destAddr = (d.destAddr & 0xFF) | uint16(value&0x1F)<<8
 		d.destAddr |= VRAM_START
+
 		return mem.WriteBlock()
 	}
 
 	if addr == REG_HDMA_DST_LOW {
 		d.destAddr = (d.destAddr & 0xFF00) | uint16(value&0xF0)
 		d.destAddr |= VRAM_START
+
 		return mem.WriteBlock()
 	}
 

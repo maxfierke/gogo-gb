@@ -44,6 +44,7 @@ func (sc *HostSerialCable) ReadByte() (byte, error) {
 
 func (sc *HostSerialCable) WriteByte(value byte) error {
 	_, err := sc.writer.Write([]byte{value})
+
 	return err
 }
 
