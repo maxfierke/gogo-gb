@@ -290,7 +290,6 @@ func (r *ScanlineRenderer) drawObjScanline() {
 						objectPriorityMode == ppu.ObjectPriorityModeCGB && !r.ppu.IsMasterBGPriorityEnabled() ||
 						// BG doesn't have priority (CGB) AND OBJ has priority over BG
 						(currentPixel.Layer != PIXEL_LAYER_BGP && !object.Attributes.BGPriority)) { // TODO: Extract method
-
 					pixelColorID := ppu.ColorID(tilePixelValue)
 					color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
 					pixelLayer := PIXEL_LAYER_OBJ
