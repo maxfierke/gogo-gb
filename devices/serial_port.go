@@ -28,15 +28,15 @@ func (sc *SerialCtrl) Read() byte {
 	value := byte(0x0)
 
 	if sc.transferEnabled {
-		value &= SC_TRANSFER_EN
+		value |= SC_TRANSFER_EN
 	}
 
 	if sc.clockSpeedDbl {
-		value &= SC_CLK_SPD
+		value |= SC_CLK_SPD
 	}
 
 	if sc.clockInternal {
-		value &= SC_CLK_INT
+		value |= SC_CLK_INT
 	}
 
 	return value
