@@ -103,9 +103,21 @@ func (sp *SerialPort) Step(cycles uint8, ic *InterruptController) {
 		} else {
 			sp.clk -= uint(cycles)
 		}
+
+		return
 	}
 
-	// TODO: Implement external clock
+	// External clock: poll for a byte driven by the external sender
+	recvVal, err := sp.cable.ReadByte()
+	if err != nil {
+		// Assume byte isn't ready
+		return
+	}
+
+	_ = sp.cable.WriteByte(sp.buf)
+	sp.buf = recvVal
+	sp.ctrl.SetTransferEnabled(false)
+	ic.RequestSerial()
 }
 
 func (sp *SerialPort) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
