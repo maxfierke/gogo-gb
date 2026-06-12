@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cart/mbc"
@@ -66,7 +68,7 @@ func init() {
 
 	runCmd.Flags().StringVarP(&runCmdOptions.debugger, "debugger", "d", "", "Specify debugger to use (\"gameboy-doctor\", \"interactive\")")
 	runCmd.Flags().StringVarP(&runCmdOptions.model, "model", "m", "auto", "Specify model to use (\"auto\", \"dmg\", \"cgb\")")
-	runCmd.Flags().StringVarP(&runCmdOptions.serialPort, "serial-port", "p", "", "Path to serial port IO (could be a file, UNIX socket, etc.)")
+	runCmd.Flags().StringVarP(&runCmdOptions.serialPort, "serial-port", "p", "", "Path to serial port IO (named pipe or unix socket)")
 	runCmd.Flags().BoolVar(&runCmdOptions.skipBootRom, "skip-bootrom", false, "Skip loading a boot ROM")
 	runCmd.Flags().BoolVar(&runCmdOptions.headless, "headless", false, "Launch without UI")
 }
@@ -129,13 +131,59 @@ func initHost(logger *log.Logger, options *RunCmdOptions) (host.Host, error) {
 		case "stderr", "/dev/stderr":
 			serialCable.SetWriter(os.Stderr)
 		default:
-			serialPort, err := os.Create(options.serialPort)
-			if err != nil {
-				return nil, fmt.Errorf("unable to open file '%s' as serial port: %w", options.serialPort, err)
-			}
+			if strings.HasSuffix(options.serialPort, ".sock") {
+				if info, _ := os.Stat(options.serialPort); info.Mode().Type() == os.ModeSocket {
+					if err := os.Remove(options.serialPort); err != nil {
+						return nil, fmt.Errorf("unable to remove existing unix socket '%s': %w", options.serialPort, err)
+					}
+				}
 
-			serialCable.SetReader(serialPort)
-			serialCable.SetWriter(serialPort)
+				listener, err := net.Listen("unix", options.serialPort)
+				if err != nil {
+					return nil, fmt.Errorf("unable to open unix socket '%s' as serial port: %w", options.serialPort, err)
+				}
+
+				go func() {
+					defer os.RemoveAll(options.serialPort)
+
+					for {
+						conn, err := listener.Accept()
+						if err != nil {
+							logger.Printf("ERROR: unable to accept connections to serial port domain socket: %v", err)
+
+							return
+						}
+						defer conn.Close()
+
+						serialCable.SetReader(conn)
+						serialCable.SetWriter(conn)
+					}
+				}()
+			} else {
+				info, err := os.Stat(options.serialPort)
+				if err != nil {
+					if errors.Is(err, os.ErrNotExist) {
+						err := syscall.Mkfifo(options.serialPort, 0o664)
+						if err != nil {
+							return nil, fmt.Errorf("creating named pipe at '%s': %w", options.serialPort, err)
+						}
+					} else {
+						return nil, fmt.Errorf("unable to open file '%s' as serial port: %w", options.serialPort, err)
+					}
+				}
+
+				if info.Mode().Type() != os.ModeNamedPipe {
+					return nil, fmt.Errorf("unable to open file '%s' as serial port: not a named pipe or unix socket", options.serialPort)
+				}
+
+				serialPort, err := os.OpenFile(options.serialPort, os.O_RDWR|os.O_TRUNC|syscall.O_NONBLOCK, 0o664)
+				if err != nil {
+					return nil, fmt.Errorf("opening file '%s' as serial port: %w", options.serialPort, err)
+				}
+
+				serialCable.SetReader(serialPort)
+				serialCable.SetWriter(serialPort)
+			}
 		}
 
 		hostDevice.AttachSerialCable(serialCable)
