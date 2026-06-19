@@ -16,6 +16,9 @@ const (
 
 	SC_CLK_EXT = 0x0
 	SC_CLK_INT = 0x1
+
+	SERIAL_PORT_CLK_NORMAL = 4096 // 512 cycles * 8 bits
+	SERIAL_PORT_CLK_FAST   = 128  // 16 cycles * 8 bits
 )
 
 type SerialCtrl struct {
@@ -141,8 +144,11 @@ func (sp *SerialPort) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrit
 		sp.ctrl.Write(value)
 
 		if sp.ctrl.IsTransferEnabled() && sp.ctrl.IsClockInternal() {
-			// TODO(GBC): derive this somehow and factor in GBC speeds when relevant
-			sp.clk = 8192
+			if sp.ctrl.IsClockSpeedDbl() {
+				sp.clk = SERIAL_PORT_CLK_FAST
+			} else {
+				sp.clk = SERIAL_PORT_CLK_NORMAL
+			}
 
 			_ = sp.cable.WriteByte(sp.buf)
 
