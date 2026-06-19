@@ -6,8 +6,8 @@ import (
 )
 
 type SerialCable interface {
-	ReadByte() (byte, error)
-	WriteByte(value byte) error
+	io.ByteReader
+	io.ByteWriter
 }
 
 type NullSerialCable struct{}
