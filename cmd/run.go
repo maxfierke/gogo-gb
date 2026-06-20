@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -8,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cart/mbc"
@@ -45,11 +45,13 @@ Options can be specified to attach a debugger, control peripherals, and specify 
 			return fmt.Errorf("getting logger: %w", err)
 		}
 
+		ctx := context.Background()
+
 		cartPath := args[0]
 		runCmdOptions.cartPath = cartPath
 
 		logger.Println("welcome to gogo-gb, the go-getting GB emulator")
-		if err := runCart(logger, &runCmdOptions); err != nil {
+		if err := runCart(ctx, logger, &runCmdOptions); err != nil {
 			return err
 		}
 
@@ -68,7 +70,7 @@ func init() {
 
 	runCmd.Flags().StringVarP(&runCmdOptions.debugger, "debugger", "d", "", "Specify debugger to use (\"gameboy-doctor\", \"interactive\")")
 	runCmd.Flags().StringVarP(&runCmdOptions.model, "model", "m", "auto", "Specify model to use (\"auto\", \"dmg\", \"cgb\")")
-	runCmd.Flags().StringVarP(&runCmdOptions.serialPort, "serial-port", "p", "", "Path to serial port IO (named pipe or unix socket)")
+	runCmd.Flags().StringVarP(&runCmdOptions.serialPort, "serial-port", "p", "", "Path to serial port IO (unix domain socket)")
 	runCmd.Flags().BoolVar(&runCmdOptions.skipBootRom, "skip-bootrom", false, "Skip loading a boot ROM")
 	runCmd.Flags().BoolVar(&runCmdOptions.headless, "headless", false, "Launch without UI")
 }
@@ -111,7 +113,7 @@ func getCartSaveFilePath(options *RunCmdOptions) string {
 	return cartSaveFilePath
 }
 
-func initHost(logger *log.Logger, options *RunCmdOptions) (host.Host, error) {
+func initHost(ctx context.Context, logger *log.Logger, options *RunCmdOptions) (host.Host, error) {
 	var hostDevice host.Host
 
 	if options.headless {
@@ -127,63 +129,41 @@ func initHost(logger *log.Logger, options *RunCmdOptions) (host.Host, error) {
 
 		switch options.serialPort {
 		case "stdout", "/dev/stdout":
-			serialCable.SetWriter(os.Stdout)
+			serialCable.SetWriter(ctx, os.Stdout)
 		case "stderr", "/dev/stderr":
-			serialCable.SetWriter(os.Stderr)
+			serialCable.SetWriter(ctx, os.Stderr)
 		default:
-			if strings.HasSuffix(options.serialPort, ".sock") {
-				if info, _ := os.Stat(options.serialPort); info.Mode().Type() == os.ModeSocket {
-					if err := os.Remove(options.serialPort); err != nil {
-						return nil, fmt.Errorf("unable to remove existing unix socket '%s': %w", options.serialPort, err)
-					}
+			if info, _ := os.Stat(options.serialPort); info.Mode().Type() == os.ModeSocket {
+				if err := os.Remove(options.serialPort); err != nil {
+					return nil, fmt.Errorf("unable to remove existing unix socket '%s': %w", options.serialPort, err)
 				}
-
-				listener, err := net.Listen("unix", options.serialPort)
-				if err != nil {
-					return nil, fmt.Errorf("unable to open unix socket '%s' as serial port: %w", options.serialPort, err)
-				}
-
-				go func() {
-					defer os.RemoveAll(options.serialPort)
-
-					for {
-						conn, err := listener.Accept()
-						if err != nil {
-							logger.Printf("ERROR: unable to accept connections to serial port domain socket: %v", err)
-
-							return
-						}
-						defer conn.Close()
-
-						serialCable.SetReader(conn)
-						serialCable.SetWriter(conn)
-					}
-				}()
-			} else {
-				info, err := os.Stat(options.serialPort)
-				if err != nil {
-					if errors.Is(err, os.ErrNotExist) {
-						err := syscall.Mkfifo(options.serialPort, 0o664)
-						if err != nil {
-							return nil, fmt.Errorf("creating named pipe at '%s': %w", options.serialPort, err)
-						}
-					} else {
-						return nil, fmt.Errorf("unable to open file '%s' as serial port: %w", options.serialPort, err)
-					}
-				}
-
-				if info.Mode().Type() != os.ModeNamedPipe {
-					return nil, fmt.Errorf("unable to open file '%s' as serial port: not a named pipe or unix socket", options.serialPort)
-				}
-
-				serialPort, err := os.OpenFile(options.serialPort, os.O_RDWR|os.O_TRUNC|syscall.O_NONBLOCK, 0o664)
-				if err != nil {
-					return nil, fmt.Errorf("opening file '%s' as serial port: %w", options.serialPort, err)
-				}
-
-				serialCable.SetReader(serialPort)
-				serialCable.SetWriter(serialPort)
 			}
+
+			listener, err := net.Listen("unix", options.serialPort)
+			if err != nil {
+				return nil, fmt.Errorf("unable to open unix socket '%s' as serial port: %w", options.serialPort, err)
+			}
+
+			go func() {
+				defer os.RemoveAll(options.serialPort)
+
+				for {
+					if ctx.Err() != nil {
+						return
+					}
+
+					conn, err := listener.Accept()
+					if err != nil {
+						logger.Printf("ERROR: unable to accept connections to serial port domain socket: %v", err)
+
+						return
+					}
+					defer conn.Close()
+
+					serialCable.SetReader(ctx, conn)
+					serialCable.SetWriter(ctx, conn)
+				}
+			}()
 		}
 
 		hostDevice.AttachSerialCable(serialCable)
@@ -328,7 +308,7 @@ func loadCartSave(console hardware.Console, logger *log.Logger, options *RunCmdO
 			}
 		}
 
-		logger.Printf("Loaded cartridge save from %s\n", cartSaveFilePath)
+		logger.Printf("loaded cartridge save from %s\n", cartSaveFilePath)
 	}
 
 	return nil
@@ -353,8 +333,8 @@ func saveCart(console hardware.Console, logger *log.Logger, options *RunCmdOptio
 	return nil
 }
 
-func runCart(logger *log.Logger, options *RunCmdOptions) error {
-	consoleHost, err := initHost(logger, options)
+func runCart(ctx context.Context, logger *log.Logger, options *RunCmdOptions) error {
+	consoleHost, err := initHost(ctx, logger, options)
 	if err != nil {
 		return fmt.Errorf("unable to initialize host device: %w", err)
 	}

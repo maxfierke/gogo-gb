@@ -2,8 +2,12 @@ package devices
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"io"
 )
+
+var ErrChangingReaderWriter = errors.New("changing reader/writer")
 
 type SerialCable interface {
 	io.ByteReader
@@ -21,37 +25,93 @@ func (sc *NullSerialCable) WriteByte(value byte) error {
 }
 
 type HostSerialCable struct {
-	reader io.Reader
-	writer io.Writer
+	rxChan   chan byte
+	rxCancel context.CancelCauseFunc
+
+	txChan   chan byte
+	txCancel context.CancelCauseFunc
 }
 
 func NewHostSerialCable() *HostSerialCable {
-	return &HostSerialCable{
-		reader: bytes.NewReader([]byte{}),
-		writer: io.Discard,
+	sc := &HostSerialCable{
+		rxChan: make(chan byte),
+		txChan: make(chan byte),
 	}
+
+	ctx := context.Background()
+	sc.SetReader(ctx, bytes.NewReader([]byte{}))
+	sc.SetWriter(ctx, io.Discard)
+
+	return sc
 }
 
 func (sc *HostSerialCable) ReadByte() (byte, error) {
-	readBuf := []byte{0x00}
-
-	if _, err := sc.reader.Read(readBuf); err != nil {
-		return 0xFF, err
+	select {
+	case value := <-sc.rxChan:
+		return value, nil
+	default:
+		return 0xFF, errors.New("read channel empty")
 	}
-
-	return readBuf[0], nil
 }
 
 func (sc *HostSerialCable) WriteByte(value byte) error {
-	_, err := sc.writer.Write([]byte{value})
+	select {
+	case sc.txChan <- value:
+	default:
+		return errors.New("write channel full")
+	}
 
-	return err
+	return nil
 }
 
-func (sc *HostSerialCable) SetReader(reader io.Reader) {
-	sc.reader = reader
+func (sc *HostSerialCable) SetReader(ctx context.Context, reader io.Reader) {
+	if sc.rxCancel != nil {
+		sc.rxCancel(ErrChangingReaderWriter)
+	}
+	ctx, cancel := context.WithCancelCause(ctx)
+	sc.rxCancel = cancel
+	go sc.receivePoll(ctx, reader)
 }
 
-func (sc *HostSerialCable) SetWriter(writer io.Writer) {
-	sc.writer = writer
+func (sc *HostSerialCable) SetWriter(ctx context.Context, writer io.Writer) {
+	if sc.txCancel != nil {
+		sc.txCancel(ErrChangingReaderWriter)
+	}
+	ctx, cancel := context.WithCancelCause(ctx)
+	sc.txCancel = cancel
+	go sc.writePoll(ctx, writer)
+}
+
+func (sc *HostSerialCable) receivePoll(ctx context.Context, reader io.Reader) {
+	var readBuf [1]byte
+
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+		if n, err := reader.Read(readBuf[:]); err != nil && err != io.EOF {
+			return
+		} else if n > 0 {
+			select {
+			case sc.rxChan <- readBuf[0]:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}
+}
+
+func (sc *HostSerialCable) writePoll(ctx context.Context, writer io.Writer) {
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+
+		select {
+		case value := <-sc.txChan:
+			_, _ = writer.Write([]byte{value})
+		case <-ctx.Done():
+			return
+		}
+	}
 }
