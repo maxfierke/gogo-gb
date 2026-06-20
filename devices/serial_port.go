@@ -86,6 +86,7 @@ type SerialPort struct {
 func NewSerialPort() *SerialPort {
 	return &SerialPort{
 		cable: &NullSerialCable{},
+		recv:  0xFF,
 	}
 }
 
