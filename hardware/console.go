@@ -18,11 +18,8 @@ type Console interface {
 	SetupDebugger()
 	Debugger() debug.Debugger
 	Draw() image.Image
-	CartridgeHeader() cart.Header
 	CyclesPerFrame() uint
-	LoadCartridge(r io.Reader) error
-	Save(w io.Writer) error
-	LoadSave(r io.Reader) error
+	InsertCartridge(cart *cart.Cartridge) error
 	Step() (uint8, error)
 	ReceiveInputs(inputs devices.JoypadInputs)
 }
@@ -55,6 +52,20 @@ func WithBootROM(r io.Reader) ConsoleOption {
 			return fmt.Errorf("loading boot ROM: %w", err)
 		}
 		bootROM.AttachMemHandlers(mmu)
+
+		return nil
+	}
+}
+
+func WithCartridge(cartridge *cart.Cartridge) ConsoleOption {
+	return func(console Console, mmu *mem.MMU) error {
+		if cartridge == nil {
+			return errors.New("cartridge cannot be nil")
+		}
+
+		if err := console.InsertCartridge(cartridge); err != nil {
+			return fmt.Errorf("inserting cartridge: %w", err)
+		}
 
 		return nil
 	}

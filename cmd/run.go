@@ -75,7 +75,7 @@ func init() {
 	runCmd.Flags().BoolVar(&runCmdOptions.headless, "headless", false, "Launch without UI")
 }
 
-var DEFAULT_BOOT_ROM_PATHS = []string{
+var DEFAULT_DMG_BOOT_ROM_PATHS = []string{
 	"gb_bios.bin",
 	"dmg_bios.bin",
 	"mgb_bios.bin",
@@ -172,20 +172,21 @@ func initHost(ctx context.Context, logger *log.Logger, options *RunCmdOptions) (
 	return hostDevice, nil
 }
 
-func initConsole(logger *log.Logger, options *RunCmdOptions) (hardware.Console, error) {
+func initConsole(cartridge *cart.Cartridge, logger *log.Logger, options *RunCmdOptions) (hardware.Console, error) {
 	var model hardware.ConsoleModel
 	switch options.model {
 	case "auto":
 		{
-			ext := filepath.Ext(options.cartPath)
-			switch ext {
-			case ".gbc":
+			switch cartridge.Header.Cgb() {
+			case cart.CGB_COLOR_ONLY, cart.CGB_COLOR_ENHANCED:
 				model = hardware.ConsoleModelCGB
-			case ".gb":
+			case cart.CGB_COLOR_NONE:
 				model = hardware.ConsoleModelDMG
 			default:
 				return nil, errors.New("unable to auto-detect model. Please specify with --model/-m")
 			}
+
+			logger.Printf("using model %s based on cartridge header\n", model)
 		}
 	case "dmg":
 		model = hardware.ConsoleModelDMG
@@ -201,6 +202,7 @@ func initConsole(logger *log.Logger, options *RunCmdOptions) (hardware.Console, 
 	}
 
 	opts := []hardware.ConsoleOption{
+		hardware.WithCartridge(cartridge),
 		hardware.WithDebugger(debugger),
 	}
 
@@ -237,7 +239,7 @@ func loadBootROM(model hardware.ConsoleModel, logger *log.Logger, options *RunCm
 	var err error
 
 	if bootRomPath == "" {
-		lookupPaths := DEFAULT_BOOT_ROM_PATHS
+		lookupPaths := DEFAULT_DMG_BOOT_ROM_PATHS
 		if model == hardware.ConsoleModelCGB {
 			lookupPaths = DEFAULT_CGB_BOOT_ROM_PATHS
 		}
@@ -266,28 +268,30 @@ func loadBootROM(model hardware.ConsoleModel, logger *log.Logger, options *RunCm
 	return bootRomFile, nil
 }
 
-func loadCart(console hardware.Console, logger *log.Logger, options *RunCmdOptions) error {
+func loadCart(logger *log.Logger, options *RunCmdOptions) (*cart.Cartridge, error) {
 	if options.cartPath == "" {
-		return nil
+		return cart.NewCartridge(), nil
 	}
 
 	cartFile, err := os.Open(options.cartPath)
-	if options.cartPath == "" || err != nil {
-		return fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("unable to load cartridge. Please ensure it's inserted correctly (e.g. file exists): %w", err)
 	}
 	defer cartFile.Close()
 
-	err = console.LoadCartridge(cartFile)
+	cartridge, err := cart.LoadCartridge(cartFile)
 	if errors.Is(err, cart.ErrChecksum) {
 		logger.Printf("WARN: Cartridge header does not match expected checksum. Continuing, but subsequent operations may fail")
 	} else if err != nil {
-		return fmt.Errorf("unable to load cartridge: %w", err)
+		return nil, fmt.Errorf("unable to load cartridge: %w", err)
 	}
 
-	return nil
+	logger.Printf("loaded cartridge from %s\n", options.cartPath)
+
+	return cartridge, nil
 }
 
-func loadCartSave(console hardware.Console, logger *log.Logger, options *RunCmdOptions) error {
+func loadCartSave(cartridge *cart.Cartridge, logger *log.Logger, options *RunCmdOptions) error {
 	cartSaveFilePath := getCartSaveFilePath(options)
 
 	cartSaveFile, err := os.Open(cartSaveFilePath)
@@ -298,7 +302,7 @@ func loadCartSave(console hardware.Console, logger *log.Logger, options *RunCmdO
 	if cartSaveFile != nil {
 		defer cartSaveFile.Close()
 
-		err = console.LoadSave(cartSaveFile)
+		err = cartridge.LoadSave(cartSaveFile)
 		if err != nil {
 			switch {
 			case errors.Is(err, mbc.ErrMBC3BadClockBattery):
@@ -314,7 +318,7 @@ func loadCartSave(console hardware.Console, logger *log.Logger, options *RunCmdO
 	return nil
 }
 
-func saveCart(console hardware.Console, logger *log.Logger, options *RunCmdOptions) error {
+func saveCart(cartridge *cart.Cartridge, logger *log.Logger, options *RunCmdOptions) error {
 	cartSaveFilePath := getCartSaveFilePath(options)
 
 	cartSaveFile, err := os.OpenFile(cartSaveFilePath, os.O_RDWR|os.O_CREATE, 0o644)
@@ -323,7 +327,7 @@ func saveCart(console hardware.Console, logger *log.Logger, options *RunCmdOptio
 	}
 	defer cartSaveFile.Close()
 
-	err = console.Save(cartSaveFile)
+	err = cartridge.Save(cartSaveFile)
 	if err != nil {
 		return fmt.Errorf("unable to write cartridge save file: %w", err)
 	}
@@ -334,29 +338,29 @@ func saveCart(console hardware.Console, logger *log.Logger, options *RunCmdOptio
 }
 
 func runCart(ctx context.Context, logger *log.Logger, options *RunCmdOptions) error {
+	cartridge, err := loadCart(logger, options)
+	if err != nil {
+		return fmt.Errorf("loading cartridge: %w", err)
+	}
+
 	consoleHost, err := initHost(ctx, logger, options)
 	if err != nil {
 		return fmt.Errorf("unable to initialize host device: %w", err)
 	}
 
-	console, err := initConsole(logger, options)
+	console, err := initConsole(cartridge, logger, options)
 	if err != nil {
-		return fmt.Errorf("initializing DMG: %w", err)
+		return fmt.Errorf("initializing console: %w", err)
 	}
 
-	err = loadCart(console, logger, options)
-	if err != nil {
-		return fmt.Errorf("loading cartridge: %w", err)
-	}
-
-	if console.CartridgeHeader().SupportsSaving() {
-		err := loadCartSave(console, logger, options)
+	if cartridge.Header.SupportsSaving() {
+		err := loadCartSave(cartridge, logger, options)
 		if err != nil {
 			return fmt.Errorf("loading cartridge save: %w", err)
 		}
 
 		defer func() {
-			err := saveCart(console, logger, options)
+			err := saveCart(cartridge, logger, options)
 			if err != nil {
 				logger.Printf("WARN: Error occurred while saving: %s", err.Error())
 			}

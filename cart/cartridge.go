@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	ErrCartridgeNotLoaded     = errors.New("cartridge not loaded")
 	ErrCartridgeAlreadyLoaded = errors.New("cartridge already loaded")
 	ErrUnsupportedMbc         = errors.New("unsupported or unknown MBC type")
 )
@@ -25,7 +26,10 @@ func NewCartridge() *Cartridge {
 }
 
 func (c *Cartridge) DebugPrint(w io.Writer) {
-	if c.mbc != nil {
+	if c.mbc == nil {
+		fmt.Fprintf(w, "== Cartridge Info ==\n\n")
+		fmt.Fprintf(w, "Not loaded\n\n")
+	} else {
 		c.Header.DebugPrint(w)
 		c.mbc.DebugPrint(w)
 	}
@@ -87,14 +91,24 @@ func (c *Cartridge) LoadCartridge(r *Reader) error {
 }
 
 func (c *Cartridge) Step(cycles uint8) {
-	c.mbc.Step(cycles)
+	if c.mbc != nil {
+		c.mbc.Step(cycles)
+	}
 }
 
 func (c *Cartridge) Save(w io.Writer) error {
+	if c.mbc == nil {
+		return ErrCartridgeNotLoaded
+	}
+
 	return c.mbc.Save(w)
 }
 
 func (c *Cartridge) LoadSave(r io.Reader) error {
+	if c.mbc == nil {
+		return ErrCartridgeNotLoaded
+	}
+
 	return c.mbc.LoadSave(r)
 }
 
@@ -112,4 +126,22 @@ func (c *Cartridge) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite 
 	}
 
 	return c.mbc.OnWrite(mmu, addr, value)
+}
+
+func LoadCartridge(r io.Reader) (*Cartridge, error) {
+	cartReader, err := NewReader(r)
+	if err != nil && !errors.Is(err, ErrChecksum) {
+		return nil, fmt.Errorf("reading cartridge: %w", err)
+	}
+
+	cartridge := NewCartridge()
+
+	err = cartridge.LoadCartridge(cartReader)
+	if errors.Is(err, ErrChecksum) {
+		return cartridge, fmt.Errorf("loading cartridge: %w", err)
+	} else if err != nil {
+		return nil, fmt.Errorf("loading cartridge: %w", err)
+	}
+
+	return cartridge, nil
 }

@@ -1,10 +1,8 @@
 package hardware
 
 import (
-	"errors"
 	"fmt"
 	"image"
-	"io"
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
@@ -116,52 +114,18 @@ func (dmg *DMG) Debugger() debug.Debugger {
 	return dmg.debugger
 }
 
-func (dmg *DMG) CartridgeHeader() cart.Header {
-	if dmg.cartridge == nil {
-		return cart.Header{}
-	}
-
-	return dmg.cartridge.Header
-}
-
 func (dmg *DMG) CyclesPerFrame() uint {
 	return dmgCyclesPerFrame
 }
 
-func (dmg *DMG) LoadCartridge(r io.Reader) error {
-	cartReader, err := cart.NewReader(r)
-	if err != nil && !errors.Is(err, cart.ErrChecksum) {
-		return fmt.Errorf("loading cartridge: %w", err)
-	}
-
-	err = dmg.cartridge.LoadCartridge(cartReader)
-	if err != nil {
-		return fmt.Errorf("loading cartridge: %w", err)
-	}
+func (dmg *DMG) InsertCartridge(cartridge *cart.Cartridge) error {
+	dmg.cartridge = cartridge
 
 	return nil
 }
 
 func (dmg *DMG) Draw() image.Image {
 	return dmg.ppu.Draw()
-}
-
-func (dmg *DMG) LoadSave(r io.Reader) error {
-	err := dmg.cartridge.LoadSave(r)
-	if err != nil {
-		return fmt.Errorf("loading save: %w", err)
-	}
-
-	return nil
-}
-
-func (dmg *DMG) Save(w io.Writer) error {
-	err := dmg.cartridge.Save(w)
-	if err != nil {
-		return fmt.Errorf("writing save: %w", err)
-	}
-
-	return nil
 }
 
 func (dmg *DMG) ReceiveInputs(inputs devices.JoypadInputs) {

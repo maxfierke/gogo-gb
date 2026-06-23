@@ -28,11 +28,13 @@ const (
 	HEADER_SIZE       = HEADER_END + 1
 )
 
+type cgbMode string
+
 const (
-	CGB_COLOR_NONE     = "No"
-	CGB_COLOR_ENHANCED = "Color-enhanced"
-	CGB_COLOR_ONLY     = "Color-only"
-	CGB_UNKNOWN        = "Unknown"
+	CGB_COLOR_NONE     cgbMode = "No"
+	CGB_COLOR_ENHANCED cgbMode = "Color-enhanced"
+	CGB_COLOR_ONLY     cgbMode = "Color-only"
+	CGB_UNKNOWN        cgbMode = "Unknown"
 )
 
 type cartType byte
@@ -179,7 +181,7 @@ func (hdr Header) CartTypeName() string {
 	}
 }
 
-func (hdr Header) Cgb() string {
+func (hdr Header) Cgb() cgbMode {
 	switch hdr.cgb {
 	case 0x00:
 		return CGB_COLOR_NONE

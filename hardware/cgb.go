@@ -1,10 +1,8 @@
 package hardware
 
 import (
-	"errors"
 	"fmt"
 	"image"
-	"io"
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
@@ -144,14 +142,6 @@ func (cgb *CGB) Debugger() debug.Debugger {
 	return cgb.debugger
 }
 
-func (cgb *CGB) CartridgeHeader() cart.Header {
-	if cgb.cartridge == nil {
-		return cart.Header{}
-	}
-
-	return cgb.cartridge.Header
-}
-
 func (cgb *CGB) CyclesPerFrame() uint {
 	if cgb.cpu.IsDoubleSpeed() {
 		return cgbCyclesPerFrame
@@ -160,40 +150,14 @@ func (cgb *CGB) CyclesPerFrame() uint {
 	return dmgCyclesPerFrame
 }
 
-func (cgb *CGB) LoadCartridge(r io.Reader) error {
-	cartReader, err := cart.NewReader(r)
-	if err != nil && !errors.Is(err, cart.ErrChecksum) {
-		return fmt.Errorf("loading cartridge: %w", err)
-	}
-
-	err = cgb.cartridge.LoadCartridge(cartReader)
-	if err != nil {
-		return fmt.Errorf("loading cartridge: %w", err)
-	}
+func (cgb *CGB) InsertCartridge(cartridge *cart.Cartridge) error {
+	cgb.cartridge = cartridge
 
 	return nil
 }
 
 func (cgb *CGB) Draw() image.Image {
 	return cgb.ppu.Draw()
-}
-
-func (cgb *CGB) LoadSave(r io.Reader) error {
-	err := cgb.cartridge.LoadSave(r)
-	if err != nil {
-		return fmt.Errorf("loading save: %w", err)
-	}
-
-	return nil
-}
-
-func (cgb *CGB) Save(w io.Writer) error {
-	err := cgb.cartridge.Save(w)
-	if err != nil {
-		return fmt.Errorf("writing save: %w", err)
-	}
-
-	return nil
 }
 
 func (cgb *CGB) ReceiveInputs(inputs devices.JoypadInputs) {
