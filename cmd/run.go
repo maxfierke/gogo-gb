@@ -133,7 +133,7 @@ func initHost(ctx context.Context, logger *log.Logger, options *RunCmdOptions) (
 		case "stderr", "/dev/stderr":
 			serialCable.SetWriter(ctx, os.Stderr)
 		default:
-			if info, _ := os.Stat(options.serialPort); info.Mode().Type() == os.ModeSocket {
+			if info, _ := os.Stat(options.serialPort); info != nil && info.Mode().Type() == os.ModeSocket {
 				if err := os.Remove(options.serialPort); err != nil {
 					return nil, fmt.Errorf("unable to remove existing unix socket '%s': %w", options.serialPort, err)
 				}
