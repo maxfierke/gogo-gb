@@ -58,6 +58,8 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Func: func(c *ishell.Context) {
 			if len(c.Args) == 0 {
 				c.Err(errors.New("must provide an address"))
+
+				return
 			}
 
 			addr, err := parseAddr(c.Args[0])
@@ -358,6 +360,8 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Func: func(c *ishell.Context) {
 			if len(c.Args) == 0 {
 				c.Err(errors.New("must provide an address"))
+
+				return
 			}
 
 			addr, err := parseAddr(c.Args[0])
