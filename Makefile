@@ -63,6 +63,7 @@ cpu_instrs: bin/gogo-gb tests/gameboy-doctor/gameboy-doctor tests/gb-test-roms/c
                 --skip-bootrom \
                 --debugger=gameboy-doctor \
                 --log=stderr \
+                --model=dmg \
                 --headless | \
       ./tests/gameboy-doctor/gameboy-doctor - cpu_instrs "$$test_num" || \
       { ec=$$?; [ $$ec -eq 141 ] && true || (exit $$ec); }; \
