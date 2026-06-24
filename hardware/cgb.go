@@ -197,7 +197,12 @@ func (cgb *CGB) Step() (uint8, error) {
 
 	cgb.cartridge.Step(cycles)
 	cgb.dma.Step(cgb.mmu, cycles)
-	cgb.ppu.Step(cgb.mmu, cycles)
+
+	if cgb.cpu.IsDoubleSpeed() {
+		cgb.ppu.Step(cgb.mmu, cycles/2)
+	} else {
+		cgb.ppu.Step(cgb.mmu, cycles)
+	}
 	cgb.timer.Step(cycles, cgb.ic)
 	cgb.serial.Step(cycles, cgb.ic)
 

@@ -69,11 +69,7 @@ func NewCPU() (*CPU, error) {
 }
 
 func (cpu *CPU) IsDoubleSpeed() bool {
-	if cpu.HasFeature(FeatureDoubleSpeed) {
-		return cpu.doubleSpeed
-	}
-
-	return false
+	return cpu.doubleSpeed
 }
 
 func (cpu *CPU) IsHalted() bool {
