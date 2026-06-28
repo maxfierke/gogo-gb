@@ -55,7 +55,7 @@ Use "gogo-gb [command] --help" for more information about a command.
 - [X] Implement GBC
   - [ ] Pass all [magen test](https://github.com/alloncm/MagenTests) ROMs for GBC
     - [X] `bg_oam_priority.gbc`
-    - [ ] `hblank_vram_dma.gbc`
+    - [X] `hblank_vram_dma.gbc`
     - [ ] `key0_lock_after_boot.gbc`
     - [X] `mbc_oob_sram_mbc1.gbc`
     - [ ] `mbc_oob_sram_mbc3.gbc`

@@ -139,10 +139,10 @@ type PPU struct {
 
 	ic       InterruptRequester
 	renderer Renderer
+	onHBlank func()
 
 	color                   bool
 	dmgCompatibilityEnabled bool
-	hdma                    *HDMA
 }
 
 func NewPPU(ic InterruptRequester, renderer RendererConstructor) *PPU {
@@ -168,10 +168,6 @@ var grayScales = []color.Color{
 
 func (ppu *PPU) Draw() image.Image {
 	return ppu.renderer.DrawImage()
-}
-
-func (ppu *PPU) ConnectHDMA(hdma *HDMA) {
-	ppu.hdma = hdma
 }
 
 func (ppu *PPU) CurrentScanline() uint8 {
@@ -279,6 +275,10 @@ func (ppu *PPU) SetDMGCompatibilityEnabled(enabled bool) {
 	ppu.dmgCompatibilityEnabled = enabled
 }
 
+func (ppu *PPU) OnHBlank(onHBlank func()) {
+	ppu.onHBlank = onHBlank
+}
+
 func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 	if !ppu.lcdCtrl.enabled {
 		return
@@ -300,8 +300,8 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 				ppu.ic.RequestVBlank()
 				ppu.requestLCD(previousStatusEnabled)
 			} else {
-				if ppu.hdma != nil {
-					ppu.hdma.Step(mmu)
+				if ppu.onHBlank != nil {
+					ppu.onHBlank()
 				}
 
 				ppu.Mode = PPU_MODE_OAM

@@ -80,7 +80,11 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 	}
 
 	cgb.ppu.EnableColor()
-	cgb.ppu.ConnectHDMA(cgb.hdma)
+	cgb.ppu.OnHBlank(func() {
+		if !cgb.cpu.IsHalted() && cgb.hdma.IsActive(ppu.HDMA_MODE_HBLANK) {
+			cgb.hdma.Step(mmu)
+		}
+	})
 
 	mmu.AddHandler(mem.MemRegion{Start: 0x0000, End: 0x7FFF}, cgb.cartridge) // MBCs ROM Banks
 	mmu.AddHandler(mem.MemRegion{Start: 0xA000, End: 0xBFFF}, cgb.cartridge) // MBCs RAM Banks
