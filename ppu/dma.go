@@ -8,6 +8,8 @@ import (
 
 const (
 	REG_DMA_OAM uint16 = 0xFF46
+
+	OAM_TRANSFER_LENGTH int = 160
 )
 
 type dmaRequest struct {
@@ -25,7 +27,7 @@ var _ mem.MemHandler = (*DMA)(nil)
 
 func NewDMA() *DMA {
 	return &DMA{
-		pendingDMA: make([]*dmaRequest, 0, 160),
+		pendingDMA: make([]*dmaRequest, 0, OAM_TRANSFER_LENGTH),
 	}
 }
 
@@ -42,7 +44,7 @@ func (d *DMA) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		if !d.enabled {
 			srcAddrStart := uint16(value) << 8
 
-			for oamAddr := range uint8(160) {
+			for oamAddr := range OAM_TRANSFER_LENGTH {
 				srcAddr := srcAddrStart + uint16(oamAddr)
 				copiedValue := mmu.Read8(srcAddr)
 
@@ -77,7 +79,7 @@ func (d *DMA) Step(mmu *mem.MMU, cycles uint8) {
 			mmu.Write8(request.addr, request.value)
 		}
 
-		d.pendingDMA = make([]*dmaRequest, 0, 160)
+		d.pendingDMA = make([]*dmaRequest, 0, OAM_TRANSFER_LENGTH)
 		d.enabled = false
 	}
 }
