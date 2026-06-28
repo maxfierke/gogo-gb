@@ -82,7 +82,10 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 	cgb.ppu.EnableColor()
 	cgb.ppu.OnHBlank(func() {
 		if !cgb.cpu.IsHalted() && cgb.hdma.IsActive(ppu.HDMA_MODE_HBLANK) {
-			cgb.hdma.Step(mmu)
+			// Length of HBlank is longer than T-cycles consumed by HDMA here,
+			// so I'm pretty sure this isn't necessary to capture as long as I don't
+			// carry about memory timings (and even then I'm not sure it matters)
+			_ = cgb.hdma.Step(mmu, cgb.cpu.IsDoubleSpeed())
 		}
 	})
 
@@ -177,7 +180,7 @@ func (cgb *CGB) Step() (uint8, error) {
 	haltedPriorToExecute := cgb.cpu.IsHalted()
 
 	if cgb.hdma.IsActive(ppu.HDMA_MODE_GENERAL) {
-		cgb.hdma.Step(cgb.mmu)
+		cycles = cgb.hdma.Step(cgb.mmu, cgb.cpu.IsDoubleSpeed())
 	} else {
 		cycles, err = cgb.cpu.Step(cgb.mmu)
 		if err != nil {

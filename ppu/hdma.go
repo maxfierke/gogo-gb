@@ -47,9 +47,9 @@ func (d *HDMA) IsActive(dmaMode HDMAMode) bool {
 	return d.active && d.mode == dmaMode
 }
 
-func (d *HDMA) Step(mmu *mem.MMU) {
+func (d *HDMA) Step(mmu *mem.MMU, doubleSpeed bool) uint8 {
 	if !d.active {
-		return
+		return 0
 	}
 
 	for i := range uint16(bytesInBlock) {
@@ -69,6 +69,14 @@ func (d *HDMA) Step(mmu *mem.MMU) {
 	if d.length == 0 {
 		d.active = false
 	}
+
+	// https://gbdev.io/pandocs/CGB_Registers.html#transfer-timings
+	cycles := 16
+	if doubleSpeed {
+		cycles = 64
+	}
+
+	return uint8(cycles)
 }
 
 func (d *HDMA) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
