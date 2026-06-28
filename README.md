@@ -61,7 +61,7 @@ Use "gogo-gb [command] --help" for more information about a command.
     - [ ] `mbc_oob_sram_mbc3.gbc`
     - [X] `mbc_oob_sram_mbc5.gbc`
     - [ ] `oam_internal_priority.gbc`
-    - [ ] `ppu_disabled_state.gbc`
+    - [X] `ppu_disabled_state.gbc`
 - [ ] FIFO-based rendering PPU (currently scanline)
 - [ ] Implement PPU registers debugging
 - [ ] Implement Sound/APU

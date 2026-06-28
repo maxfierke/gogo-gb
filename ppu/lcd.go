@@ -99,7 +99,7 @@ type lcdStatus struct {
 	lycIntSel   bool
 }
 
-func (stat *lcdStatus) Read(ppu *PPU) uint8 {
+func (stat *lcdStatus) Read(ppu *PPU, lcdEnabled bool) uint8 {
 	var (
 		lycEqLy     uint8
 		mode0IntSel uint8
@@ -128,13 +128,20 @@ func (stat *lcdStatus) Read(ppu *PPU) uint8 {
 		lycEqLy = 1 << LCD_STAT_BIT_LYC_EQ_LY
 	}
 
+	ppuMode := ppu.Mode
+	if !lcdEnabled {
+		// When the LCD is disabled pandocs says this is 0, which is the same value
+		// as HBlank. However, rendering is disabled, so it's not technically HBlank :shruggie:
+		ppuMode = PPU_MODE_HBLANK
+	}
+
 	return (1<<7 | // Always set, but supposedly unused
 		lycIntSel |
 		mode2IntSel |
 		mode1IntSel |
 		mode0IntSel |
 		lycEqLy |
-		uint8(ppu.Mode))
+		uint8(ppuMode))
 }
 
 func (stat *lcdStatus) InterruptEnabled(ppu *PPU) bool {

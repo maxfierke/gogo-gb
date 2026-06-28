@@ -339,7 +339,7 @@ func (ppu *PPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	}
 
 	if addr == REG_PPU_LCDSTAT {
-		return mem.ReadReplace(ppu.lcdStatus.Read(ppu))
+		return mem.ReadReplace(ppu.lcdStatus.Read(ppu, ppu.lcdCtrl.enabled))
 	}
 
 	if addr == REG_PPU_SCX {
