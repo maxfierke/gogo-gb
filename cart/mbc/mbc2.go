@@ -41,7 +41,7 @@ func NewMBC2(rom []byte, hasBattery bool) *MBC2 {
 	}
 }
 
-func (m *MBC2) Step(cycles uint8) {}
+func (m *MBC2) Step(cycles uint8, doubleSpeed bool) {}
 
 func (m *MBC2) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if MBC2_ROM_BANK_X0.Contains(addr, false) {

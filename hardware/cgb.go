@@ -179,9 +179,10 @@ func (cgb *CGB) Step() (uint8, error) {
 	var err error
 
 	haltedPriorToExecute := cgb.cpu.IsHalted()
+	doubleSpeedPriorToExecute := cgb.cpu.IsDoubleSpeed()
 
 	if cgb.hdma.IsActive(ppu.HDMA_MODE_GENERAL) {
-		cycles = cgb.hdma.Step(cgb.mmu, cgb.cpu.IsDoubleSpeed())
+		cycles = cgb.hdma.Step(cgb.mmu, doubleSpeedPriorToExecute)
 	} else {
 		cycles, err = cgb.cpu.Step(cgb.mmu)
 		if err != nil {
@@ -203,10 +204,10 @@ func (cgb *CGB) Step() (uint8, error) {
 		cgb.debugger.OnInterrupt(cgb.cpu, cgb.mmu)
 	}
 
-	cgb.cartridge.Step(cycles)
+	cgb.cartridge.Step(cycles, doubleSpeedPriorToExecute)
 	cgb.dma.Step(cgb.mmu, cycles)
 
-	if cgb.cpu.IsDoubleSpeed() {
+	if doubleSpeedPriorToExecute {
 		cgb.ppu.Step(cgb.mmu, cycles/2)
 	} else {
 		cgb.ppu.Step(cgb.mmu, cycles)

@@ -215,10 +215,20 @@ func NewMBC3(rom []byte, ram []byte, rtcAvailable bool) *MBC3 {
 	}
 }
 
-// TODO(GBC): Use GBC clock rate here
-const cyclesPerRTCSecond = 4194304
+const (
+	dmgCyclesPerRTCSecond uint = 4194304
+	cgbCyclesPerRTCSecond      = dmgCyclesPerRTCSecond * 2
+)
 
-func (m *MBC3) Step(cycles uint8) {
+func cyclesPerRTCSecond(doubleSpeed bool) uint {
+	if doubleSpeed {
+		return cgbCyclesPerRTCSecond
+	}
+
+	return dmgCyclesPerRTCSecond
+}
+
+func (m *MBC3) Step(cycles uint8, doubleSpeed bool) {
 	if m.rtcAvailable && !m.rtc.Halt {
 		m.rtcClock += uint(cycles)
 
@@ -227,8 +237,9 @@ func (m *MBC3) Step(cycles uint8) {
 			m.rtc.Timestamp = now
 		}
 
-		if m.rtcClock >= cyclesPerRTCSecond {
-			m.rtcClock -= cyclesPerRTCSecond
+		rtcSecondCycles := cyclesPerRTCSecond(doubleSpeed)
+		if m.rtcClock >= rtcSecondCycles {
+			m.rtcClock -= rtcSecondCycles
 			m.rtc.advanceTime(m.rtc.Timestamp.Add(time.Second))
 		}
 	}

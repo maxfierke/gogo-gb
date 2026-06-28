@@ -90,9 +90,9 @@ func (c *Cartridge) LoadCartridge(r *Reader) error {
 	return nil
 }
 
-func (c *Cartridge) Step(cycles uint8) {
+func (c *Cartridge) Step(cycles uint8, doubleSpeed bool) {
 	if c.mbc != nil {
-		c.mbc.Step(cycles)
+		c.mbc.Step(cycles, doubleSpeed)
 	}
 }
 

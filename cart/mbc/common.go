@@ -14,7 +14,7 @@ const (
 type MBC interface {
 	mem.MemHandler
 
-	Step(cycles uint8)
+	Step(cycles uint8, doubleSpeed bool)
 	DebugPrint(w io.Writer)
 	Save(w io.Writer) error
 	LoadSave(r io.Reader) error

@@ -161,7 +161,7 @@ func (dmg *DMG) Step() (uint8, error) {
 		dmg.debugger.OnInterrupt(dmg.cpu, dmg.mmu)
 	}
 
-	dmg.cartridge.Step(cycles)
+	dmg.cartridge.Step(cycles, false)
 	dmg.dma.Step(dmg.mmu, cycles)
 	dmg.ppu.Step(dmg.mmu, cycles)
 	dmg.timer.Step(cycles, dmg.ic)
