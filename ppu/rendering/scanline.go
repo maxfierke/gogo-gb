@@ -240,7 +240,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 	renderedObjectsX := map[uint8]uint8{}
 
 	for _, object := range r.oam.Objects() {
-		if renderedObjects == ppu.OAM_MAX_OBJECTS_PER_SCANLINE {
+		if object == nil || renderedObjects == ppu.OAM_MAX_OBJECTS_PER_SCANLINE {
 			break
 		}
 
@@ -248,7 +248,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 			objPixelY := currentScanLine - object.PosY
 
 			tile := r.vram.GetObjTile(
-				object,
+				*object,
 				r.ppu.ObjectSize(),
 				objPixelY,
 				r.ppu.IsColorEnabled(),

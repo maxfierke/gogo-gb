@@ -128,14 +128,14 @@ const (
 
 type OAM struct {
 	raw        [OAM_SIZE]byte
-	objectData [OAM_MAX_OBJECT_COUNT]ObjectData
+	objectData [OAM_MAX_OBJECT_COUNT]*ObjectData
 }
 
 func NewOAM() *OAM {
 	return &OAM{}
 }
 
-func (o *OAM) Objects() []ObjectData {
+func (o *OAM) Objects() []*ObjectData {
 	return o.objectData[:]
 }
 
@@ -152,6 +152,10 @@ func (o *OAM) writeObj(oamAddr uint8, value byte) {
 	objIndex := oamAddr / 4
 	if objIndex > OAM_MAX_OBJECT_COUNT {
 		return
+	}
+
+	if obj := o.objectData[objIndex]; obj == nil {
+		o.objectData[objIndex] = &ObjectData{}
 	}
 
 	byteIndex := oamAddr % 4
