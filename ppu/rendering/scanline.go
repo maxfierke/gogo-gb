@@ -244,8 +244,8 @@ func (r *ScanlineRenderer) drawObjScanline() {
 			break
 		}
 
-		if object.PosY <= currentScanLine && (object.PosY+objHeight) > currentScanLine {
-			objPixelY := currentScanLine - object.PosY
+		if object.PosY <= int16(currentScanLine) && (object.PosY+int16(objHeight)) > int16(currentScanLine) {
+			objPixelY := currentScanLine - uint8(object.PosY)
 
 			tile := r.vram.GetObjTile(
 				*object,
@@ -267,7 +267,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 					tilePixelX = 7 - x
 				}
 
-				pixelX := object.PosX + x
+				pixelX := uint8(object.PosX) + x
 
 				if pixelX >= FB_WIDTH {
 					// Skip pixels outside of rendering area
@@ -284,7 +284,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 					((objectPriorityMode == ppu.ObjectPriorityModeCGB && r.ppu.IsColorEnabled() && !hasRenderedObj) || // CGB mode: Earlier Object hasn't rendered at pixel
 						// DMG mode: Object has higher priority x coordinate than currently rendered object
 						(objectPriorityMode == ppu.ObjectPriorityModeDMG &&
-							(!hasRenderedObj || (hasRenderedObj && renderedObjX > object.PosX)))) && // TODO: Extract method
+							(!hasRenderedObj || (hasRenderedObj && renderedObjX > uint8(object.PosX))))) && // TODO: Extract method
 					(currentPixel.ColorID == ppu.COLOR_ID_WHITE || // BG is color 0
 						// CGB: BG master priority isn't set
 						objectPriorityMode == ppu.ObjectPriorityModeCGB && !r.ppu.IsMasterBGPriorityEnabled() ||
@@ -297,7 +297,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 					r.writePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
 
 					renderedObject = true
-					renderedObjectsX[pixelX] = object.PosX
+					renderedObjectsX[pixelX] = uint8(object.PosX)
 				}
 			}
 

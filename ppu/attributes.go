@@ -55,8 +55,8 @@ func (attrs *BGAttributes) Write(value uint8) {
 }
 
 type ObjectData struct {
-	PosY       uint8
-	PosX       uint8
+	PosY       int16
+	PosX       int16
 	TileIndex  uint8
 	Attributes ObjectAttributes
 }
@@ -162,9 +162,9 @@ func (o *OAM) writeObj(oamAddr uint8, value byte) {
 
 	switch byteIndex {
 	case 0:
-		o.objectData[objIndex].PosY = value - 16
+		o.objectData[objIndex].PosY = int16(value) - 16
 	case 1:
-		o.objectData[objIndex].PosX = value - 8
+		o.objectData[objIndex].PosX = int16(value) - 8
 	case 2:
 		o.objectData[objIndex].TileIndex = value
 	default:
