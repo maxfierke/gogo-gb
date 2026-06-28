@@ -58,7 +58,7 @@ Use "gogo-gb [command] --help" for more information about a command.
     - [X] `hblank_vram_dma.gbc`
     - [X] `key0_lock_after_boot.gbc`
     - [X] `mbc_oob_sram_mbc1.gbc`
-    - [ ] `mbc_oob_sram_mbc3.gbc`
+    - [X] `mbc_oob_sram_mbc3.gbc`
     - [X] `mbc_oob_sram_mbc5.gbc`
     - [ ] `oam_internal_priority.gbc`
     - [X] `ppu_disabled_state.gbc`

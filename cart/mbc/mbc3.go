@@ -26,6 +26,8 @@ var (
 	MBC3_REG_ROM_BANK_SEL_MASK = uint16(0x7F)
 
 	MBC3_REG_RAM_BANK_OR_RTC_REG_SEL = mem.MemRegion{Start: 0x4000, End: 0x5FFF}
+	MBC3_REG_RAM_BANK_SEL_MASK       = byte(0x7)
+	MBC3_REG_RAM_BANK_MASK           = byte(0x3)
 
 	MBC3_REG_RTC_LATCH_DATA = mem.MemRegion{Start: 0x6000, End: 0x7FFF}
 
@@ -175,13 +177,12 @@ func (regs *mbc3RTCRegs) advanceTime(now time.Time) {
 }
 
 type MBC3 struct {
-	curRamBank  uint8
-	curRomBank  uint16
-	ram         []byte
-	ramEnabled  bool
-	ramSelected bool
-	rtcEnabled  bool
-	rom         []byte
+	curRamBank uint8
+	curRomBank uint16
+	ram        []byte
+	ramEnabled bool
+	rtcEnabled bool
+	rom        []byte
 
 	rtcAvailable      bool
 	rtcLatchRequested bool
@@ -263,7 +264,7 @@ func (m *MBC3) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	}
 
 	if MBC3_RAM_BANKS.Contains(addr, false) {
-		if m.ramEnabled && m.ramSelected {
+		if m.ramEnabled && m.rtcRegSelected == MBC3_RTC_REG_NONE {
 			bankByte := mem.ReadBankAddr(
 				m.ram,
 				MBC3_RAM_BANKS,
@@ -311,12 +312,10 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	if MBC3_REG_RAM_BANK_OR_RTC_REG_SEL.Contains(addr, false) {
-		if value <= 0x3 {
-			m.curRamBank = value & 0x3
-			m.ramSelected = true
+		if value <= MBC3_REG_RAM_BANK_SEL_MASK {
+			m.curRamBank = (value & MBC3_REG_RAM_BANK_MASK)
 			m.rtcRegSelected = MBC3_RTC_REG_NONE
 		} else if value >= 0x08 && value <= 0x0C {
-			m.ramSelected = false
 			m.rtcRegSelected = mbc3RTCReg(value)
 		}
 
@@ -337,7 +336,7 @@ func (m *MBC3) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	}
 
 	if MBC3_RAM_BANKS.Contains(addr, false) {
-		if m.ramEnabled && m.ramSelected && len(m.ram) > 0 {
+		if m.ramEnabled && m.rtcRegSelected == MBC3_RTC_REG_NONE && len(m.ram) > 0 {
 			mem.WriteBankAddr(
 				m.ram,
 				MBC3_RAM_BANKS,
@@ -362,7 +361,7 @@ func (m *MBC3) DebugPrint(w io.Writer) {
 	fmt.Fprintf(w, "Current ROM bank: %d\n", m.curRomBank)
 	fmt.Fprintf(w, "Current RAM bank: %d\n", m.curRamBank)
 	fmt.Fprintf(w, "RAM enabled: %t\n", m.ramEnabled)
-	fmt.Fprintf(w, "RAM selected: %t\n", m.ramSelected)
+	fmt.Fprintf(w, "RAM selected: %t\n", m.rtcRegSelected == MBC3_RTC_REG_NONE)
 
 	fmt.Fprintf(w, "RTC available: %t\n", m.rtcAvailable)
 	if m.rtcAvailable {
@@ -482,6 +481,7 @@ var (
 	MBC30_REG_ROM_BANK = mem.MemRegion{Start: 0x2000, End: 0x3FFF}
 
 	MBC30_REG_RAM_BANK_OR_RTC_REG_SEL = mem.MemRegion{Start: 0x4000, End: 0x5FFF}
+	MBC30_REG_RAM_BANK_MASK           = byte(0x7)
 )
 
 type MBC30 struct {
@@ -524,9 +524,8 @@ func (m *MBC30) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 		return mem.WriteBlock()
 	}
 
-	if MBC30_REG_RAM_BANK_OR_RTC_REG_SEL.Contains(addr, false) && value <= 0x7 {
-		m.curRamBank = value & 0x7
-		m.ramSelected = true
+	if MBC30_REG_RAM_BANK_OR_RTC_REG_SEL.Contains(addr, false) && value <= MBC3_REG_RAM_BANK_SEL_MASK {
+		m.curRamBank = value & MBC30_REG_RAM_BANK_MASK
 		m.rtcRegSelected = MBC3_RTC_REG_NONE
 
 		return mem.WriteBlock()
