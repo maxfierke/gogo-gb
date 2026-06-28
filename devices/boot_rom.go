@@ -71,9 +71,10 @@ func (br *DMGBootROM) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrit
 }
 
 type CGBBootROM struct {
-	enabled        bool
-	rom            [BOOTROM_SIZE_CGB]byte
-	dmgModeEnabled bool
+	enabled          bool
+	rom              [BOOTROM_SIZE_CGB]byte
+	dmgModeEnabled   bool
+	onDMGModeEnabled func(bool)
 }
 
 func NewCGBBootROM() *CGBBootROM {
@@ -97,6 +98,10 @@ func (br *CGBBootROM) LoadROM(r io.Reader) error {
 	return nil
 }
 
+func (br *CGBBootROM) OnDMGModeEnabled(onDMGModeEnabled func(bool)) {
+	br.onDMGModeEnabled = onDMGModeEnabled
+}
+
 func (br *CGBBootROM) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if addr == REG_BOOTROM_KEY0 {
 		var value byte
@@ -114,12 +119,21 @@ func (br *CGBBootROM) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 }
 
 func (br *CGBBootROM) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
-	if addr == REG_BOOTROM_EN && br.enabled {
-		br.enabled = value == 0x00
+	if addr == REG_BOOTROM_EN {
+		if br.enabled {
+			br.enabled = value == 0x00
+		}
 
 		return mem.WriteBlock()
-	} else if addr == REG_BOOTROM_KEY0 && br.enabled {
-		br.dmgModeEnabled = bits.Read(value, REG_BOOTROM_KEY0_CPU_MODE_BIT) == 1
+	} else if addr == REG_BOOTROM_KEY0 {
+		if br.enabled {
+			dmgModeEnabled := bits.Read(value, REG_BOOTROM_KEY0_CPU_MODE_BIT) == 1
+			br.dmgModeEnabled = dmgModeEnabled
+
+			if dmgModeEnabled && br.onDMGModeEnabled != nil {
+				br.onDMGModeEnabled(dmgModeEnabled)
+			}
+		}
 
 		return mem.WriteBlock()
 	} else if br.enabled {

@@ -38,11 +38,16 @@ func WithBootROM(r io.Reader) ConsoleOption {
 	return func(console Console, mmu *mem.MMU) error {
 		var bootROM devices.BootROM
 
-		switch console.(type) {
+		switch console := console.(type) {
 		case *DMG:
 			bootROM = devices.NewDMGBootROM()
 		case *CGB:
-			bootROM = devices.NewCGBBootROM()
+			cgbBootROM := devices.NewCGBBootROM()
+			cgbBootROM.OnDMGModeEnabled(func(dmgCompatibilityEnabled bool) {
+				console.ppu.SetDMGCompatibilityEnabled(dmgCompatibilityEnabled)
+			})
+
+			bootROM = cgbBootROM
 		default:
 			return errors.New("unrecognized console")
 		}

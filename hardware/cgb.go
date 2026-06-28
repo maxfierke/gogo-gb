@@ -107,7 +107,6 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF46, End: 0xFF46}, cgb.dma)    // DMA
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF47, End: 0xFF4B}, cgb.ppu)    // PPU registers
 
-	mmu.AddHandler(mem.MemRegion{Start: 0xFF4C, End: 0xFF4C}, cgb.ppu)  // DMG Mode (during Boot ROM)
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF4F, End: 0xFF4F}, cgb.ppu)  // VRAM Bank Select
 	mmu.AddHandler(mem.MemRegion{Start: 0xFF51, End: 0xFF55}, cgb.hdma) // VRAM DMA
 

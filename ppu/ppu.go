@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/color"
 
-	"github.com/maxfierke/gogo-gb/bits"
 	"github.com/maxfierke/gogo-gb/mem"
 )
 
@@ -32,9 +31,6 @@ const (
 
 	VBLANK_PERIOD_BEGIN = 144
 	VBLANK_PERIOD_END   = 154
-
-	REG_BOOTROM_KEY0              = 0xFF4C
-	REG_BOOTROM_KEY0_CPU_MODE_BIT = 2
 
 	REG_PPU_LCDC    uint16 = 0xFF40
 	REG_PPU_LCDSTAT uint16 = 0xFF41
@@ -543,14 +539,6 @@ func (ppu *PPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 
 	if addr == REG_PPU_OPRI {
 		ppu.objectPriority = ObjectPriorityMode(value & 0x1)
-
-		return mem.WriteBlock()
-	}
-
-	if addr == REG_BOOTROM_KEY0 && !ppu.dmgCompatibilityEnabled {
-		// TODO: This should only be set by the bootrom,
-		// so this probably doesn't belong here
-		ppu.SetDMGCompatibilityEnabled(bits.Read(value, REG_BOOTROM_KEY0_CPU_MODE_BIT) == 1)
 
 		return mem.WriteBlock()
 	}
