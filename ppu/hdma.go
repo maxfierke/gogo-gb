@@ -86,9 +86,9 @@ func (d *HDMA) Step(mmu *mem.MMU, doubleSpeed bool) uint8 {
 func (d *HDMA) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 	if addr == REG_HDMA_LEN_MODE_START {
 		if d.active {
-			return mem.ReadReplace(0x00)
+			return mem.ReadReplace((d.length - 1) & 0x7F)
 		} else if d.mode == HDMA_MODE_HBLANK {
-			return mem.ReadReplace((HDMA_MODE_HBLANK << 7) | d.length)
+			return mem.ReadReplace((HDMA_MODE_HBLANK << 7) | ((d.length - 1) & 0x7F))
 		}
 
 		return mem.ReadReplace(0xFF)
