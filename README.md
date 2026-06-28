@@ -53,6 +53,15 @@ Use "gogo-gb [command] --help" for more information about a command.
 - [X] Pass `dmg-acid2` test ROM
 - [X] Pass `cgb-acid2` test ROM
 - [X] Implement GBC
+  - [ ] Pass all [magen test](https://github.com/alloncm/MagenTests) ROMs for GBC
+    - [X] `bg_oam_priority.gbc`
+    - [ ] `hblank_vram_dma.gbc`
+    - [ ] `key0_lock_after_boot.gbc`
+    - [X] `mbc_oob_sram_mbc1.gbc`
+    - [ ] `mbc_oob_sram_mbc3.gbc`
+    - [X] `mbc_oob_sram_mbc5.gbc`
+    - [ ] `oam_internal_priority.gbc`
+    - [ ] `ppu_disabled_state.gbc`
 - [ ] FIFO-based rendering PPU (currently scanline)
 - [ ] Implement PPU registers debugging
 - [ ] Implement Sound/APU
