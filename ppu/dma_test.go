@@ -9,8 +9,8 @@ import (
 
 const DMG_RAM_SIZE = 0x10000
 
-func populateRam(mmu *mem.MMU, start uint16, len int) {
-	for i := range len {
+func populateRam(mmu *mem.MMU, start uint16, length int) {
+	for i := range length {
 		mmu.Write8(start+uint16(i), byte(i+1))
 	}
 }
@@ -40,8 +40,8 @@ func TestDMAOnWrite_StartsTransfer(t *testing.T) {
 	dma.OnWrite(mmu, REG_DMA_OAM, 0x80)
 
 	require.True(dma.enabled)
-	require.Equal(dma.pendingDMA[0].addr, uint16(0xFE00))
-	require.Equal(dma.pendingDMA[0].value, byte(0x01))
+	require.Equal(uint16(0xFE00), dma.pendingDMA[0].addr)
+	require.Equal(byte(0x01), dma.pendingDMA[0].value)
 }
 
 func TestDMAOnWrite_IgnoredWhileActive(t *testing.T) {
