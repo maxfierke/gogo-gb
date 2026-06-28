@@ -71,6 +71,17 @@ Just being realistic about my likelihood of getting to these:
 - [ ] Implement MBC1M, MMM01, other multicarts, or Hudson carts
 - [ ] Implement (any) accessories
 
+## Known Games w/ Problems
+
+- [ ] Halo: Combat Devolved v2.31
+  - "Crusader Games" interstitional has top third of image tiles all messed up
+  - BG tiles are all messed up in this game. Looks possibly related to scroll
+    registers? Obj & window all appear to be fine. Menu BG is fine.
+- [ ] Pokémon Crystal
+  - Logo animation flickers in on main menu (scanline limitation?)
+  - In New Bark Town, when NPCs are at top row of screen, half their heads are
+    hidden by the BG (BG/OBJ priority issue?)
+
 ## Inspiration Material
 
 * [DMG-01](https://rylev.github.io/DMG-01/public/book/introduction.html)
