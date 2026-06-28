@@ -51,6 +51,9 @@ func NewDMG(opts ...ConsoleOption) (*DMG, error) {
 
 	ic := devices.NewInterruptController()
 
+	oam := ppu.NewOAM()
+	vram := ppu.NewVRAM()
+
 	dmg := &DMG{
 		cpu:       cpu,
 		mmu:       mmu,
@@ -59,7 +62,7 @@ func NewDMG(opts ...ConsoleOption) (*DMG, error) {
 		dma:       ppu.NewDMA(),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
-		ppu:       ppu.NewPPU(ic, rendering.Scanline),
+		ppu:       ppu.NewPPU(ic, oam, vram, rendering.Scanline),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 	}

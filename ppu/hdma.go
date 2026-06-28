@@ -33,14 +33,18 @@ type HDMA struct {
 	srcAddr  uint16
 	destAddr uint16
 	length   uint8
+
+	vram *VRAM
 }
 
 const bytesInBlock = 16
 
-var _ mem.MemHandler = (*DMA)(nil)
+var _ mem.MemHandler = (*HDMA)(nil)
 
-func NewHDMA() *HDMA {
-	return &HDMA{}
+func NewHDMA(vram *VRAM) *HDMA {
+	return &HDMA{
+		vram: vram,
+	}
 }
 
 func (d *HDMA) IsActive(dmaMode HDMAMode) bool {
@@ -60,7 +64,7 @@ func (d *HDMA) Step(mmu *mem.MMU, doubleSpeed bool) uint8 {
 		if destAddr < VRAM_START || destAddr > VRAM_END {
 			panic(fmt.Sprintf("illegal HDMA write to 0x%04X", destAddr))
 		}
-		mmu.Write8(destAddr, value)
+		d.vram.Write(destAddr-VRAM_START, value)
 	}
 	d.srcAddr += bytesInBlock
 	d.destAddr += bytesInBlock

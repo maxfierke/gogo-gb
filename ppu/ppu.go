@@ -145,13 +145,13 @@ type PPU struct {
 	dmgCompatibilityEnabled bool
 }
 
-func NewPPU(ic InterruptRequester, renderer RendererConstructor) *PPU {
+func NewPPU(ic InterruptRequester, oam *OAM, vram *VRAM, renderer RendererConstructor) *PPU {
 	ppu := &PPU{
 		Mode:           PPU_MODE_OAM,
 		ic:             ic,
 		objectPriority: ObjectPriorityModeDMG,
-		oam:            NewOAM(),
-		vram:           NewVRAM(),
+		oam:            oam,
+		vram:           vram,
 	}
 
 	ppu.renderer = renderer(ppu, ppu.oam, ppu.vram)

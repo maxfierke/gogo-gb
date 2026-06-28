@@ -56,6 +56,8 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 	unmapped := mem.NewUnmappedRegion()
 
 	ic := devices.NewInterruptController()
+	oam := ppu.NewOAM()
+	vram := ppu.NewVRAM()
 
 	cgb := &CGB{
 		cpu:       cgbCpu,
@@ -63,10 +65,10 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 		cartridge: cart.NewCartridge(),
 		debugger:  debug.NewNullDebugger(),
 		dma:       ppu.NewDMA(),
-		hdma:      ppu.NewHDMA(),
+		hdma:      ppu.NewHDMA(vram),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
-		ppu:       ppu.NewPPU(ic, rendering.Scanline),
+		ppu:       ppu.NewPPU(ic, oam, vram, rendering.Scanline),
 		serial:    devices.NewSerialPort(),
 		timer:     devices.NewTimer(),
 		wram:      mem.NewWRAM(),
