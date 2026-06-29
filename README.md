@@ -77,8 +77,6 @@ Just being realistic about my likelihood of getting to these:
   - "Crusader Games" interstitional has top third of image tiles all messed up
   - BG tiles are all messed up in this game. Looks possibly related to scroll
     registers? Obj & window all appear to be fine. Menu BG is fine.
-- [ ] Pokémon Crystal
-  - Logo animation flickers in on main menu (scanline limitation?)
 
 ## Inspiration Material
 
