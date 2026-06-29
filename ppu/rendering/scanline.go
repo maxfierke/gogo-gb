@@ -293,19 +293,18 @@ func (r *ScanlineRenderer) isObjOverBackground(object *ppu.ObjectData, pixelX ui
 		return false
 	}
 
-	objectPriorityMode := r.ppu.ObjectPriority()
+	// Skip if we've already rendered an object w/ higher priority for this pixel
+	if _, hasRenderedObj := renderedObjectsX[pixelX]; hasRenderedObj {
+		return false
+	}
 
-	renderedObjX, hasRenderedObj := renderedObjectsX[pixelX]
+	objectPriorityMode := r.ppu.ObjectPriority()
 
 	currentPixel := r.readPixel(pixelX, r.ppu.CurrentScanline())
 
 	switch objectPriorityMode {
 	case ppu.ObjectPriorityModeCGB:
 		if !r.ppu.IsColorEnabled() { // TODO: Is this actually possible?
-			return false
-		}
-
-		if hasRenderedObj { // Earlier object has already rendered at pixel
 			return false
 		}
 
@@ -323,11 +322,6 @@ func (r *ScanlineRenderer) isObjOverBackground(object *ppu.ObjectData, pixelX ui
 			return true
 		}
 	case ppu.ObjectPriorityModeDMG:
-		// DMG mode: Object has lower priority x coordinate than currently rendered object
-		if hasRenderedObj && renderedObjX <= uint8(object.PosX) {
-			return false
-		}
-
 		if currentPixel.ColorID == ppu.COLOR_ID_WHITE { // BG is color 0
 			return true
 		}
