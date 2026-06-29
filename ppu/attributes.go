@@ -1,6 +1,11 @@
 package ppu
 
-import "github.com/maxfierke/gogo-gb/bits"
+import (
+	"iter"
+	"slices"
+
+	"github.com/maxfierke/gogo-gb/bits"
+)
 
 const (
 	BG_ATTR_BIT_VRAM_BANK   = 3
@@ -137,6 +142,40 @@ func NewOAM() *OAM {
 
 func (o *OAM) Objects() []*ObjectData {
 	return o.objectData[:]
+}
+
+func (o *OAM) ObjectsByScanline(scanLine uint8, objSize objectSize, objPriorityMode ObjectPriorityMode) iter.Seq[*ObjectData] {
+	objHeight := int16(8)
+	if objSize == OBJ_SIZE_8x16 {
+		objHeight = 16
+	}
+	objectsFound := 0
+
+	objects := o.objectData[:]
+	if objPriorityMode == ObjectPriorityModeDMG {
+		slices.SortStableFunc(objects, func(a, b *ObjectData) int {
+			return int(a.PosX) - int(b.PosX)
+		})
+	}
+
+	return func(yield func(*ObjectData) bool) {
+		for _, object := range objects {
+			if objectsFound == OAM_MAX_OBJECTS_PER_SCANLINE {
+				return
+			}
+
+			if object == nil {
+				continue
+			}
+
+			if object.PosY <= int16(scanLine) && (object.PosY+objHeight) > int16(scanLine) {
+				if !yield(object) {
+					return
+				}
+				objectsFound++
+			}
+		}
+	}
 }
 
 func (o *OAM) Read(oamAddr uint8) byte {

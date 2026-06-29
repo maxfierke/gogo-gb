@@ -228,67 +228,55 @@ func (r *ScanlineRenderer) drawWinScanline() {
 }
 
 func (r *ScanlineRenderer) drawObjScanline() {
-	objHeight := uint8(8)
-	if r.ppu.ObjectSize() == ppu.OBJ_SIZE_8x16 {
-		objHeight = 16
-	}
-
 	currentScanLine := r.ppu.CurrentScanline()
 
-	renderedObjects := 0
 	renderedObjectsX := map[uint8]uint8{}
 
-	for _, object := range r.oam.Objects() {
-		if object == nil || renderedObjects == ppu.OAM_MAX_OBJECTS_PER_SCANLINE {
-			break
+	objects := r.oam.ObjectsByScanline(
+		currentScanLine,
+		r.ppu.ObjectSize(),
+		r.ppu.ObjectPriority(),
+	)
+
+	for object := range objects {
+		objPixelY := currentScanLine - uint8(object.PosY)
+
+		tile := r.vram.GetObjTile(
+			*object,
+			r.ppu.ObjectSize(),
+			objPixelY,
+			r.ppu.IsColorEnabled(),
+		)
+
+		tilePixelY := objPixelY % 8
+		tileRow := tile[tilePixelY]
+		if object.Attributes.FlipY {
+			tileRow = tile[7-tilePixelY]
 		}
 
-		if object.PosY <= int16(currentScanLine) && (object.PosY+int16(objHeight)) > int16(currentScanLine) {
-			objPixelY := currentScanLine - uint8(object.PosY)
-
-			tile := r.vram.GetObjTile(
-				*object,
-				r.ppu.ObjectSize(),
-				objPixelY,
-				r.ppu.IsColorEnabled(),
-			)
-
-			tilePixelY := objPixelY % 8
-			tileRow := tile[tilePixelY]
-			if object.Attributes.FlipY {
-				tileRow = tile[7-tilePixelY]
+		for x := range uint8(8) {
+			tilePixelX := x
+			if object.Attributes.FlipX {
+				tilePixelX = 7 - x
 			}
 
-			renderedObject := false
-			for x := range uint8(8) {
-				tilePixelX := x
-				if object.Attributes.FlipX {
-					tilePixelX = 7 - x
-				}
+			pixelX := uint8(object.PosX) + x
 
-				pixelX := uint8(object.PosX) + x
-
-				if pixelX >= FB_WIDTH {
-					// Skip pixels outside of rendering area
-					continue
-				}
-
-				tilePixel := tileRow[tilePixelX]
-
-				if r.isObjOverBackground(object, pixelX, tilePixel, renderedObjectsX) {
-					pixelColorID := ppu.ColorID(tilePixel)
-					color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
-					pixelLayer := PIXEL_LAYER_OBJ
-
-					r.writePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
-
-					renderedObject = true
-					renderedObjectsX[pixelX] = uint8(object.PosX)
-				}
+			if pixelX >= FB_WIDTH {
+				// Skip pixels outside of rendering area
+				continue
 			}
 
-			if renderedObject {
-				renderedObjects += 1
+			tilePixel := tileRow[tilePixelX]
+
+			if r.isObjOverBackground(object, pixelX, tilePixel, renderedObjectsX) {
+				pixelColorID := ppu.ColorID(tilePixel)
+				color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
+				pixelLayer := PIXEL_LAYER_OBJ
+
+				r.writePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
+
+				renderedObjectsX[pixelX] = uint8(object.PosX)
 			}
 		}
 	}
