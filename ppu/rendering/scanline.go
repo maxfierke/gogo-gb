@@ -303,10 +303,6 @@ func (r *ScanlineRenderer) isObjOverBackground(object *ppu.ObjectData, currentPi
 
 	switch objectPriorityMode {
 	case ppu.ObjectPriorityModeCGB:
-		if !r.ppu.IsColorEnabled() { // TODO: Is this actually possible?
-			return false
-		}
-
 		if currentPixel.ColorID == ppu.COLOR_ID_WHITE { // BG is color 0
 			return true
 		}
