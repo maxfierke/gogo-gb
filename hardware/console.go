@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"time"
 
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/debug"
@@ -130,9 +131,20 @@ func Run(console Console, host devices.HostInterface) error {
 		}
 	}()
 
+	var lastFrameDuration time.Duration
+
 	for range host.RequestFrame() {
+		start := time.Now()
+
+		var catchupCycles uint
+		if lastFrameDuration.Microseconds()%16666 > 0 {
+			secs := lastFrameDuration.Seconds()
+			frames := uint(secs / 60)
+			catchupCycles = console.CyclesPerFrame() * frames
+		}
+
 		var frameCycles uint
-		for frameCycles < console.CyclesPerFrame() {
+		for frameCycles < console.CyclesPerFrame()+catchupCycles {
 			cycles, err := console.Step()
 			if err != nil {
 				return err
@@ -141,6 +153,7 @@ func Run(console Console, host devices.HostInterface) error {
 		}
 
 		framebuffer <- console.Draw()
+		lastFrameDuration = time.Since(start)
 	}
 
 	return nil
