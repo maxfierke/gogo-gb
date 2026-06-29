@@ -231,7 +231,7 @@ func (r *ScanlineRenderer) drawWinScanline() {
 func (r *ScanlineRenderer) drawObjScanline() {
 	currentScanLine := r.ppu.CurrentScanline()
 
-	renderedObjectsX := map[uint8]uint8{}
+	seenObjectsX := map[uint8]struct{}{}
 
 	objects := slices.Collect(r.oam.ObjectsByScanline(
 		currentScanLine,
@@ -275,32 +275,31 @@ func (r *ScanlineRenderer) drawObjScanline() {
 
 			tilePixel := tileRow[tilePixelX]
 
-			if r.isObjOverBackground(object, pixelX, tilePixel, renderedObjectsX) {
+			if tilePixel == ppu.VRAM_TILE_PIXEL_ZERO { // Skip transparent pixels
+				continue
+			}
+
+			// Skip if we've already seen an object w/ higher priority for this pixel
+			if _, seenObject := seenObjectsX[pixelX]; seenObject {
+				continue
+			}
+			seenObjectsX[pixelX] = struct{}{}
+
+			currentPixel := r.readPixel(pixelX, currentScanLine)
+
+			if r.isObjOverBackground(object, currentPixel) {
 				pixelColorID := ppu.ColorID(tilePixel)
 				color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
 				pixelLayer := PIXEL_LAYER_OBJ
 
 				r.writePixel(pixelX, currentScanLine, pixelColorID, color, pixelLayer)
-
-				renderedObjectsX[pixelX] = uint8(object.PosX)
 			}
 		}
 	}
 }
 
-func (r *ScanlineRenderer) isObjOverBackground(object *ppu.ObjectData, pixelX uint8, tilePixel ppu.PPUPixel, renderedObjectsX map[uint8]uint8) bool {
-	if tilePixel == ppu.VRAM_TILE_PIXEL_ZERO { // Skip transparent pixels
-		return false
-	}
-
-	// Skip if we've already rendered an object w/ higher priority for this pixel
-	if _, hasRenderedObj := renderedObjectsX[pixelX]; hasRenderedObj {
-		return false
-	}
-
+func (r *ScanlineRenderer) isObjOverBackground(object *ppu.ObjectData, currentPixel RenderedPixel) bool {
 	objectPriorityMode := r.ppu.ObjectPriority()
-
-	currentPixel := r.readPixel(pixelX, r.ppu.CurrentScanline())
 
 	switch objectPriorityMode {
 	case ppu.ObjectPriorityModeCGB:
