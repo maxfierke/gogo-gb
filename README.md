@@ -79,8 +79,6 @@ Just being realistic about my likelihood of getting to these:
     registers? Obj & window all appear to be fine. Menu BG is fine.
 - [ ] Pokémon Crystal
   - Logo animation flickers in on main menu (scanline limitation?)
-  - In New Bark Town, when NPCs are at top row of screen, half their heads are
-    hidden by the BG (BG/OBJ priority issue?)
 
 ## Inspiration Material
 
