@@ -3,6 +3,7 @@ package rendering
 import (
 	"image"
 	"image/color"
+	"slices"
 
 	"github.com/maxfierke/gogo-gb/ppu"
 )
@@ -232,13 +233,18 @@ func (r *ScanlineRenderer) drawObjScanline() {
 
 	renderedObjectsX := map[uint8]uint8{}
 
-	objects := r.oam.ObjectsByScanline(
+	objects := slices.Collect(r.oam.ObjectsByScanline(
 		currentScanLine,
 		r.ppu.ObjectSize(),
-		r.ppu.ObjectPriority(),
-	)
+	))
 
-	for object := range objects {
+	if r.ppu.ObjectPriority() == ppu.ObjectPriorityModeDMG {
+		slices.SortStableFunc(objects, func(a, b *ppu.ObjectData) int {
+			return int(a.PosX) - int(b.PosX)
+		})
+	}
+
+	for _, object := range objects {
 		objPixelY := currentScanLine - uint8(object.PosY)
 
 		tile := r.vram.GetObjTile(

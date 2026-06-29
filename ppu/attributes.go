@@ -2,7 +2,6 @@ package ppu
 
 import (
 	"iter"
-	"slices"
 
 	"github.com/maxfierke/gogo-gb/bits"
 )
@@ -144,22 +143,15 @@ func (o *OAM) Objects() []*ObjectData {
 	return o.objectData[:]
 }
 
-func (o *OAM) ObjectsByScanline(scanLine uint8, objSize objectSize, objPriorityMode ObjectPriorityMode) iter.Seq[*ObjectData] {
+func (o *OAM) ObjectsByScanline(scanLine uint8, objSize objectSize) iter.Seq[*ObjectData] {
 	objHeight := int16(8)
 	if objSize == OBJ_SIZE_8x16 {
 		objHeight = 16
 	}
 	objectsFound := 0
 
-	objects := o.objectData[:]
-	if objPriorityMode == ObjectPriorityModeDMG {
-		slices.SortStableFunc(objects, func(a, b *ObjectData) int {
-			return int(a.PosX) - int(b.PosX)
-		})
-	}
-
 	return func(yield func(*ObjectData) bool) {
-		for _, object := range objects {
+		for _, object := range o.objectData {
 			if objectsFound == OAM_MAX_OBJECTS_PER_SCANLINE {
 				return
 			}
