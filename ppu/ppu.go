@@ -224,7 +224,7 @@ func (ppu *PPU) GetBGWindowTileset() tileSetArea {
 }
 
 func (ppu *PPU) IsMasterBGPriorityEnabled() bool {
-	return ppu.objectPriority == ObjectPriorityModeCGB && ppu.IsColorEnabled() && ppu.lcdCtrl.bgWindowEnabled
+	return ppu.IsColorEnabled() && ppu.lcdCtrl.bgWindowEnabled
 }
 
 func (ppu *PPU) IsColorEnabled() bool {

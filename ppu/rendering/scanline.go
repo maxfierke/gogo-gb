@@ -234,7 +234,6 @@ func (r *ScanlineRenderer) drawObjScanline() {
 	}
 
 	currentScanLine := r.ppu.CurrentScanline()
-	objectPriorityMode := r.ppu.ObjectPriority()
 
 	renderedObjects := 0
 	renderedObjectsX := map[uint8]uint8{}
@@ -274,23 +273,10 @@ func (r *ScanlineRenderer) drawObjScanline() {
 					continue
 				}
 
-				tilePixelValue := tileRow[tilePixelX]
+				tilePixel := tileRow[tilePixelX]
 
-				renderedObjX, hasRenderedObj := renderedObjectsX[pixelX]
-
-				currentPixel := r.readPixel(pixelX, currentScanLine)
-
-				if tilePixelValue != ppu.VRAM_TILE_PIXEL_ZERO && // Skip transparent pixels
-					((objectPriorityMode == ppu.ObjectPriorityModeCGB && r.ppu.IsColorEnabled() && !hasRenderedObj) || // CGB mode: Earlier Object hasn't rendered at pixel
-						// DMG mode: Object has higher priority x coordinate than currently rendered object
-						(objectPriorityMode == ppu.ObjectPriorityModeDMG &&
-							(!hasRenderedObj || (hasRenderedObj && renderedObjX > uint8(object.PosX))))) && // TODO: Extract method
-					(currentPixel.ColorID == ppu.COLOR_ID_WHITE || // BG is color 0
-						// CGB: BG master priority isn't set
-						objectPriorityMode == ppu.ObjectPriorityModeCGB && !r.ppu.IsMasterBGPriorityEnabled() ||
-						// BG doesn't have priority (CGB) AND OBJ has priority over BG
-						(currentPixel.Layer != PIXEL_LAYER_BGP && !object.Attributes.BGPriority)) { // TODO: Extract method
-					pixelColorID := ppu.ColorID(tilePixelValue)
+				if r.isObjOverBackground(object, pixelX, tilePixel, renderedObjectsX) {
+					pixelColorID := ppu.ColorID(tilePixel)
 					color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
 					pixelLayer := PIXEL_LAYER_OBJ
 
@@ -306,6 +292,59 @@ func (r *ScanlineRenderer) drawObjScanline() {
 			}
 		}
 	}
+}
+
+func (r *ScanlineRenderer) isObjOverBackground(object *ppu.ObjectData, pixelX uint8, tilePixel ppu.PPUPixel, renderedObjectsX map[uint8]uint8) bool {
+	if tilePixel == ppu.VRAM_TILE_PIXEL_ZERO { // Skip transparent pixels
+		return false
+	}
+
+	objectPriorityMode := r.ppu.ObjectPriority()
+
+	renderedObjX, hasRenderedObj := renderedObjectsX[pixelX]
+
+	currentPixel := r.readPixel(pixelX, r.ppu.CurrentScanline())
+
+	switch objectPriorityMode {
+	case ppu.ObjectPriorityModeCGB:
+		if !r.ppu.IsColorEnabled() { // TODO: Is this actually possible?
+			return false
+		}
+
+		if hasRenderedObj { // Earlier object has already rendered at pixel
+			return false
+		}
+
+		if currentPixel.ColorID == ppu.COLOR_ID_WHITE { // BG is color 0
+			return true
+		}
+
+		// BG master priority isn't set
+		if !r.ppu.IsMasterBGPriorityEnabled() {
+			return true
+		}
+
+		// BG doesn't have priority (CGB) AND OBJ has priority over BG
+		if currentPixel.Layer != PIXEL_LAYER_BGP && !object.Attributes.BGPriority {
+			return true
+		}
+	case ppu.ObjectPriorityModeDMG:
+		// DMG mode: Object has lower priority x coordinate than currently rendered object
+		if hasRenderedObj && renderedObjX <= uint8(object.PosX) {
+			return false
+		}
+
+		if currentPixel.ColorID == ppu.COLOR_ID_WHITE { // BG is color 0
+			return true
+		}
+
+		// OBJ has priority over BG
+		if !object.Attributes.BGPriority {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r *ScanlineRenderer) readPixel(x, y uint8) RenderedPixel {
