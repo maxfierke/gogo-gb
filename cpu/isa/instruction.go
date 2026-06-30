@@ -7,6 +7,6 @@ type Instruction struct {
 	Opcode *Opcode
 }
 
-func (ins *Instruction) String() string {
+func (ins Instruction) String() string {
 	return fmt.Sprintf("0x%04X    %s", ins.Addr, ins.Opcode)
 }
