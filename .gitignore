@@ -17,6 +17,9 @@ bin/
 # Logfiles
 *.log
 
+# Profiles
+*.prof
+
 # Test binary, built with `go test -c`
 *.test
 

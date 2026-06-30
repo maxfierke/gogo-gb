@@ -8,6 +8,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/pprof"
 	"strings"
 
 	"github.com/maxfierke/gogo-gb/cart"
@@ -23,8 +25,10 @@ type RunCmdOptions struct {
 	bootRomPath  string
 	cartPath     string
 	cartSavePath string
+	cpuProfile   string
 	debugger     string
 	headless     bool
+	memProfile   string
 	model        string
 	serialPort   string
 	skipBootRom  bool
@@ -67,6 +71,9 @@ func init() {
 
 	runCmd.Flags().StringVarP(&runCmdOptions.cartSavePath, "save", "s", "", "Path to cartridge save file (.sav). Defaults to a .sav file with the same name as the cartridge file")
 	_ = runCmd.MarkFlagFilename("save", ".sav")
+
+	runCmd.Flags().StringVar(&runCmdOptions.cpuProfile, "cpuprofile", "", "Start cpu profile and output to named file")
+	runCmd.Flags().StringVar(&runCmdOptions.memProfile, "memprofile", "", "Start mem profile and output to named file")
 
 	runCmd.Flags().StringVarP(&runCmdOptions.debugger, "debugger", "d", "", "Specify debugger to use (\"gameboy-doctor\", \"interactive\")")
 	runCmd.Flags().StringVarP(&runCmdOptions.model, "model", "m", "auto", "Specify model to use (\"auto\", \"dmg\", \"cgb\")")
@@ -363,6 +370,33 @@ func runCart(ctx context.Context, logger *log.Logger, options *RunCmdOptions) er
 			err := saveCart(cartridge, logger, options)
 			if err != nil {
 				logger.Printf("WARN: Error occurred while saving: %s", err.Error())
+			}
+		}()
+	}
+
+	if options.cpuProfile != "" {
+		f, err := os.Create(options.cpuProfile)
+		if err != nil {
+			log.Fatal("could not create CPU profile: ", err)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			log.Fatal("could not start CPU profile: ", err)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
+	if options.memProfile != "" {
+		defer func() {
+			f, err := os.Create(options.memProfile)
+			if err != nil {
+				log.Fatal("could not create memory profile: ", err)
+			}
+			defer f.Close()
+			runtime.GC()
+
+			if err := pprof.Lookup("allocs").WriteTo(f, 0); err != nil {
+				log.Fatal("could not write memory profile: ", err)
 			}
 		}()
 	}
