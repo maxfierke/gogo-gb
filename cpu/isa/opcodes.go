@@ -79,7 +79,7 @@ type Opcodes struct {
 	CbPrefixed map[uint8]*Opcode
 }
 
-func (opcodes *Opcodes) InstructionFromByte(addr uint16, value byte, prefixed bool) (*Instruction, bool) {
+func (opcodes *Opcodes) InstructionFromByte(addr uint16, value byte, prefixed bool) (Instruction, bool) {
 	var opcode *Opcode
 	var present bool
 
@@ -90,10 +90,10 @@ func (opcodes *Opcodes) InstructionFromByte(addr uint16, value byte, prefixed bo
 	}
 
 	if !present {
-		return nil, present
+		return Instruction{}, present
 	}
 
-	return &Instruction{
+	return Instruction{
 		Addr:   addr,
 		Opcode: opcode,
 	}, true

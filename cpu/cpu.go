@@ -137,7 +137,7 @@ func (cpu *CPU) Step(mmu *mem.MMU) (uint8, error) {
 	return cycles, err
 }
 
-func (cpu *CPU) FetchAndDecode(mmu *mem.MMU, addr uint16) (*isa.Instruction, error) {
+func (cpu *CPU) FetchAndDecode(mmu *mem.MMU, addr uint16) (isa.Instruction, error) {
 	// Fetch :)
 	opcodeByte := mmu.Read8(addr)
 	prefixed := opcodeByte == 0xCB
@@ -152,16 +152,16 @@ func (cpu *CPU) FetchAndDecode(mmu *mem.MMU, addr uint16) (*isa.Instruction, err
 
 	if !exist {
 		if prefixed {
-			return nil, fmt.Errorf("unimplemented instruction found @ 0x%04X: 0xCB%02X", addr, opcodeByte)
+			return isa.Instruction{}, fmt.Errorf("unimplemented instruction found @ 0x%04X: 0xCB%02X", addr, opcodeByte)
 		} else {
-			return nil, fmt.Errorf("unimplemented instruction found @ 0x%04X: 0x%02X", addr, opcodeByte)
+			return isa.Instruction{}, fmt.Errorf("unimplemented instruction found @ 0x%04X: 0x%02X", addr, opcodeByte)
 		}
 	}
 
 	return inst, nil
 }
 
-func (cpu *CPU) Execute(mmu *mem.MMU, inst *isa.Instruction) (nextPC uint16, cycles uint8, err error) {
+func (cpu *CPU) Execute(mmu *mem.MMU, inst isa.Instruction) (nextPC uint16, cycles uint8, err error) {
 	opcode := inst.Opcode
 
 	if opcode.CbPrefixed {
