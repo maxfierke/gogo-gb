@@ -64,6 +64,10 @@ func NewRGB555(r, g, b uint8) rgb555 {
 }
 
 func (c rgb555) RGBA() (r, g, b, a uint32) {
+	return c.colorRGBA().RGBA()
+}
+
+func (c rgb555) colorRGBA() color.RGBA {
 	color := color.RGBA{
 		R: c.R << 3,
 		G: c.G << 3,
@@ -74,7 +78,7 @@ func (c rgb555) RGBA() (r, g, b, a uint32) {
 	color.G |= color.G >> 2
 	color.B |= color.B >> 2
 
-	return color.RGBA()
+	return color
 }
 
 const (

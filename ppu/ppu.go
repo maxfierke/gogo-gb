@@ -155,11 +155,11 @@ func NewPPU(ic InterruptRequester, oam *OAM, vram *VRAM, renderer RendererConstr
 	return ppu
 }
 
-var grayScales = []color.Color{
-	color.White,
-	color.GrayModel.Convert(color.RGBA{R: 170, G: 170, B: 170}),
-	color.GrayModel.Convert(color.RGBA{R: 85, G: 85, B: 85}),
-	color.Black,
+var grayScales = []color.RGBA{
+	{R: 255, G: 255, B: 255, A: 255},
+	{R: 170, G: 170, B: 170, A: 255},
+	{R: 85, G: 85, B: 85, A: 255},
+	{A: 255},
 }
 
 func (ppu *PPU) Draw() image.Image {
@@ -195,17 +195,17 @@ func (ppu *PPU) ObjectSize() objectSize {
 	return ppu.lcdCtrl.objectSize
 }
 
-func (ppu *PPU) GetBGPaletteColor(colorID ColorID, cgbPaletteID uint8) color.Color {
+func (ppu *PPU) GetBGPaletteColor(colorID ColorID, cgbPaletteID uint8) color.RGBA {
 	if ppu.IsColorEnabled() {
-		return ppu.cgbBGPalettes.palettes[cgbPaletteID][colorID]
+		return ppu.cgbBGPalettes.palettes[cgbPaletteID][colorID].colorRGBA()
 	}
 
 	return grayScales[ppu.bgPalette[colorID]]
 }
 
-func (ppu *PPU) GetObjPaletteColor(colorID ColorID, objAttributes ObjectAttributes) color.Color {
+func (ppu *PPU) GetObjPaletteColor(colorID ColorID, objAttributes ObjectAttributes) color.RGBA {
 	if ppu.IsColorEnabled() {
-		return ppu.cgbObjPalettes.palettes[objAttributes.CGBPaletteID][colorID]
+		return ppu.cgbObjPalettes.palettes[objAttributes.CGBPaletteID][colorID].colorRGBA()
 	}
 
 	return grayScales[ppu.objPalettes[objAttributes.DMGPaletteID][colorID]]
