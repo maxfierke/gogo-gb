@@ -23,7 +23,7 @@ const (
 type RenderedPixel struct {
 	Layer   PixelLayer
 	ColorID ppu.ColorID
-	Color   color.Color
+	Color   color.RGBA
 }
 
 type PixelLayer uint8
@@ -40,32 +40,28 @@ type ScanlineRenderer struct {
 	vram *ppu.VRAM
 
 	framebuf [FB_HEIGHT][FB_WIDTH]RenderedPixel
+	fbImage  *image.RGBA
 }
 
 var _ ppu.Renderer = (*ScanlineRenderer)(nil)
 
 func Scanline(ppu *ppu.PPU, oam *ppu.OAM, vram *ppu.VRAM) ppu.Renderer {
 	return &ScanlineRenderer{
-		ppu:  ppu,
-		oam:  oam,
-		vram: vram,
+		fbImage: image.NewRGBA(image.Rect(0, 0, FB_WIDTH, FB_HEIGHT)),
+		ppu:     ppu,
+		oam:     oam,
+		vram:    vram,
 	}
 }
 
 func (r *ScanlineRenderer) DrawImage() image.Image {
-	fbImage := image.NewRGBA(
-		image.Rect(0, 0, FB_WIDTH, FB_HEIGHT),
-	)
-
 	for y := range FB_HEIGHT {
 		for x, pixel := range r.framebuf[y] {
-			if pixel.Color != nil {
-				fbImage.Set(x, y, pixel.Color)
-			}
+			r.fbImage.SetRGBA(x, y, pixel.Color)
 		}
 	}
 
-	return fbImage
+	return r.fbImage
 }
 
 func (r *ScanlineRenderer) Step(cycles uint8) uint8 {
@@ -334,7 +330,7 @@ func (r *ScanlineRenderer) readPixel(x, y uint8) RenderedPixel {
 	return r.framebuf[y][x]
 }
 
-func (r *ScanlineRenderer) writePixel(x, y uint8, colorID ppu.ColorID, color color.Color, layer PixelLayer) {
+func (r *ScanlineRenderer) writePixel(x, y uint8, colorID ppu.ColorID, color color.RGBA, layer PixelLayer) {
 	r.framebuf[y][x].Color = color
 	r.framebuf[y][x].ColorID = colorID
 	r.framebuf[y][x].Layer = layer
