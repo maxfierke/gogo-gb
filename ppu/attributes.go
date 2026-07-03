@@ -1,7 +1,7 @@
 package ppu
 
 import (
-	"iter"
+	"slices"
 
 	"github.com/maxfierke/gogo-gb/bits"
 )
@@ -143,31 +143,35 @@ func (o *OAM) Objects() []*ObjectData {
 	return o.objectData[:]
 }
 
-func (o *OAM) ObjectsByScanline(scanLine uint8, objSize objectSize) iter.Seq[*ObjectData] {
+func (o *OAM) ObjectsByScanline(scanLine uint8, objSize objectSize, objPriorityMode ObjectPriorityMode) []*ObjectData {
 	objHeight := int16(8)
 	if objSize == OBJ_SIZE_8x16 {
 		objHeight = 16
 	}
-	objectsFound := 0
 
-	return func(yield func(*ObjectData) bool) {
-		for _, object := range o.objectData {
-			if objectsFound == OAM_MAX_OBJECTS_PER_SCANLINE {
-				return
-			}
+	objects := make([]*ObjectData, 0, OAM_MAX_OBJECTS_PER_SCANLINE)
 
-			if object == nil {
-				continue
-			}
+	for _, object := range o.objectData {
+		if len(objects) == OAM_MAX_OBJECTS_PER_SCANLINE {
+			break
+		}
 
-			if object.PosY <= int16(scanLine) && (object.PosY+objHeight) > int16(scanLine) {
-				if !yield(object) {
-					return
-				}
-				objectsFound++
-			}
+		if object == nil {
+			continue
+		}
+
+		if object.PosY <= int16(scanLine) && (object.PosY+objHeight) > int16(scanLine) {
+			objects = append(objects, object)
 		}
 	}
+
+	if objPriorityMode == ObjectPriorityModeDMG {
+		slices.SortStableFunc(objects, func(a, b *ObjectData) int {
+			return int(a.PosX) - int(b.PosX)
+		})
+	}
+
+	return objects
 }
 
 func (o *OAM) Read(oamAddr uint8) byte {
