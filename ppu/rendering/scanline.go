@@ -9,30 +9,12 @@ import (
 )
 
 const (
-	FB_WIDTH  = 160
-	FB_HEIGHT = 144
-
 	// CLK_MODE3_PERIOD_LEN is the dot length of Mode 3 (VRAM / drawing).
 	// 172 dots is the floor, but 174 dots was chosen for compatibility with
 	// orangeglo's LED Screen Timer test ROM. Mode 0 and Mode 3 just need to add
 	// up to 376.
 	// This is probably a bug of some kind, but not one I feel like fixing right now.
 	SCANLINE_CLK_MODE3_PERIOD_LEN = 174
-)
-
-type RenderedPixel struct {
-	Layer     PixelLayer
-	ColorID   ppu.ColorID
-	PaletteID uint8
-	Color     color.RGBA
-}
-
-type PixelLayer uint8
-
-const (
-	PIXEL_LAYER_BG  PixelLayer = iota // Background/window layer
-	PIXEL_LAYER_BGP                   // Background/window layer w/ priority over objects
-	PIXEL_LAYER_OBJ                   // Object layer
 )
 
 type ScanlineRenderer struct {
@@ -216,6 +198,8 @@ func (r *ScanlineRenderer) drawWinScanline() {
 
 func (r *ScanlineRenderer) drawObjScanline() {
 	currentScanLine := r.ppu.CurrentScanline()
+	objectPriorityMode := r.ppu.ObjectPriority()
+	cgbMasterBgPriorityEnabled := r.ppu.IsMasterBGPriorityEnabled()
 
 	seenObjectsX := map[uint8]struct{}{}
 
@@ -273,7 +257,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 
 			currentPixel := r.readPixel(pixelX, currentScanLine)
 
-			if r.isObjOverBackground(object, currentPixel) {
+			if isObjOverBackground(object, currentPixel, objectPriorityMode, cgbMasterBgPriorityEnabled) {
 				pixelColorID := ppu.ColorID(tilePixel)
 				color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
 				pixelLayer := PIXEL_LAYER_OBJ
@@ -282,38 +266,6 @@ func (r *ScanlineRenderer) drawObjScanline() {
 			}
 		}
 	}
-}
-
-func (r *ScanlineRenderer) isObjOverBackground(object *ppu.ObjectData, currentPixel RenderedPixel) bool {
-	objectPriorityMode := r.ppu.ObjectPriority()
-
-	switch objectPriorityMode {
-	case ppu.ObjectPriorityModeCGB:
-		if currentPixel.ColorID == ppu.COLOR_ID_WHITE { // BG is color 0
-			return true
-		}
-
-		// BG master priority isn't set
-		if !r.ppu.IsMasterBGPriorityEnabled() {
-			return true
-		}
-
-		// BG doesn't have priority (CGB) AND OBJ has priority over BG
-		if currentPixel.Layer != PIXEL_LAYER_BGP && !object.Attributes.BGPriority {
-			return true
-		}
-	case ppu.ObjectPriorityModeDMG:
-		if currentPixel.ColorID == ppu.COLOR_ID_WHITE { // BG is color 0
-			return true
-		}
-
-		// OBJ has priority over BG
-		if !object.Attributes.BGPriority {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (r *ScanlineRenderer) readPixel(x, y uint8) RenderedPixel {
