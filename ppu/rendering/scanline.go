@@ -156,24 +156,15 @@ func (r *ScanlineRenderer) drawWinScanline() {
 	windowY := r.ppu.WindowY()
 
 	if currentScanLine >= windowY {
-		// TODO: do this in PPU instead
-		if currentScanLine == windowY {
-			r.ppu.ResetWindow()
-		}
-
 		currentWindowLine := r.ppu.CurrentWindowLine()
 		tileMap := r.ppu.GetWindowTilemap()
 		tileY := currentWindowLine / 8
 		tilePixelY := currentWindowLine % 8
 
-		rendered := false
-
 		for lineX := range uint16(FB_WIDTH) {
 			if (lineX + 7) < uint16(windowX) {
 				continue
 			}
-
-			rendered = true
 
 			windowAdjustedLineX := (lineX + 7 - uint16(windowX))
 			tileX := uint8(windowAdjustedLineX / 8)
@@ -219,11 +210,6 @@ func (r *ScanlineRenderer) drawWinScanline() {
 			}
 
 			r.writePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
-		}
-
-		// TODO: Do this in PPU
-		if rendered {
-			r.ppu.IncrementWindowLine()
 		}
 	}
 }
