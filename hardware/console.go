@@ -101,6 +101,7 @@ func WithFakeBootROM() ConsoleOption {
 func WithRenderer(renderer ppu.RendererConstructor) ConsoleOption {
 	return func(console Console, mmu *mem.MMU) error {
 		console.SetRenderer(renderer)
+
 		return nil
 	}
 }

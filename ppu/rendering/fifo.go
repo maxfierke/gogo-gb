@@ -47,6 +47,7 @@ func (pf *pixelFIFO) Pop() (RenderedPixel, bool) {
 
 	pixel := pf.pixels[0]
 	pf.pixels = pf.pixels[1:]
+
 	return pixel, true
 }
 
@@ -74,29 +75,6 @@ func (b *bgFetcher) Reset() {
 	b.tileX = 0
 	b.tileY = 0
 	b.fifo.Clear()
-}
-
-func (b *bgFetcher) checkWindow(ppu *gfx.PPU) {
-	if b.renderingWindow {
-		return
-	}
-
-	currentScanLine := ppu.CurrentScanline()
-	windowX := ppu.WindowX()
-	windowY := ppu.WindowY()
-
-	isWithinWindow := ppu.IsWindowEnabled() &&
-		currentScanLine >= windowY &&
-		uint16(b.currentX+7) >= uint16(windowX)
-
-	if !isWithinWindow {
-		return
-	}
-
-	// Stop fetching BG, switch to window
-	b.fifo.Clear()
-	b.fetcherStep = FETCHER_STEP_GET_TILE_INDEX
-	b.renderingWindow = true
 }
 
 func (b *bgFetcher) Step(ppu *gfx.PPU, vram *gfx.VRAM) {
@@ -184,6 +162,29 @@ func (b *bgFetcher) Step(ppu *gfx.PPU, vram *gfx.VRAM) {
 	}
 }
 
+func (b *bgFetcher) checkWindow(ppu *gfx.PPU) {
+	if b.renderingWindow {
+		return
+	}
+
+	currentScanLine := ppu.CurrentScanline()
+	windowX := ppu.WindowX()
+	windowY := ppu.WindowY()
+
+	isWithinWindow := ppu.IsWindowEnabled() &&
+		currentScanLine >= windowY &&
+		uint16(b.currentX+7) >= uint16(windowX)
+
+	if !isWithinWindow {
+		return
+	}
+
+	// Stop fetching BG, switch to window
+	b.fifo.Clear()
+	b.fetcherStep = FETCHER_STEP_GET_TILE_INDEX
+	b.renderingWindow = true
+}
+
 type FIFORenderer struct {
 	ppu  *gfx.PPU
 	oam  *gfx.OAM
@@ -230,12 +231,6 @@ func (r *FIFORenderer) Reset() {
 	r.bg.Reset()
 }
 
-func (r *FIFORenderer) writePixel(x, y uint8, colorID gfx.ColorID, color color.RGBA, layer PixelLayer) {
-	r.framebuf[y][x].Color = color
-	r.framebuf[y][x].ColorID = colorID
-	r.framebuf[y][x].Layer = layer
-}
-
 func (r *FIFORenderer) Step(cycles uint8) uint8 {
 	if !r.ppu.IsLCDEnabled() || r.ppu.CurrentScanline() >= FB_HEIGHT {
 		return 0
@@ -271,4 +266,10 @@ func (r *FIFORenderer) Step(cycles uint8) uint8 {
 	r.fifoCycles = cycles
 
 	return pixelsRendered
+}
+
+func (r *FIFORenderer) writePixel(x, y uint8, colorID gfx.ColorID, color color.RGBA, layer PixelLayer) {
+	r.framebuf[y][x].Color = color
+	r.framebuf[y][x].ColorID = colorID
+	r.framebuf[y][x].Layer = layer
 }
