@@ -99,6 +99,7 @@ type RendererConstructor func(ppu *PPU, oam *OAM, vram *VRAM) Renderer
 
 type Renderer interface {
 	DrawImage() image.Image
+	Reset()
 	Step(dots uint8) uint8
 }
 
@@ -150,7 +151,7 @@ func NewPPU(ic InterruptRequester, oam *OAM, vram *VRAM, renderer RendererConstr
 		vram:           vram,
 	}
 
-	ppu.renderer = renderer(ppu, ppu.oam, ppu.vram)
+	ppu.SetRenderer(renderer)
 
 	return ppu
 }
@@ -172,14 +173,6 @@ func (ppu *PPU) CurrentScanline() uint8 {
 
 func (ppu *PPU) CurrentWindowLine() uint8 {
 	return ppu.curWindowLine
-}
-
-func (ppu *PPU) IncrementWindowLine() {
-	ppu.curWindowLine++
-}
-
-func (ppu *PPU) ResetWindow() {
-	ppu.curWindowLine = 0
 }
 
 func (ppu *PPU) EnableColor() {
@@ -275,6 +268,10 @@ func (ppu *PPU) OnHBlank(onHBlank func()) {
 	ppu.onHBlank = onHBlank
 }
 
+func (ppu *PPU) SetRenderer(renderer RendererConstructor) {
+	ppu.renderer = renderer(ppu, ppu.oam, ppu.vram)
+}
+
 func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 	if !ppu.lcdCtrl.enabled {
 		return
@@ -320,6 +317,7 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 			ppu.clock = ppu.clock % CLK_MODE2_PERIOD_LEN
 			ppu.Mode = PPU_MODE_VRAM
 			ppu.mode3Cycles = 0
+			ppu.renderer.Reset()
 		}
 	case PPU_MODE_VRAM:
 		ppu.mode3Cycles += cycles
@@ -327,6 +325,12 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 		if ppu.pixelsRendered == 160 {
 			ppu.clock = ppu.clock % uint(ppu.mode3Cycles)
 			ppu.pixelsRendered = 0
+
+			// Window is drawn for x+7 when overlapping w/ current scan line
+			if ppu.lcdCtrl.windowEnabled && ppu.curScanLine >= ppu.windowY && ppu.windowX <= 166 {
+				ppu.curWindowLine++
+			}
+
 			ppu.Mode = PPU_MODE_HBLANK
 			ppu.requestLCD(previousStatusEnabled)
 		}

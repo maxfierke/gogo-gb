@@ -3,35 +3,17 @@ package rendering
 import (
 	"image"
 	"image/color"
-	"slices"
 
 	"github.com/maxfierke/gogo-gb/ppu"
 )
 
 const (
-	FB_WIDTH  = 160
-	FB_HEIGHT = 144
-
 	// CLK_MODE3_PERIOD_LEN is the dot length of Mode 3 (VRAM / drawing).
 	// 172 dots is the floor, but 174 dots was chosen for compatibility with
 	// orangeglo's LED Screen Timer test ROM. Mode 0 and Mode 3 just need to add
 	// up to 376.
 	// This is probably a bug of some kind, but not one I feel like fixing right now.
 	SCANLINE_CLK_MODE3_PERIOD_LEN = 174
-)
-
-type RenderedPixel struct {
-	Layer   PixelLayer
-	ColorID ppu.ColorID
-	Color   color.RGBA
-}
-
-type PixelLayer uint8
-
-const (
-	PIXEL_LAYER_BG  PixelLayer = iota // Background/window layer
-	PIXEL_LAYER_BGP                   // Background/window layer w/ priority over objects
-	PIXEL_LAYER_OBJ                   // Object layer
 )
 
 type ScanlineRenderer struct {
@@ -62,6 +44,9 @@ func (r *ScanlineRenderer) DrawImage() image.Image {
 	}
 
 	return r.fbImage
+}
+
+func (r *ScanlineRenderer) Reset() {
 }
 
 func (r *ScanlineRenderer) Step(cycles uint8) uint8 {
@@ -152,24 +137,15 @@ func (r *ScanlineRenderer) drawWinScanline() {
 	windowY := r.ppu.WindowY()
 
 	if currentScanLine >= windowY {
-		// TODO: do this in PPU instead
-		if currentScanLine == windowY {
-			r.ppu.ResetWindow()
-		}
-
 		currentWindowLine := r.ppu.CurrentWindowLine()
 		tileMap := r.ppu.GetWindowTilemap()
 		tileY := currentWindowLine / 8
 		tilePixelY := currentWindowLine % 8
 
-		rendered := false
-
 		for lineX := range uint16(FB_WIDTH) {
 			if (lineX + 7) < uint16(windowX) {
 				continue
 			}
-
-			rendered = true
 
 			windowAdjustedLineX := (lineX + 7 - uint16(windowX))
 			tileX := uint8(windowAdjustedLineX / 8)
@@ -216,29 +192,21 @@ func (r *ScanlineRenderer) drawWinScanline() {
 
 			r.writePixel(uint8(lineX), currentScanLine, pixelColorID, color, pixelLayer)
 		}
-
-		// TODO: Do this in PPU
-		if rendered {
-			r.ppu.IncrementWindowLine()
-		}
 	}
 }
 
 func (r *ScanlineRenderer) drawObjScanline() {
 	currentScanLine := r.ppu.CurrentScanline()
+	objectPriorityMode := r.ppu.ObjectPriority()
+	cgbMasterBgPriorityEnabled := r.ppu.IsMasterBGPriorityEnabled()
 
 	seenObjectsX := map[uint8]struct{}{}
 
-	objects := slices.Collect(r.oam.ObjectsByScanline(
+	objects := r.oam.ObjectsByScanline(
 		currentScanLine,
 		r.ppu.ObjectSize(),
-	))
-
-	if r.ppu.ObjectPriority() == ppu.ObjectPriorityModeDMG {
-		slices.SortStableFunc(objects, func(a, b *ppu.ObjectData) int {
-			return int(a.PosX) - int(b.PosX)
-		})
-	}
+		objectPriorityMode,
+	)
 
 	for _, object := range objects {
 		objPixelY := currentScanLine - uint8(object.PosY)
@@ -283,7 +251,7 @@ func (r *ScanlineRenderer) drawObjScanline() {
 
 			currentPixel := r.readPixel(pixelX, currentScanLine)
 
-			if r.isObjOverBackground(object, currentPixel) {
+			if isObjOverBackground(object, currentPixel, objectPriorityMode, cgbMasterBgPriorityEnabled) {
 				pixelColorID := ppu.ColorID(tilePixel)
 				color := r.ppu.GetObjPaletteColor(pixelColorID, object.Attributes)
 				pixelLayer := PIXEL_LAYER_OBJ
@@ -292,38 +260,6 @@ func (r *ScanlineRenderer) drawObjScanline() {
 			}
 		}
 	}
-}
-
-func (r *ScanlineRenderer) isObjOverBackground(object *ppu.ObjectData, currentPixel RenderedPixel) bool {
-	objectPriorityMode := r.ppu.ObjectPriority()
-
-	switch objectPriorityMode {
-	case ppu.ObjectPriorityModeCGB:
-		if currentPixel.ColorID == ppu.COLOR_ID_WHITE { // BG is color 0
-			return true
-		}
-
-		// BG master priority isn't set
-		if !r.ppu.IsMasterBGPriorityEnabled() {
-			return true
-		}
-
-		// BG doesn't have priority (CGB) AND OBJ has priority over BG
-		if currentPixel.Layer != PIXEL_LAYER_BGP && !object.Attributes.BGPriority {
-			return true
-		}
-	case ppu.ObjectPriorityModeDMG:
-		if currentPixel.ColorID == ppu.COLOR_ID_WHITE { // BG is color 0
-			return true
-		}
-
-		// OBJ has priority over BG
-		if !object.Attributes.BGPriority {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (r *ScanlineRenderer) readPixel(x, y uint8) RenderedPixel {

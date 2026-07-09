@@ -172,6 +172,10 @@ func (cgb *CGB) ReceiveInputs(inputs devices.JoypadInputs) {
 	cgb.joypad.ReceiveInputs(inputs)
 }
 
+func (cgb *CGB) SetRenderer(renderer ppu.RendererConstructor) {
+	cgb.ppu.SetRenderer(renderer)
+}
+
 func (cgb *CGB) Step() (uint8, error) {
 	cgb.debugger.OnDecode(cgb.cpu, cgb.mmu)
 

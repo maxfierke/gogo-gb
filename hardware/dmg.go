@@ -135,6 +135,10 @@ func (dmg *DMG) ReceiveInputs(inputs devices.JoypadInputs) {
 	dmg.joypad.ReceiveInputs(inputs)
 }
 
+func (dmg *DMG) SetRenderer(renderer ppu.RendererConstructor) {
+	dmg.ppu.SetRenderer(renderer)
+}
+
 func (dmg *DMG) Step() (uint8, error) {
 	dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
 
