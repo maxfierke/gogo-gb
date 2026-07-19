@@ -127,7 +127,7 @@ func (dmg *DMG) InsertCartridge(cartridge *cart.Cartridge) error {
 	return nil
 }
 
-func (dmg *DMG) Draw() image.Image {
+func (dmg *DMG) Draw() *image.RGBA {
 	return dmg.ppu.Draw()
 }
 

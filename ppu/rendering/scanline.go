@@ -54,7 +54,7 @@ func Scanline(ppu *ppu.PPU, oam *ppu.OAM, vram *ppu.VRAM) ppu.Renderer {
 	}
 }
 
-func (r *ScanlineRenderer) DrawImage() image.Image {
+func (r *ScanlineRenderer) DrawImage() *image.RGBA {
 	for y := range FB_HEIGHT {
 		for x, pixel := range r.framebuf[y] {
 			r.fbImage.SetRGBA(x, y, pixel.Color)

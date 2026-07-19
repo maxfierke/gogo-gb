@@ -17,7 +17,7 @@ const (
 )
 
 type UI struct {
-	fbChan      chan image.Image
+	fbChan      chan *image.RGBA
 	frameChan   chan struct{}
 	inputChan   chan devices.JoypadInputs
 	logger      *log.Logger
@@ -33,7 +33,7 @@ var (
 
 func NewUIHost() *UI {
 	return &UI{
-		fbChan:      make(chan image.Image, 1),
+		fbChan:      make(chan *image.RGBA, 1),
 		frameChan:   make(chan struct{}),
 		inputChan:   make(chan devices.JoypadInputs),
 		logger:      log.Default(),
@@ -41,7 +41,7 @@ func NewUIHost() *UI {
 	}
 }
 
-func (ui *UI) Framebuffer() chan<- image.Image {
+func (ui *UI) Framebuffer() chan<- *image.RGBA {
 	return ui.fbChan
 }
 
@@ -127,11 +127,7 @@ func (ui *UI) Draw(screen *ebiten.Image) {
 		if ui.framebufferImage == nil {
 			ui.framebufferImage = ebiten.NewImageFromImage(fbImage)
 		} else {
-			for x := range FB_WIDTH {
-				for y := range FB_HEIGHT {
-					ui.framebufferImage.Set(x, y, fbImage.At(x, y))
-				}
-			}
+			ui.framebufferImage.WritePixels(fbImage.Pix)
 		}
 		scale := math.Ceil(ebiten.Monitor().DeviceScaleFactor())
 		op := &ebiten.DrawImageOptions{

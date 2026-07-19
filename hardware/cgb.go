@@ -164,7 +164,7 @@ func (cgb *CGB) InsertCartridge(cartridge *cart.Cartridge) error {
 	return nil
 }
 
-func (cgb *CGB) Draw() image.Image {
+func (cgb *CGB) Draw() *image.RGBA {
 	return cgb.ppu.Draw()
 }
 

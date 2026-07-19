@@ -98,7 +98,7 @@ type InterruptRequester interface {
 type RendererConstructor func(ppu *PPU, oam *OAM, vram *VRAM) Renderer
 
 type Renderer interface {
-	DrawImage() image.Image
+	DrawImage() *image.RGBA
 	Step(dots uint8) uint8
 }
 
@@ -162,7 +162,7 @@ var grayScales = []color.RGBA{
 	{A: 255},
 }
 
-func (ppu *PPU) Draw() image.Image {
+func (ppu *PPU) Draw() *image.RGBA {
 	return ppu.renderer.DrawImage()
 }
 

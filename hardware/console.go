@@ -17,7 +17,7 @@ type Console interface {
 	AttachDebugger(debugger debug.Debugger)
 	SetupDebugger()
 	Debugger() debug.Debugger
-	Draw() image.Image
+	Draw() *image.RGBA
 	CyclesPerFrame() uint
 	InsertCartridge(cart *cart.Cartridge) error
 	Step() (uint8, error)

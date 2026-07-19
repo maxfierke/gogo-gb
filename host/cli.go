@@ -10,7 +10,7 @@ import (
 )
 
 type CLIHost struct {
-	fbChan      chan image.Image
+	fbChan      chan *image.RGBA
 	frameChan   chan struct{}
 	inputChan   chan devices.JoypadInputs
 	logger      *log.Logger
@@ -21,7 +21,7 @@ var _ Host = (*CLIHost)(nil)
 
 func NewCLIHost() *CLIHost {
 	return &CLIHost{
-		fbChan:      make(chan image.Image),
+		fbChan:      make(chan *image.RGBA),
 		frameChan:   make(chan struct{}),
 		inputChan:   make(chan devices.JoypadInputs),
 		logger:      log.Default(),
@@ -29,7 +29,7 @@ func NewCLIHost() *CLIHost {
 	}
 }
 
-func (h *CLIHost) Framebuffer() chan<- image.Image {
+func (h *CLIHost) Framebuffer() chan<- *image.RGBA {
 	return h.fbChan
 }
 
