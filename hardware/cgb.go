@@ -168,6 +168,10 @@ func (cgb *CGB) Draw() *image.RGBA {
 	return cgb.ppu.Draw()
 }
 
+func (cgb *CGB) OnVBlank(onVBlank func()) {
+	cgb.ppu.OnVBlank(onVBlank)
+}
+
 func (cgb *CGB) ReceiveInputs(inputs devices.JoypadInputs) {
 	cgb.joypad.ReceiveInputs(inputs)
 }

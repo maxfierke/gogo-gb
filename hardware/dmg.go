@@ -131,6 +131,10 @@ func (dmg *DMG) Draw() *image.RGBA {
 	return dmg.ppu.Draw()
 }
 
+func (dmg *DMG) OnVBlank(onVBlank func()) {
+	dmg.ppu.OnVBlank(onVBlank)
+}
+
 func (dmg *DMG) ReceiveInputs(inputs devices.JoypadInputs) {
 	dmg.joypad.ReceiveInputs(inputs)
 }

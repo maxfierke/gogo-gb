@@ -20,6 +20,7 @@ type Console interface {
 	Draw() *image.RGBA
 	CyclesPerFrame() uint
 	InsertCartridge(cart *cart.Cartridge) error
+	OnVBlank(onVBlank func())
 	Step() (uint8, error)
 	ReceiveInputs(inputs devices.JoypadInputs)
 }
@@ -130,6 +131,10 @@ func Run(console Console, host devices.HostInterface) error {
 		}
 	}()
 
+	console.OnVBlank(func() {
+		framebuffer <- console.Draw()
+	})
+
 	for range host.RequestFrame() {
 		var frameCycles uint
 		for frameCycles < console.CyclesPerFrame() {
@@ -139,8 +144,6 @@ func Run(console Console, host devices.HostInterface) error {
 			}
 			frameCycles += uint(cycles)
 		}
-
-		framebuffer <- console.Draw()
 	}
 
 	return nil

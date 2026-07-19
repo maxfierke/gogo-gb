@@ -136,6 +136,7 @@ type PPU struct {
 	ic       InterruptRequester
 	renderer Renderer
 	onHBlank func()
+	onVBlank func()
 
 	color                   bool
 	dmgCompatibilityEnabled bool
@@ -275,6 +276,10 @@ func (ppu *PPU) OnHBlank(onHBlank func()) {
 	ppu.onHBlank = onHBlank
 }
 
+func (ppu *PPU) OnVBlank(onVBlank func()) {
+	ppu.onVBlank = onVBlank
+}
+
 func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 	if !ppu.lcdCtrl.enabled {
 		return
@@ -295,6 +300,10 @@ func (ppu *PPU) Step(mmu *mem.MMU, cycles uint8) {
 				ppu.curWindowLine = 0
 				ppu.ic.RequestVBlank()
 				ppu.requestLCD(previousStatusEnabled)
+
+				if ppu.onVBlank != nil {
+					ppu.onVBlank()
+				}
 			} else {
 				if ppu.onHBlank != nil {
 					ppu.onHBlank()
