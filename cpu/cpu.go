@@ -40,7 +40,7 @@ type CPU struct {
 	ime    bool
 	halted bool
 
-	features []Feature
+	features map[Feature]struct{}
 	opcodes  *isa.Opcodes
 
 	// CGB-only
@@ -51,21 +51,19 @@ type CPU struct {
 var _ mem.MemHandler = (*CPU)(nil)
 
 func NewCPU() (*CPU, error) {
-	cpu := new(CPU)
-	cpu.Reg = NewRegisters()
-	cpu.PC = &Register[uint16]{name: "PC", value: 0x0000}
-	cpu.SP = &Register[uint16]{name: "SP", value: 0x0000}
-	cpu.halted = false
-	cpu.ime = true
-
 	opcodes, err := isa.LoadOpcodes()
 	if err != nil {
 		return nil, fmt.Errorf("loading opcodes: %w", err)
 	}
 
-	cpu.opcodes = opcodes
-
-	return cpu, nil
+	return &CPU{
+		Reg:      NewRegisters(),
+		PC:       &Register[uint16]{name: "PC", value: 0x0000},
+		SP:       &Register[uint16]{name: "SP", value: 0x0000},
+		ime:      true,
+		features: make(map[Feature]struct{}),
+		opcodes:  opcodes,
+	}, nil
 }
 
 func (cpu *CPU) IsDoubleSpeed() bool {
@@ -81,19 +79,19 @@ func (cpu *CPU) EnableFeature(feature Feature) error {
 		return fmt.Errorf("unrecognized feature: %s", feature)
 	}
 
-	if !cpu.HasFeature(feature) {
-		cpu.features = append(cpu.features, feature)
-	}
+	cpu.features[feature] = struct{}{}
 
 	return nil
 }
 
 func (cpu *CPU) HasFeature(feature Feature) bool {
-	return slices.Contains(cpu.features, feature)
+	_, ok := cpu.features[feature]
+
+	return ok
 }
 
 func (cpu *CPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	if cpu.HasFeature(FeatureDoubleSpeed) && addr == REG_KEY1 {
+	if addr == REG_KEY1 && cpu.HasFeature(FeatureDoubleSpeed) {
 		var value byte
 
 		if cpu.doubleSpeed {
@@ -111,7 +109,7 @@ func (cpu *CPU) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 }
 
 func (cpu *CPU) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
-	if cpu.HasFeature(FeatureDoubleSpeed) && addr == REG_KEY1 {
+	if addr == REG_KEY1 && cpu.HasFeature(FeatureDoubleSpeed) {
 		cpu.speedswitchArmed = gogobits.Read(value, REG_KEY1_ARMED_BIT) == 1
 
 		return mem.WriteBlock()
