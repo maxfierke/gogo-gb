@@ -24,6 +24,7 @@ type UI struct {
 	serialCable devices.SerialCable
 
 	framebufferImage *ebiten.Image
+	drawOpts         *ebiten.DrawImageOptions
 }
 
 var (
@@ -129,12 +130,8 @@ func (ui *UI) Draw(screen *ebiten.Image) {
 		} else {
 			ui.framebufferImage.WritePixels(fbImage.Pix)
 		}
-		scale := math.Ceil(ebiten.Monitor().DeviceScaleFactor())
-		op := &ebiten.DrawImageOptions{
-			Filter: ebiten.FilterPixelated,
-		}
-		op.GeoM.Scale(scale, scale)
-		screen.DrawImage(ui.framebufferImage, op)
+
+		screen.DrawImage(ui.framebufferImage, ui.drawOpts)
 	default:
 		// do nothing
 	}
@@ -154,6 +151,13 @@ func (ui *UI) Run(console hardware.Console) error {
 
 	// We only render full frames, so no need to waste resources clearing
 	ebiten.SetScreenClearedEveryFrame(false)
+
+	scale := math.Ceil(ebiten.Monitor().DeviceScaleFactor())
+	op := &ebiten.DrawImageOptions{
+		Filter: ebiten.FilterPixelated,
+	}
+	op.GeoM.Scale(scale, scale)
+	ui.drawOpts = op
 
 	if console == nil {
 		return errors.New("console cannot be nil")
