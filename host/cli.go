@@ -21,7 +21,7 @@ var _ Host = (*CLIHost)(nil)
 
 func NewCLIHost() *CLIHost {
 	return &CLIHost{
-		fbChan:      make(chan *image.RGBA),
+		fbChan:      make(chan *image.RGBA, 1),
 		frameChan:   make(chan struct{}),
 		inputChan:   make(chan devices.JoypadInputs),
 		logger:      log.Default(),
@@ -78,7 +78,10 @@ func (h *CLIHost) Run(console hardware.Console) error {
 			h.frameChan <- struct{}{}
 
 			// Consume frame
-			<-h.fbChan
+			select {
+			case <-h.fbChan:
+			default:
+			}
 		}
 	}()
 

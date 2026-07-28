@@ -132,7 +132,12 @@ func Run(console Console, host devices.HostInterface) error {
 	}()
 
 	console.OnVBlank(func() {
-		framebuffer <- console.Draw()
+		select {
+		case framebuffer <- console.Draw():
+		default:
+			// Skipped frame
+			host.LogWarn("skipped frame due to channel being filled")
+		}
 	})
 
 	for range host.RequestFrame() {
