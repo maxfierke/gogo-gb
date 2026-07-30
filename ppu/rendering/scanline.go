@@ -138,7 +138,7 @@ func (r *ScanlineRenderer) drawBgScanline() {
 		pixelColorID := ppu.ColorID(tilePixelValue)
 		color := r.ppu.GetBGPaletteColor(pixelColorID, bgAttributes.PaletteID)
 		pixelLayer := PIXEL_LAYER_BG
-		if bgAttributes.Priority && r.ppu.IsColorEnabled() {
+		if bgAttributes.Priority && r.ppu.IsColorEnabled() && !r.ppu.DMGCompatibilityEnabled {
 			pixelLayer = PIXEL_LAYER_BGP
 		}
 
@@ -210,7 +210,7 @@ func (r *ScanlineRenderer) drawWinScanline() {
 			pixelColorID := ppu.ColorID(tilePixelValue)
 			color := r.ppu.GetBGPaletteColor(pixelColorID, bgAttributes.PaletteID)
 			pixelLayer := PIXEL_LAYER_BG
-			if bgAttributes.Priority && r.ppu.IsColorEnabled() {
+			if bgAttributes.Priority && r.ppu.IsColorEnabled() && !r.ppu.DMGCompatibilityEnabled {
 				pixelLayer = PIXEL_LAYER_BGP
 			}
 

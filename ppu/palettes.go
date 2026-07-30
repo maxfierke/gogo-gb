@@ -69,14 +69,11 @@ func (c rgb555) RGBA() (r, g, b, a uint32) {
 
 func (c rgb555) colorRGBA() color.RGBA {
 	color := color.RGBA{
-		R: c.R << 3,
-		G: c.G << 3,
-		B: c.B << 3,
+		R: c.R<<3 | c.R>>2,
+		G: c.G<<3 | c.G>>2,
+		B: c.B<<3 | c.B>>2,
 		A: 255,
 	}
-	color.R |= color.R >> 2
-	color.G |= color.G >> 2
-	color.B |= color.B >> 2
 
 	return color
 }

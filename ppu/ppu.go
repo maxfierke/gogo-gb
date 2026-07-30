@@ -139,7 +139,7 @@ type PPU struct {
 	onVBlank func()
 
 	color                   bool
-	dmgCompatibilityEnabled bool
+	DMGCompatibilityEnabled bool
 }
 
 func NewPPU(ic InterruptRequester, oam *OAM, vram *VRAM, renderer RendererConstructor) *PPU {
@@ -206,6 +206,12 @@ func (ppu *PPU) GetBGPaletteColor(colorID ColorID, cgbPaletteID uint8) color.RGB
 
 func (ppu *PPU) GetObjPaletteColor(colorID ColorID, objAttributes ObjectAttributes) color.RGBA {
 	if ppu.IsColorEnabled() {
+		if ppu.DMGCompatibilityEnabled {
+			dmgColorID := ppu.objPalettes[objAttributes.DMGPaletteID][colorID]
+
+			return ppu.cgbObjPalettes.palettes[objAttributes.DMGPaletteID][dmgColorID].colorRGBA()
+		}
+
 		return ppu.cgbObjPalettes.palettes[objAttributes.CGBPaletteID][colorID].colorRGBA()
 	}
 
@@ -225,11 +231,11 @@ func (ppu *PPU) GetBGWindowTileset() tileSetArea {
 }
 
 func (ppu *PPU) IsMasterBGPriorityEnabled() bool {
-	return ppu.IsColorEnabled() && ppu.lcdCtrl.bgWindowEnabled
+	return ppu.IsColorEnabled() && !ppu.DMGCompatibilityEnabled && ppu.lcdCtrl.bgWindowEnabled
 }
 
 func (ppu *PPU) IsColorEnabled() bool {
-	return ppu.color && !ppu.dmgCompatibilityEnabled
+	return ppu.color
 }
 
 func (ppu *PPU) IsCurrentLineEqualToCompare() bool {
@@ -241,11 +247,11 @@ func (ppu *PPU) IsLCDEnabled() bool {
 }
 
 func (ppu *PPU) IsBackgroundEnabled() bool {
-	return ppu.lcdCtrl.bgWindowEnabled || ppu.IsColorEnabled()
+	return ppu.lcdCtrl.bgWindowEnabled || (ppu.IsColorEnabled() && !ppu.DMGCompatibilityEnabled)
 }
 
 func (ppu *PPU) IsWindowEnabled() bool {
-	return (ppu.lcdCtrl.bgWindowEnabled || ppu.IsColorEnabled()) && ppu.lcdCtrl.windowEnabled
+	return (ppu.lcdCtrl.bgWindowEnabled || (ppu.IsColorEnabled() && !ppu.DMGCompatibilityEnabled)) && ppu.lcdCtrl.windowEnabled
 }
 
 func (ppu *PPU) IsObjectEnabled() bool {
@@ -269,7 +275,7 @@ func (ppu *PPU) WindowY() uint8 {
 }
 
 func (ppu *PPU) SetDMGCompatibilityEnabled(enabled bool) {
-	ppu.dmgCompatibilityEnabled = enabled
+	ppu.DMGCompatibilityEnabled = enabled
 }
 
 func (ppu *PPU) OnHBlank(onHBlank func()) {
