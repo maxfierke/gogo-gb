@@ -41,3 +41,12 @@ jobs:
 
     - name: Blargg cpu_instrs tests
       run: make cpu_instrs
+
+    - name: DMG Acid2
+      run: make dmg_acid2
+
+    - name: DMG Acid2 (CGB in DMG mode)
+      run: make dmg_acid2_cgb
+
+    - name: CGB Acid2
+      run: make cgb_acid2

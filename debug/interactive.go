@@ -122,6 +122,7 @@ func (i *InteractiveDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU, cart *cart.Cartr
 	i.shell.Set("ppu", ppu)
 
 	if i.opts.AttachOnBoot {
+		i.shell.Println("gogo-gb interactive debugger")
 		i.Attach(cpu, mmu)
 	}
 }
@@ -201,7 +202,6 @@ func (i *InteractiveDebugger) setupShell() {
 	}
 
 	shell := ishell.New()
-	shell.Println("gogo-gb interactive debugger")
 
 	shell.AddCmd(&ishell.Cmd{
 		Name:    "break",
