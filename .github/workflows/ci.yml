@@ -14,11 +14,12 @@ jobs:
       DISPLAY: ':99.0'
 
     steps:
-    - name: Install ebiten build dependencies
+    - name: Install build dependencies
       run: |
         sudo apt install gcc libc6-dev libgl1-mesa-dev libxcursor-dev \
                          libxi-dev libxinerama-dev libxrandr-dev \
-                         libxxf86vm-dev libasound2-dev pkg-config
+                         libxxf86vm-dev libasound2-dev pkg-config \
+                         imagemagick
 
     - name: Run Xvfb for ebitin
       run: |
