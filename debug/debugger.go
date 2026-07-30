@@ -48,9 +48,9 @@ func (opts *DebuggerOptions) onSoftBreak(ppu *ppu.PPU) error {
 		return ErrSoftBreakExit
 	case SoftBreakpointActionExit:
 		return ErrSoftBreakExit
+	default:
+		return nil
 	}
-
-	return nil
 }
 
 type Debugger interface {
