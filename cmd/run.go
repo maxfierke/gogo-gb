@@ -22,16 +22,19 @@ import (
 )
 
 type RunCmdOptions struct {
-	bootRomPath  string
-	cartPath     string
-	cartSavePath string
-	cpuProfile   string
-	debugger     string
-	headless     bool
-	memProfile   string
-	model        string
-	serialPort   string
-	skipBootRom  bool
+	bootRomPath             string
+	cartPath                string
+	cartSavePath            string
+	cpuProfile              string
+	debugger                string
+	debuggerAttach          bool
+	debuggerSoftBreakpoints string
+	headless                bool
+	memProfile              string
+	model                   string
+	screenshotPath          string
+	serialPort              string
+	skipBootRom             bool
 }
 
 var runCmdOptions = RunCmdOptions{}
@@ -76,7 +79,10 @@ func init() {
 	runCmd.Flags().StringVar(&runCmdOptions.memProfile, "memprofile", "", "Start mem profile and output to named file")
 
 	runCmd.Flags().StringVarP(&runCmdOptions.debugger, "debugger", "d", "", "Specify debugger to use (\"gameboy-doctor\", \"interactive\")")
+	runCmd.Flags().BoolVar(&runCmdOptions.debuggerAttach, "debugger-attach", true, "Attach debugger on boot. Ignored if --debugger is not specified.")
+	runCmd.Flags().StringVar(&runCmdOptions.debuggerSoftBreakpoints, "debugger-soft-break", "", "Enable soft breakpoints (LD B, B) and optionally specify behavior: \"break\", \"screenshot\", \"exit\"; supported debuggers (\"interactive\")")
 	runCmd.Flags().StringVarP(&runCmdOptions.model, "model", "m", "auto", "Specify model to use (\"auto\", \"dmg\", \"cgb\")")
+	runCmd.Flags().StringVar(&runCmdOptions.screenshotPath, "screenshot-path", "", "Path to gogo-gb screenshot")
 	runCmd.Flags().StringVarP(&runCmdOptions.serialPort, "serial-port", "p", "", "Path to serial port IO (unix domain socket)")
 	runCmd.Flags().BoolVar(&runCmdOptions.skipBootRom, "skip-bootrom", false, "Skip loading a boot ROM")
 	runCmd.Flags().BoolVar(&runCmdOptions.headless, "headless", false, "Launch without UI")
@@ -203,7 +209,23 @@ func initConsole(cartridge *cart.Cartridge, logger *log.Logger, options *RunCmdO
 		return nil, fmt.Errorf("unrecognized model: %s", options.model)
 	}
 
-	debugger, err := debug.NewDebugger(options.debugger)
+	enableSoftBreakpoints := options.debuggerSoftBreakpoints != ""
+	var softBreakpointAction debug.SoftBreakpointAction
+	if enableSoftBreakpoints && options.debuggerSoftBreakpoints != "" {
+		switch options.debuggerSoftBreakpoints {
+		case "break", "screenshot", "exit":
+			softBreakpointAction = debug.SoftBreakpointAction(options.debuggerSoftBreakpoints)
+		default:
+			return nil, fmt.Errorf("unrecognized debugger-soft-break value: %s", options.debuggerSoftBreakpoints)
+		}
+	}
+
+	debugger, err := debug.NewDebugger(options.debugger, &debug.DebuggerOptions{
+		AttachOnBoot:          options.debuggerAttach,
+		EnableSoftBreakpoints: enableSoftBreakpoints,
+		SoftBreakpointAction:  softBreakpointAction,
+		ScreenshotPath:        options.screenshotPath,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize debugger: %w", err)
 	}
@@ -403,6 +425,10 @@ func runCart(ctx context.Context, logger *log.Logger, options *RunCmdOptions) er
 
 	err = consoleHost.Run(console)
 	if err != nil {
+		if errors.Is(err, debug.ErrSoftBreakExit) {
+			return nil
+		}
+
 		return fmt.Errorf("running emulation: %w", err)
 	}
 

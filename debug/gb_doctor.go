@@ -6,6 +6,7 @@ import (
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
 	"github.com/maxfierke/gogo-gb/mem"
+	"github.com/maxfierke/gogo-gb/ppu"
 )
 
 type GBDoctorDebugger struct{}
@@ -14,12 +15,10 @@ func NewGBDoctorDebugger() *GBDoctorDebugger {
 	return &GBDoctorDebugger{}
 }
 
-func (gbd *GBDoctorDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU, cart *cart.Cartridge) {
-	cpu.ResetToBootROM()
-	gbd.printState(cpu, mmu)
+func (gbd *GBDoctorDebugger) Attach(cpu *cpu.CPU, mmu *mem.MMU) {}
+func (gbd *GBDoctorDebugger) OnDecode(cpu *cpu.CPU, mmu *mem.MMU) error {
+	return nil
 }
-
-func (gbd *GBDoctorDebugger) OnDecode(cpu *cpu.CPU, mmu *mem.MMU) {}
 
 func (gbd *GBDoctorDebugger) OnExecute(cpu *cpu.CPU, mmu *mem.MMU) {
 	gbd.printState(cpu, mmu)
@@ -37,6 +36,11 @@ func (gbd *GBDoctorDebugger) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
 
 func (gbd *GBDoctorDebugger) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
 	return mem.WritePassthrough()
+}
+
+func (gbd *GBDoctorDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU, cart *cart.Cartridge, ppu *ppu.PPU) {
+	cpu.ResetToBootROM()
+	gbd.printState(cpu, mmu)
 }
 
 func (gbd *GBDoctorDebugger) printState(cpu *cpu.CPU, mmu *mem.MMU) {

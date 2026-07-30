@@ -5,8 +5,10 @@ import (
 	"image"
 	"log"
 	"math"
+	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/maxfierke/gogo-gb/debug"
 	"github.com/maxfierke/gogo-gb/devices"
 	"github.com/maxfierke/gogo-gb/hardware"
 )
@@ -166,6 +168,11 @@ func (ui *UI) Run(console hardware.Console) error {
 	go func() {
 		ui.Log("starting console main loop")
 		if err := hardware.Run(console, ui); err != nil {
+			if errors.Is(err, debug.ErrSoftBreakExit) {
+				os.Exit(0)
+
+				return
+			}
 			ui.LogErr("unexpected error occurred during runtime: %v", err)
 
 			return

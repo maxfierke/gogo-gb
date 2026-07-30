@@ -143,7 +143,7 @@ func (cgb *CGB) AttachDebugger(debugger debug.Debugger) {
 }
 
 func (cgb *CGB) SetupDebugger() {
-	cgb.debugger.Setup(cgb.cpu, cgb.mmu, cgb.cartridge)
+	cgb.debugger.Setup(cgb.cpu, cgb.mmu, cgb.cartridge, cgb.ppu)
 }
 
 func (cgb *CGB) Debugger() debug.Debugger {
@@ -177,10 +177,12 @@ func (cgb *CGB) ReceiveInputs(inputs devices.JoypadInputs) {
 }
 
 func (cgb *CGB) Step() (uint8, error) {
-	cgb.debugger.OnDecode(cgb.cpu, cgb.mmu)
+	err := cgb.debugger.OnDecode(cgb.cpu, cgb.mmu)
+	if err != nil {
+		return 0, fmt.Errorf("on decode: %w", err)
+	}
 
 	var cycles uint8
-	var err error
 
 	haltedPriorToExecute := cgb.cpu.IsHalted()
 	doubleSpeedPriorToExecute := cgb.cpu.IsDoubleSpeed()

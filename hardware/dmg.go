@@ -110,7 +110,7 @@ func (dmg *DMG) AttachDebugger(debugger debug.Debugger) {
 }
 
 func (dmg *DMG) SetupDebugger() {
-	dmg.debugger.Setup(dmg.cpu, dmg.mmu, dmg.cartridge)
+	dmg.debugger.Setup(dmg.cpu, dmg.mmu, dmg.cartridge, dmg.ppu)
 }
 
 func (dmg *DMG) Debugger() debug.Debugger {
@@ -140,13 +140,16 @@ func (dmg *DMG) ReceiveInputs(inputs devices.JoypadInputs) {
 }
 
 func (dmg *DMG) Step() (uint8, error) {
-	dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
+	err := dmg.debugger.OnDecode(dmg.cpu, dmg.mmu)
+	if err != nil {
+		return 0, fmt.Errorf("on decode: %w", err)
+	}
 
 	var cycles uint8
 
 	haltedPriorToExecute := dmg.cpu.IsHalted()
 
-	cycles, err := dmg.cpu.Step(dmg.mmu)
+	cycles, err = dmg.cpu.Step(dmg.mmu)
 	if err != nil {
 		return 0, fmt.Errorf("unexpected error while executing instruction: %w", err)
 	}

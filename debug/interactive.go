@@ -14,6 +14,7 @@ import (
 	"github.com/maxfierke/gogo-gb/cart"
 	"github.com/maxfierke/gogo-gb/cpu"
 	"github.com/maxfierke/gogo-gb/mem"
+	"github.com/maxfierke/gogo-gb/ppu"
 )
 
 var ErrConsoleNotAttached = errors.New("debugger must be attached to a running console")
@@ -37,15 +38,166 @@ type InteractiveDebugger struct {
 	steppingMu sync.Mutex
 	stepping   bool
 
-	shell *ishell.Shell
+	shell       *ishell.Shell
+	opts        *DebuggerOptions
+	onSoftBreak func() error
 }
 
 var _ Debugger = (*InteractiveDebugger)(nil)
 
-func NewInteractiveDebugger() (*InteractiveDebugger, error) {
+func NewInteractiveDebugger(opts *DebuggerOptions) (*InteractiveDebugger, error) {
 	debugger := &InteractiveDebugger{
-		breakpoints: map[uint16]breakpoint{},
-		watches:     map[uint16]watch{},
+		breakpoints: make(map[uint16]breakpoint),
+		watches:     make(map[uint16]watch),
+		opts:        opts,
+	}
+
+	return debugger, nil
+}
+
+func (i *InteractiveDebugger) Attach(cpu *cpu.CPU, mmu *mem.MMU) {
+	i.shell.Set("cpu", cpu)
+	i.shell.Set("mmu", mmu)
+
+	// Remove references to CPU & MMU once we're done, since control will pass
+	// back to the console and we shouldn't hold onto references while emulation
+	// is running
+	defer i.shell.Del("cpu")
+	defer i.shell.Del("mmu")
+
+	i.shell.Run()
+}
+
+func (i *InteractiveDebugger) OnDecode(cpu *cpu.CPU, mmu *mem.MMU) error {
+	addr := cpu.PC.Read()
+	if _, ok := i.breakpoints[addr]; (ok || i.isStepping()) && !cpu.IsHalted() {
+		i.shell.Printf("reached 0x%02X\n", addr)
+		i.Attach(cpu, mmu)
+	} else if i.opts.EnableSoftBreakpoints && isSoftBreakpoint(cpu, mmu, addr) {
+		err := i.onSoftBreak()
+		if err != nil {
+			return err
+		}
+
+		i.Attach(cpu, mmu)
+	}
+
+	return nil
+}
+
+func (i *InteractiveDebugger) OnExecute(cpu *cpu.CPU, mmu *mem.MMU) {}
+
+func (i *InteractiveDebugger) OnInterrupt(cpu *cpu.CPU, mmu *mem.MMU) {}
+
+func (i *InteractiveDebugger) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
+	return mem.ReadPassthrough()
+}
+
+func (i *InteractiveDebugger) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
+	if w, ok := i.watches[addr]; ok && w.lastValue != value {
+		i.shell.Printf("watched 0x%02X: 0x%02X\n", addr, value)
+		i.watches[addr] = watch{lastValue: value}
+	}
+
+	return mem.WritePassthrough()
+}
+
+func (i *InteractiveDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU, cart *cart.Cartridge, ppu *ppu.PPU) {
+	i.setupShell()
+	i.onSoftBreak = func() error {
+		return i.opts.onSoftBreak(ppu)
+	}
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		for range c {
+			if !i.isActive() {
+				i.startStepping()
+			}
+		}
+	}()
+
+	i.shell.Set("cart", cart)
+	i.shell.Set("ppu", ppu)
+
+	if i.opts.AttachOnBoot {
+		i.Attach(cpu, mmu)
+	}
+}
+
+func (i *InteractiveDebugger) isActive() bool {
+	return i.shell.Active()
+}
+
+func (i *InteractiveDebugger) startStepping() {
+	i.steppingMu.Lock()
+	defer i.steppingMu.Unlock()
+	i.stepping = true
+}
+
+func (i *InteractiveDebugger) stopStepping() {
+	i.steppingMu.Lock()
+	defer i.steppingMu.Unlock()
+	i.stepping = false
+}
+
+func (i *InteractiveDebugger) isStepping() bool {
+	i.steppingMu.Lock()
+	defer i.steppingMu.Unlock()
+
+	return i.stepping
+}
+
+func (i *InteractiveDebugger) printState(cpu *cpu.CPU, mmu *mem.MMU) {
+	i.shell.Printf("Registers:\n")
+	i.shell.Printf(
+		" A: %02X    F: %02X    AF: %04X\n",
+		cpu.Reg.A.Read(),
+		cpu.Reg.F.Read(),
+		cpu.Reg.AF.Read(),
+	)
+	i.shell.Printf(
+		" B: %02X    C: %02X    BC: %04X\n",
+		cpu.Reg.B.Read(),
+		cpu.Reg.C.Read(),
+		cpu.Reg.BC.Read(),
+	)
+	i.shell.Printf(
+		" D: %02X    E: %02X    DE: %04X\n",
+		cpu.Reg.D.Read(),
+		cpu.Reg.E.Read(),
+		cpu.Reg.DE.Read(),
+	)
+	i.shell.Printf(
+		" H: %02X    L: %02X    HL: %04X\n",
+		cpu.Reg.H.Read(),
+		cpu.Reg.L.Read(),
+		cpu.Reg.HL.Read(),
+	)
+	i.shell.Printf("Flags:\n")
+	i.shell.Printf(
+		" Z: %t N: %t H: %t C: %t\n",
+		cpu.Reg.F.Zero,
+		cpu.Reg.F.Subtract,
+		cpu.Reg.F.HalfCarry,
+		cpu.Reg.F.Carry,
+	)
+	i.shell.Printf("Program state:\n")
+	i.shell.Printf(
+		"SP: %04X PC: %04X PCMEM: %02X,%02X,%02X,%02X\n",
+		cpu.SP.Read(),
+		cpu.PC.Read(),
+		mmu.Read8(cpu.PC.Read()),
+		mmu.Read8(cpu.PC.Read()+1),
+		mmu.Read8(cpu.PC.Read()+2),
+		mmu.Read8(cpu.PC.Read()+3),
+	)
+}
+
+func (i *InteractiveDebugger) setupShell() {
+	if i.shell != nil {
+		return
 	}
 
 	shell := ishell.New()
@@ -69,8 +221,8 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				return
 			}
 
-			if _, ok := debugger.breakpoints[addr]; !ok {
-				debugger.breakpoints[addr] = breakpoint{}
+			if _, ok := i.breakpoints[addr]; !ok {
+				i.breakpoints[addr] = breakpoint{}
 				c.Printf("added breakpoint @ 0x%02X\n", addr)
 			}
 		},
@@ -99,7 +251,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Aliases: []string{"c"},
 		Help:    "Continue execution until next breakpoint",
 		Func: func(c *ishell.Context) {
-			debugger.stopStepping()
+			i.stopStepping()
 			c.Stop()
 		},
 	})
@@ -109,7 +261,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Aliases: []string{"s"},
 		Help:    "Execute the next instruction",
 		Func: func(c *ishell.Context) {
-			debugger.startStepping()
+			i.startStepping()
 			c.Stop()
 		},
 	})
@@ -271,7 +423,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				return
 			}
 
-			debugger.printState(cpu, mmu)
+			i.printState(cpu, mmu)
 		},
 	})
 
@@ -281,7 +433,7 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 		Help:    "List set breakpoints",
 		Func: func(c *ishell.Context) {
 			c.Println("Active breakpoints:")
-			for i, breakpoint := range debugger.breakpoints {
+			for i, breakpoint := range i.breakpoints {
 				c.Printf("* %d: 0x%02X\n", i, breakpoint)
 			}
 		},
@@ -305,8 +457,8 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				return
 			}
 
-			if _, ok := debugger.breakpoints[addr]; ok {
-				delete(debugger.breakpoints, addr)
+			if _, ok := i.breakpoints[addr]; ok {
+				delete(i.breakpoints, addr)
 				c.Printf("cleared breakpoint @ 0x%02X\n", addr)
 			}
 		},
@@ -346,8 +498,8 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				return
 			}
 
-			if _, ok := debugger.watches[addr]; ok {
-				delete(debugger.watches, addr)
+			if _, ok := i.watches[addr]; ok {
+				delete(i.watches, addr)
 				c.Printf("removed watch @ 0x%02X\n", addr)
 			}
 		},
@@ -371,140 +523,14 @@ func NewInteractiveDebugger() (*InteractiveDebugger, error) {
 				return
 			}
 
-			if _, ok := debugger.watches[addr]; !ok {
-				debugger.watches[addr] = watch{}
+			if _, ok := i.watches[addr]; !ok {
+				i.watches[addr] = watch{}
 				c.Printf("added watch @ 0x%02X\n", addr)
 			}
 		},
 	})
 
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		for range c {
-			if !debugger.isActive() {
-				debugger.startStepping()
-			}
-		}
-	}()
-
-	debugger.shell = shell
-
-	return debugger, nil
-}
-
-func (i *InteractiveDebugger) OnDecode(cpu *cpu.CPU, mmu *mem.MMU) {
-	addr := cpu.PC.Read()
-	if _, ok := i.breakpoints[addr]; (ok || i.isStepping()) && !cpu.IsHalted() {
-		i.shell.Printf("reached 0x%02X\n", addr)
-		i.attachShell(cpu, mmu)
-	}
-}
-
-func (i *InteractiveDebugger) OnExecute(cpu *cpu.CPU, mmu *mem.MMU) {
-}
-
-func (i *InteractiveDebugger) OnInterrupt(cpu *cpu.CPU, mmu *mem.MMU) {
-}
-
-func (i *InteractiveDebugger) OnRead(mmu *mem.MMU, addr uint16) mem.MemRead {
-	return mem.ReadPassthrough()
-}
-
-func (i *InteractiveDebugger) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWrite {
-	if w, ok := i.watches[addr]; ok && w.lastValue != value {
-		i.shell.Printf("watched 0x%02X: 0x%02X\n", addr, value)
-		i.watches[addr] = watch{lastValue: value}
-	}
-
-	return mem.WritePassthrough()
-}
-
-func (i *InteractiveDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU, cart *cart.Cartridge) {
-	i.shell.Set("cart", cart)
-	i.attachShell(cpu, mmu)
-}
-
-func (i *InteractiveDebugger) attachShell(cpu *cpu.CPU, mmu *mem.MMU) {
-	i.shell.Set("cpu", cpu)
-	i.shell.Set("mmu", mmu)
-
-	// Remove references to CPU & MMU once we're done, since control will pass
-	// back to the console and we shouldn't hold onto references while emulation
-	// is running
-	defer i.shell.Del("cpu")
-	defer i.shell.Del("mmu")
-
-	i.shell.Run()
-}
-
-func (i *InteractiveDebugger) isActive() bool {
-	return i.shell.Active()
-}
-
-func (i *InteractiveDebugger) startStepping() {
-	i.steppingMu.Lock()
-	defer i.steppingMu.Unlock()
-	i.stepping = true
-}
-
-func (i *InteractiveDebugger) stopStepping() {
-	i.steppingMu.Lock()
-	defer i.steppingMu.Unlock()
-	i.stepping = false
-}
-
-func (i *InteractiveDebugger) isStepping() bool {
-	i.steppingMu.Lock()
-	defer i.steppingMu.Unlock()
-
-	return i.stepping
-}
-
-func (i *InteractiveDebugger) printState(cpu *cpu.CPU, mmu *mem.MMU) {
-	i.shell.Printf("Registers:\n")
-	i.shell.Printf(
-		" A: %02X    F: %02X    AF: %04X\n",
-		cpu.Reg.A.Read(),
-		cpu.Reg.F.Read(),
-		cpu.Reg.AF.Read(),
-	)
-	i.shell.Printf(
-		" B: %02X    C: %02X    BC: %04X\n",
-		cpu.Reg.B.Read(),
-		cpu.Reg.C.Read(),
-		cpu.Reg.BC.Read(),
-	)
-	i.shell.Printf(
-		" D: %02X    E: %02X    DE: %04X\n",
-		cpu.Reg.D.Read(),
-		cpu.Reg.E.Read(),
-		cpu.Reg.DE.Read(),
-	)
-	i.shell.Printf(
-		" H: %02X    L: %02X    HL: %04X\n",
-		cpu.Reg.H.Read(),
-		cpu.Reg.L.Read(),
-		cpu.Reg.HL.Read(),
-	)
-	i.shell.Printf("Flags:\n")
-	i.shell.Printf(
-		" Z: %t N: %t H: %t C: %t\n",
-		cpu.Reg.F.Zero,
-		cpu.Reg.F.Subtract,
-		cpu.Reg.F.HalfCarry,
-		cpu.Reg.F.Carry,
-	)
-	i.shell.Printf("Program state:\n")
-	i.shell.Printf(
-		"SP: %04X PC: %04X PCMEM: %02X,%02X,%02X,%02X\n",
-		cpu.SP.Read(),
-		cpu.PC.Read(),
-		mmu.Read8(cpu.PC.Read()),
-		mmu.Read8(cpu.PC.Read()+1),
-		mmu.Read8(cpu.PC.Read()+2),
-		mmu.Read8(cpu.PC.Read()+3),
-	)
+	i.shell = shell
 }
 
 func parseAddr(addrString string) (uint16, error) {
