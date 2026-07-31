@@ -85,3 +85,13 @@ Just being realistic about my likelihood of getting to these:
 * [Let's Write a Gameboy Emulator in Python](https://www.inspiredpython.com/course/game-boy-emulator/let-s-write-a-game-boy-emulator-in-python)
 * [Pandocs](https://gbdev.io/pandocs/About.html)
 * [Writing a Gameboy Emulator in Rust](https://yushiomote.org/posts/gameboy-emu)
+
+## License
+
+gogo-gb is licensed under the MIT License. You can see the full license in [LICENSE](LICENSE).
+
+## Acknowledgements
+
+`gogo-gb` uses SameBoy's [open-source boot ROMs](https://github.com/LIJI32/SameBoy/tree/master/BootROMs) for testing,
+specifically in CI/GitHub Actions. SameBoy is an open-source project licensed
+under the Expat license. You may find the full license in [tests/sameboy-bootroms/LICENSE](tests/sameboy-bootroms/LICENSE).
