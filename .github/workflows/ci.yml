@@ -48,6 +48,9 @@ jobs:
     - name: Blargg cpu_instrs tests
       run: make cpu_instrs
 
+    - name: Blargg instr_timing test
+      run: make instr_timing
+
     - name: DMG Acid2
       run: make dmg_acid2
 

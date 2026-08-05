@@ -7,6 +7,7 @@ MAKEFLAGS += --no-builtin-rules
 
 GO ?= go
 MOONEYE_TEST_SUITE_VERION ?= mts-20240127-1204-74ae166
+TIMEOUT ?= 30s
 
 all: build
 
@@ -40,8 +41,11 @@ test:
 bin/gogo-gb:
 	$(GO) build -o bin/gogo-gb .
 
+bin/gogo-gb-test-harness: tests/harness/go.mod tests/harness/main.go
+	cd tests/harness && $(GO) build -o ../../bin/gogo-gb-test-harness .
+
 .PHONY: cpu_instrs
-cpu_instrs: bin/gogo-gb tests/gameboy-doctor/gameboy-doctor tests/gb-test-roms/cpu_instrs/individual/*.gb
+cpu_instrs: bin/gogo-gb tests/gameboy-doctor/gameboy-doctor tests/gb-test-roms/**/*.gb
 	@CPU_TESTS=( \
     "01-special.gb" \
     "02-interrupts.gb" \
@@ -71,21 +75,40 @@ cpu_instrs: bin/gogo-gb tests/gameboy-doctor/gameboy-doctor tests/gb-test-roms/c
   done
 
 .PHONY: mem_timing
-mem_timing: bin/gogo-gb tests/gb-test-roms/mem_timing/individual/*.gb
+mem_timing: bin/gogo-gb bin/gogo-gb-test-harness tests/gb-test-roms/**/*.gb
 	@MEM_TESTS=( \
     "01-read_timing.gb" \
     "02-write_timing.gb" \
     "03-modify_timing.gb" \
   ); \
   for file in "$${MEM_TESTS[@]}"; do \
-    test_name=$${file%*.gb}; \
-    test_num=$$((10#$${test_name%-*})); \
-    echo "=== WARNING: WIP, these will hang ==="; \
     echo "=== Starting mem_timing test $$file ==="; \
-    bin/gogo-gb run "tests/gb-test-roms/mem_timing/individual/$$file" \
-                --log=stderr --serial-port=stdout --headless; \
+    bin/gogo-gb-test-harness \
+      --success="Passed" \
+      --failure="Failed" \
+      --timeout="$(TIMEOUT)" \
+      bin/gogo-gb \
+      "tests/gb-test-roms/mem_timing/individual/$$file" || exit $$?; \
     echo "=== Finished mem_timing test $$file ===" ; \
   done
+
+.PHONY: instr_timing
+instr_timing: bin/gogo-gb bin/gogo-gb-test-harness tests/gb-test-roms/**/*.gb
+	bin/gogo-gb-test-harness \
+    --success="Passed" \
+    --failure="Failed" \
+    --timeout="$(TIMEOUT)" \
+    bin/gogo-gb \
+    tests/gb-test-roms/instr_timing/instr_timing.gb
+
+.PHONY: interrupt_time
+interrupt_time: bin/gogo-gb bin/gogo-gb-test-harness tests/gb-test-roms/**/*.gb
+	bin/gogo-gb-test-harness \
+    --success="Passed" \
+    --failure="Failed" \
+    --timeout="$(TIMEOUT)" \
+    bin/gogo-gb \
+    tests/gb-test-roms/interrupt_time/interrupt_time.gb
 
 .PHONY: acid2
 acid2: dmg_acid2 dmg_acid2_cgb cgb_acid2
@@ -196,11 +219,7 @@ tests/gameboy-doctor/gameboy-doctor:
 	git submodule init
 	git submodule update
 
-tests/gb-test-roms/cpu_instrs/individual/*.gb:
-	git submodule init
-	git submodule update
-
-tests/gb-test-roms/mem_timing/individual/*.gb:
+tests/gb-test-roms/**/*.gb:
 	git submodule init
 	git submodule update
 
