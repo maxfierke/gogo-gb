@@ -1,3 +1,6 @@
+//go:build ui
+// +build ui
+
 package host
 
 import (
@@ -33,6 +36,10 @@ var (
 	_ Host        = (*UI)(nil)
 	_ ebiten.Game = (*UI)(nil)
 )
+
+func init() {
+	Hosts["ui"] = NewUIHost()
+}
 
 func NewUIHost() *UI {
 	return &UI{

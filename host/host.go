@@ -7,6 +7,10 @@ import (
 	"github.com/maxfierke/gogo-gb/hardware"
 )
 
+var Hosts = map[string]Host{
+	"headless": NewCLIHost(),
+}
+
 type Host interface {
 	devices.HostInterface
 

@@ -130,9 +130,13 @@ func initHost(ctx context.Context, logger *log.Logger, options *RunCmdOptions) (
 	var hostDevice host.Host
 
 	if options.headless {
-		hostDevice = host.NewCLIHost()
+		hostDevice = host.Hosts["headless"]
 	} else {
-		hostDevice = host.NewUIHost()
+		h, ok := host.Hosts["ui"]
+		if !ok {
+			return nil, errors.New("ui host not available. make sure gogo-gb was compiled with ui tag")
+		}
+		hostDevice = h
 	}
 
 	hostDevice.SetLogger(logger)

@@ -1,3 +1,6 @@
+//go:build readline
+// +build readline
+
 package debug
 
 import (
@@ -16,6 +19,10 @@ import (
 	"github.com/maxfierke/gogo-gb/mem"
 	"github.com/maxfierke/gogo-gb/ppu"
 )
+
+func init() {
+	debuggers["interactive"] = NewInteractiveDebugger
+}
 
 var ErrConsoleNotAttached = errors.New("debugger must be attached to a running console")
 
@@ -45,14 +52,12 @@ type InteractiveDebugger struct {
 
 var _ Debugger = (*InteractiveDebugger)(nil)
 
-func NewInteractiveDebugger(opts *DebuggerOptions) (*InteractiveDebugger, error) {
-	debugger := &InteractiveDebugger{
+func NewInteractiveDebugger(opts *DebuggerOptions) Debugger {
+	return &InteractiveDebugger{
 		breakpoints: make(map[uint16]breakpoint),
 		watches:     make(map[uint16]watch),
 		opts:        opts,
 	}
-
-	return debugger, nil
 }
 
 func (i *InteractiveDebugger) Attach(cpu *cpu.CPU, mmu *mem.MMU) {
@@ -606,4 +611,15 @@ func getCompoundRegister(cpu *cpu.CPU, regName string) *cpu.CompoundRegister {
 	}
 
 	panic("tried to access non-existent register")
+}
+
+func isSoftBreakpoint(cpu *cpu.CPU, mmu *mem.MMU, addr uint16) bool {
+	inst, _ := cpu.FetchAndDecode(mmu, addr)
+
+	if inst.Opcode.CbPrefixed {
+		return false
+	}
+
+	// At LD B, B
+	return inst.Opcode.Addr == 0x40
 }

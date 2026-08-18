@@ -11,7 +11,7 @@ import (
 
 type GBDoctorDebugger struct{}
 
-func NewGBDoctorDebugger() *GBDoctorDebugger {
+func NewGBDoctorDebugger(*DebuggerOptions) Debugger {
 	return &GBDoctorDebugger{}
 }
 

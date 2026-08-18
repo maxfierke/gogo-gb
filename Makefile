@@ -6,6 +6,7 @@ MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
 GO ?= go
+GOBUILDFLAGS ?= -tags=ui,readline
 MOONEYE_TEST_SUITE_VERION ?= mts-20240127-1204-74ae166
 TIMEOUT ?= 30s
 
@@ -29,9 +30,6 @@ clean:
 	$(GO) clean
 	rm -f bin/gogo-gb
 
-.PHONY: run
-run:
-	$(GO) run .
 
 .PHONY: test
 test:
@@ -39,7 +37,7 @@ test:
 
 .PHONY: bin/gogo-gb # This does exist, but we're not tracking its dependencies. Go is
 bin/gogo-gb:
-	$(GO) build -o bin/gogo-gb .
+	$(GO) build $(GOBUILDFLAGS) -o bin/gogo-gb .
 
 bin/gogo-gb-test-harness: tests/harness/go.mod tests/harness/main.go
 	cd tests/harness && $(GO) build -o ../../bin/gogo-gb-test-harness .

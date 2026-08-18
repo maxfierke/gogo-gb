@@ -58,7 +58,7 @@ func NewDMG(opts ...ConsoleOption) (*DMG, error) {
 		cpu:       cpu,
 		mmu:       mmu,
 		cartridge: cart.NewCartridge(),
-		debugger:  debug.NewNullDebugger(),
+		debugger:  debug.NewNullDebugger(nil),
 		dma:       ppu.NewDMA(),
 		ic:        ic,
 		joypad:    devices.NewJoypad(ic),
@@ -180,5 +180,5 @@ func (dmg *DMG) Step() (uint8, error) {
 func (dmg *DMG) detachDebugger() {
 	// Remove any existing handlers
 	dmg.mmu.RemoveHandler(dmg.debuggerHandler)
-	dmg.debugger = debug.NewNullDebugger()
+	dmg.debugger = debug.NewNullDebugger(nil)
 }

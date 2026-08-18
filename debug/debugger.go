@@ -53,6 +53,14 @@ func (opts *DebuggerOptions) onSoftBreak(ppu *ppu.PPU) error {
 	}
 }
 
+type newDebuggerFunc func(*DebuggerOptions) Debugger
+
+var debuggers = map[string]newDebuggerFunc{
+	"gameboy-doctor": NewGBDoctorDebugger,
+	"none":           NewNullDebugger,
+	"":               NewNullDebugger,
+}
+
 type Debugger interface {
 	mem.MemHandler
 
@@ -64,21 +72,16 @@ type Debugger interface {
 }
 
 func NewDebugger(name string, opts *DebuggerOptions) (Debugger, error) {
-	switch name {
-	case "gameboy-doctor":
-		return NewGBDoctorDebugger(), nil
-	case "interactive":
-		return NewInteractiveDebugger(opts)
-	case "", "none":
-		return NewNullDebugger(), nil
-	default:
-		return nil, fmt.Errorf("unrecognized debugger: %v", name)
+	if debugger, ok := debuggers[name]; ok {
+		return debugger(opts), nil
 	}
+
+	return nil, fmt.Errorf("unrecognized debugger: %v", name)
 }
 
 type NullDebugger struct{}
 
-func NewNullDebugger() *NullDebugger {
+func NewNullDebugger(*DebuggerOptions) Debugger {
 	return &NullDebugger{}
 }
 
@@ -98,17 +101,6 @@ func (nd *NullDebugger) OnWrite(mmu *mem.MMU, addr uint16, value byte) mem.MemWr
 }
 
 func (nd *NullDebugger) Setup(cpu *cpu.CPU, mmu *mem.MMU, cart *cart.Cartridge, ppu *ppu.PPU) {}
-
-func isSoftBreakpoint(cpu *cpu.CPU, mmu *mem.MMU, addr uint16) bool {
-	inst, _ := cpu.FetchAndDecode(mmu, addr)
-
-	if inst.Opcode.CbPrefixed {
-		return false
-	}
-
-	// At LD B, B
-	return inst.Opcode.Addr == 0x40
-}
 
 func takeScreenshot(img image.Image, path string) error {
 	if path == "" {

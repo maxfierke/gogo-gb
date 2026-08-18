@@ -63,7 +63,7 @@ func NewCGB(opts ...ConsoleOption) (*CGB, error) {
 		cpu:       cgbCpu,
 		mmu:       mmu,
 		cartridge: cart.NewCartridge(),
-		debugger:  debug.NewNullDebugger(),
+		debugger:  debug.NewNullDebugger(nil),
 		dma:       ppu.NewDMA(),
 		hdma:      ppu.NewHDMA(vram),
 		ic:        ic,
@@ -227,5 +227,5 @@ func (cgb *CGB) Step() (uint8, error) {
 func (cgb *CGB) detachDebugger() {
 	// Remove any existing handlers
 	cgb.mmu.RemoveHandler(cgb.debuggerHandler)
-	cgb.debugger = debug.NewNullDebugger()
+	cgb.debugger = debug.NewNullDebugger(nil)
 }
